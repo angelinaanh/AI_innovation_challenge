@@ -48,6 +48,7 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_FViOIxMjuN6Eu91INSN5zA_oLkjM
 | Supabase integration | `docs/architecture/supabase-integration.md` |
 | UI and product design | `docs/design/ui-product-design.md` |
 | Implementation process | `docs/design/implementation-process.md` |
+| Feature blueprint | `docs/problem/feature-blueprint.md` |
 | API contract | `docs/api/api-contract.md` |
 | AI workflows | `docs/ai/ai-workflows.md` |
 | MVP scope | `docs/problem/mvp-scope.md` |
@@ -90,4 +91,3 @@ Every code change must update the matching docs:
 3. Keep adaptive personalization explainable and rule-based.
 4. Keep parent visibility useful but privacy-preserving.
 5. Avoid public leaderboards; gamification should motivate without pressure.
-

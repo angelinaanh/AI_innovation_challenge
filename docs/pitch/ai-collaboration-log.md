@@ -19,3 +19,19 @@ Reason:
 
 This maximizes VAIC judging score across product value, AI-native architecture, trustworthiness, UX, and technical execution.
 
+## 2026-07-18 — Feature Blueprint From Primary Documents
+
+Prompt:
+
+> Features must be based on the two main documents. Analyze and develop them deeply.
+
+Decision:
+
+- Added `docs/problem/feature-blueprint.md`.
+- Mapped each feature cluster to Proposal `FR/NFR` and Functional Spec `M/F/P/R/S` codes.
+- Defined MVP vertical slices: Student Dashboard + Path, Lesson Player, AI Tutor, Content Studio, Teacher/Admin proof panels.
+- Explicitly listed must-not-build items such as public leaderboard, parent raw chat access, auto-publish, and out-of-scope Tutor answers.
+
+Reason:
+
+This prevents feature drift and gives implementation a traceable source-of-truth before coding starts.
