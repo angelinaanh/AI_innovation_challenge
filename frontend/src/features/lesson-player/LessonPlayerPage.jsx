@@ -13,6 +13,7 @@ import { api } from "../../lib/apiClient.js";
 import { CheckpointLesson } from "./CheckpointLesson.jsx";
 import { LessonOutline } from "./LessonOutline.jsx";
 import { QuizPanel } from "./QuizPanel.jsx";
+import { TutorDrawer } from "../tutor/TutorDrawer.jsx";
 
 export function LessonPlayerPage() {
   const { skillNodeId } = useParams();
@@ -100,6 +101,7 @@ export function LessonPlayerPage() {
         </div>
         <LessonOutline checkpoints={checkpoints} activeStep={activeStep} onSelect={setActiveStep} />
       </div>
+      <TutorDrawer skillNodeId={skillNodeId} skillNodeName={data.skillNode.name} />
     </div>
   );
 }

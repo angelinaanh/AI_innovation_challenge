@@ -37,6 +37,8 @@ The interface is responsive from 390px mobile through desktop, has loading/error
 
 The Lesson Player supports direct checkpoint navigation, visible progress, MCQ radio semantics, disabled/submitting states, wrong-answer retry, first-correct reward feedback, and a link back to the recalculated path.
 
+The same screen now includes a responsive AI Tutor drawer with persisted history, explicit AI/trust labels, POST-based SSE parsing, source chips, Socratic mode, refusal states, and teacher escalation. The drawer is 430px on desktop and full-screen on mobile without changing the underlying lesson layout.
+
 ## Commands
 
 ```bash

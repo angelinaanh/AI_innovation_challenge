@@ -88,6 +88,20 @@ Implemented response highlights:
 | POST | `/teacher/escalations/:id/answer` | teacher | Answer escalation |
 | POST | `/teacher/escalations/:id/ingest` | teacher | Approve Q&A into knowledge base |
 
+Implemented Slice 3 requests:
+
+```json
+POST /tutor/sessions
+{ "skillNodeId": "uuid" }
+
+POST /tutor/sessions/:sessionId/messages/stream
+{ "message": "Repeat khác forever thế nào?" }
+```
+
+The session response includes the scoped Skill Node, approved-content trust metadata, and persisted messages. The stream endpoint accepts 2-600 characters and returns `text/event-stream`. It never returns prompts, answer keys, provider errors, profile metadata, or unapproved source content.
+
+`POST /tutor/messages/:messageId/escalate` accepts only a student-role message owned by the current session user. `GET /teacher/escalations` returns only the escalated question, student display identity, Skill Node, and queue state, not the full Tutor conversation.
+
 Tutor response metadata:
 
 ```json
@@ -145,8 +159,8 @@ Socket.IO events:
 
 SSE events for Tutor:
 
-- `token`
-- `citation`
-- `refusal`
-- `done`
-- `error`
+- `token`: `{ "delta": "..." }`
+- `citation`: `{ "sourceChunkId", "checkpointId", "title", "lessonId" }`
+- `refusal`: `{ "content", "mode", "studentMessageId", "escalationRecommended" }`
+- `done`: `{ "messageId", "studentMessageId", "mode", "confidence", "cached" }`
+- `error`: safe code/message/request ID with no provider detail

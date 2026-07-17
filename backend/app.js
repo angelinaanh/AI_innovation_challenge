@@ -4,6 +4,8 @@ import cors from "cors";
 import express from "express";
 
 import { studentRouter } from "./api/routes/studentRoutes.js";
+import { teacherRouter } from "./api/routes/teacherRoutes.js";
+import { tutorRouter } from "./api/routes/tutorRoutes.js";
 import { errorHandler, notFound } from "./middleware/errorHandler.js";
 import { env } from "./utils/env.js";
 
@@ -39,6 +41,8 @@ export function createApp() {
   });
 
   app.use("/api/student", studentRouter);
+  app.use("/api/tutor", tutorRouter);
+  app.use("/api/teacher", teacherRouter);
   app.use(notFound);
   app.use(errorHandler);
 

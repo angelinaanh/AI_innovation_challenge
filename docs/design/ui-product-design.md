@@ -158,3 +158,19 @@ The implemented Lesson Player uses a focused learning workspace rather than dash
 - explicit XP/STEAM reward and newly unlocked node after first mastery.
 
 Browser QA covers the complete checkpoint-to-quiz flow, wrong-answer retry, correct reward, path recalculation, 1440px desktop, and 390px mobile without horizontal overflow.
+
+## 11. Slice 3 Tutor Drawer
+
+The Tutor is an unframed right-side workspace on desktop and a full-screen layer on mobile:
+
+- persistent 430px desktop width and 390px mobile QA target;
+- visible “EduOne AI Tutor” identity and online state;
+- approved-content trust strip above every conversation;
+- student and assistant roles remain visually distinct;
+- source chips name the exact approved checkpoint;
+- Socratic mode is labelled “Gợi mở”;
+- refusal copy avoids guessing and exposes teacher escalation;
+- composer locks during SSE activity and recovers after `done`/`error`;
+- no horizontal overflow or button-label overflow at 390x844.
+
+The drawer overlays rather than resizing the lesson, preserving checkpoint context underneath. It does not show hidden prompts, model names, confidence numbers, or token/cost data to students.

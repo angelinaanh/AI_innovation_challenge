@@ -31,3 +31,11 @@ Stores AI prompts, workflows, agents, tools, knowledge assets, and evaluation se
 - AI must not answer Tutor questions without approved sources.
 - Personalization path decisions do not use LLM.
 
+## Implemented Tutor Assets
+
+- `prompts/tutor_socratic.md`: approved-source-only Vietnamese Tutor behavior.
+- `prompts/refusal.md`: deterministic insufficient-source refusal.
+- Backend AI Gateway: moderation, embedding, Responses API, usage/cost logging, and circuit checks.
+- Hybrid retrieval: deterministic lexical scope gate plus optional cosine ranking over approved chunk embeddings.
+
+The model never receives profile names, email addresses, STEAM scores, EXP, or parent data. Student questions and approved lesson excerpts are sent externally only after organization approval and while the transfer gate is enabled.

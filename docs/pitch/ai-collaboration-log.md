@@ -91,3 +91,23 @@ Decision:
 Reason:
 
 This turns the explainable recommendation from Slice 1 into a working learning loop where one student action visibly changes mastery, XP, and the next Skill Node.
+
+## 2026-07-18 — Slice 3 AI Tutor Foundation
+
+Prompt:
+
+> Continue.
+
+Decision:
+
+- Added a Lesson Player Tutor drawer with visible AI identity, approved-source trust state, SSE, citations, refusal, and escalation UX.
+- Built a backend AI Gateway for moderation, model aliases, budget/limit checks, usage logging, and graceful degradation.
+- Restricted retrieval to source documents attached to `PUBLISHED` lessons in the current Skill Node.
+- Added deterministic out-of-scope and answer-seeking gates before generation.
+- Persisted Tutor sessions/messages and routed one unresolved question to the demo teacher queue.
+- Kept full student identity and performance data out of model requests.
+- Paused approved-source embedding execution until external data transfer is explicitly approved.
+
+Reason:
+
+This proves that EduOne's Tutor is a bounded learning workflow with evidence and a human exit, rather than an unrestricted chatbot.

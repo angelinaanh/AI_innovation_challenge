@@ -93,3 +93,21 @@ Slice 2 verification adds:
 - verified path change from Loops to Variables;
 - controlled demo reset back to the baseline;
 - desktop/mobile Lesson Player overflow and button-content checks.
+
+Slice 3 verification adds:
+
+- deterministic Vietnamese normalization and lexical scope tests;
+- in-scope versus unrelated retrieval gate tests;
+- answer-seeking/Socratic mode detection test;
+- prompt-override detection test before retrieval/generation;
+- stable SSE framing and chunk reconstruction test;
+- live Supabase session/message persistence;
+- live out-of-scope refusal with no generation call;
+- student escalation and teacher queue API check;
+- desktop 1280px and mobile 390x844 Tutor drawer overflow checks;
+- browser regression for an SSE connection that must end and unlock the composer;
+- live fail-closed check where an in-scope query emits `external_transfer_disabled`, creates zero provider calls, and exports neither the question nor a checkpoint;
+- synthetic, non-project Responses API smoke check against `gpt-5.6-luna`;
+- staged-secret scan excluding ignored local environment files.
+
+The approved-source embedding and generated-answer E2E test is intentionally blocked until external transfer of published lesson excerpts is explicitly approved.

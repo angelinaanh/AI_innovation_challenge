@@ -106,3 +106,9 @@ Run `npm run seed:demo` inside `backend/`. The idempotent script uses existing t
 The seeded student is intentionally below the Arts and selected Tech/Engineering thresholds so the UI can demonstrate explainable recovery paths.
 
 Use `npm run reset:demo` after an end-to-end presentation. The reset is narrowly scoped to the demo student and the seeded Loops question, then restores the documented STEAM/EXP/streak baseline. Production users are never included.
+
+Slice 3 seeds one approved Loops source document and three deterministic `document_chunks`, then attaches that source to the `PUBLISHED` Loops lesson. `npm run seed:tutor` scopes lessons through `skill_nodes.org_id`, fills only missing embeddings, and writes an `ai_usage` record. Running that command transfers approved checkpoint excerpts to OpenAI and therefore requires explicit organization approval.
+
+The backend keeps `AI_ALLOW_APPROVED_CONTENT_EXPORT=false` by default. With the gate off, chunks and student questions remain local, grounded generation is refused, and teacher escalation stays available.
+
+Tutor retrieval first selects `PUBLISHED` lessons for the requested Skill Node, collects only their non-null `source_document_id` values, and then queries chunks within that allowlist. The service role never performs an unrestricted chunk similarity search.

@@ -118,3 +118,22 @@ Metrics:
 | `ai/prompts/tutor_socratic.md` | Tutor answer with citations |
 | `ai/prompts/refusal.md` | Out-of-scope refusal |
 | `ai/prompts/safety_classifier.md` | Safety triage |
+
+## 8. Slice 3 Implementation
+
+Implemented:
+
+- OpenAI SDK behind backend-only model aliases;
+- per-student daily limit and organization daily cost circuit;
+- input/output moderation with separate `ai_usage` records;
+- deterministic lexical scope gate before any paid generation;
+- deterministic prompt-override refusal before retrieval or generation;
+- optional semantic ranking with `text-embedding-3-small` vectors;
+- source proof through `document_chunks.source_document_id -> lessons.source_document_id` where lesson status is `PUBLISHED`;
+- exact-question cache accounting;
+- Responses API generation with `store: false` and no direct student identity fields;
+- post-moderation SSE token, citation, refusal, done, and error events;
+- student escalation and teacher-specific Socket.IO event.
+- fail-closed `AI_ALLOW_APPROVED_CONTENT_EXPORT` gate around embedding, student-question moderation, and grounded generation.
+
+Safety tradeoff: Tutor output is buffered until moderation passes, then delivered in SSE chunks. This adds first-token latency but prevents unmoderated model text from reaching a child.

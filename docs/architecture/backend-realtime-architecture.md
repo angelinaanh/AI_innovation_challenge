@@ -128,6 +128,9 @@ Implemented:
 - Idempotent demo seed for the existing Supabase schema.
 - Published-only lesson service and server-side quiz grading.
 - First-correct score/EXP event writes, projection update, and streak refresh.
+- AI Gateway with model aliases, moderation, usage/cost accounting, daily limits, and budget circuit.
+- Tutor session persistence, approved-source hybrid retrieval, Responses API generation, safe SSE delivery, and escalation queue.
+- Teacher-scoped `tutor.escalated` Socket.IO event without raw conversation content.
 
 Pending before public deployment:
 
@@ -136,3 +139,5 @@ Pending before public deployment:
 - production structured logger and rate limiting;
 - authenticated Socket.IO rooms.
 - transactional Postgres RPC for attempt + score + EXP writes before pilot scale.
+- transactional Postgres RPC for AI usage + daily budget projection updates.
+- verified JWT Socket.IO room claims; current handshake IDs are local-demo scaffolding only.

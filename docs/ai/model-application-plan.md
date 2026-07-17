@@ -33,10 +33,10 @@ The app should call internal aliases instead of scattered raw model names.
 
 | Alias | Initial OpenAI model | Used for | Notes |
 |---|---|---|---|
-| `CONTENT_HIGH_MODEL` | `gpt-5.6` | outline, lesson draft, final quality pass | Higher quality, async job, amortized per lesson |
-| `CONTENT_FAST_MODEL` | `gpt-5.6` | quiz, hints, highlight/tips, quest variants | Use lower reasoning/settings when possible |
-| `TUTOR_MODEL` | `gpt-5.6` | grounded Socratic Tutor answer | Must stream and cite sources |
-| `SUMMARY_MODEL` | `gpt-5.6` | teacher/admin summaries, reports | Optional, never required for core logic |
+| `CONTENT_HIGH_MODEL` | `gpt-5.6-sol` | outline, lesson draft, final quality pass | Higher quality, async job, amortized per lesson |
+| `CONTENT_FAST_MODEL` | `gpt-5.6-luna` | quiz, hints, highlight/tips, quest variants | Cost-sensitive generation |
+| `TUTOR_MODEL` | `gpt-5.6-luna` | grounded Socratic Tutor answer | Lower runtime cost; moderated output is delivered over SSE with verified citations |
+| `SUMMARY_MODEL` | `gpt-5.6-luna` | teacher/admin summaries, reports | Optional, never required for core logic |
 | `EMBEDDING_MODEL` | `text-embedding-3-small` | source chunks and Tutor query vectors | Matches current `vector(1536)` schema |
 | `MODERATION_MODEL` | `omni-moderation-latest` | input/output safety checks | Text now, image/text later for community |
 | `REALTIME_MODEL` | `gpt-realtime-2.1` | future voice Tutor / live voice agent | Phase 2/3, not MVP default |
@@ -237,18 +237,21 @@ Backend runtime:
 
 ```bash
 OPENAI_API_KEY=replace_with_secret
-OPENAI_CONTENT_HIGH_MODEL=gpt-5.6
-OPENAI_CONTENT_FAST_MODEL=gpt-5.6
-OPENAI_TUTOR_MODEL=gpt-5.6
-OPENAI_SUMMARY_MODEL=gpt-5.6
+OPENAI_CONTENT_HIGH_MODEL=gpt-5.6-sol
+OPENAI_CONTENT_FAST_MODEL=gpt-5.6-luna
+OPENAI_TUTOR_MODEL=gpt-5.6-luna
+OPENAI_SUMMARY_MODEL=gpt-5.6-luna
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 OPENAI_MODERATION_MODEL=omni-moderation-latest
 OPENAI_REALTIME_MODEL=gpt-realtime-2.1
 AI_DAILY_BUDGET_USD=5
 AI_TUTOR_DAILY_LIMIT_PER_STUDENT=20
+AI_ALLOW_APPROVED_CONTENT_EXPORT=false
 ```
 
 Never expose these through frontend environment variables except non-secret feature flags.
+
+The current OpenAI project exposes the concrete `sol`/`terra`/`luna` model IDs but rejects the generic `gpt-5.6` alias. The implementation therefore uses concrete IDs behind environment aliases. Model capability must be rechecked for each deployment project.
 
 ## 8. Cost Controls
 
@@ -281,4 +284,3 @@ Before demo:
 - OpenAI moderation guide: https://developers.openai.com/api/docs/guides/moderation
 - OpenAI Realtime/audio guide: https://developers.openai.com/api/docs/guides/realtime
 - OpenAI guardrails and human review guide: https://developers.openai.com/api/docs/guides/agents/guardrails-approvals
-

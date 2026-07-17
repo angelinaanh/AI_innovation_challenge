@@ -58,6 +58,15 @@ Slice 2 adds a complete learning loop:
 - first-correct STEAM/XP/streak update and refreshed Learning Path;
 - replayable demo reset with `npm run reset:demo`.
 
+Slice 3 is implemented as a safety-first AI Tutor workflow:
+
+- Lesson Player Tutor drawer with explicit AI and approved-content labels;
+- session/message persistence in Supabase;
+- deterministic scope gate before generation;
+- OpenAI moderation, grounded response generation, citations, and SSE delivery;
+- refusal and student-requested escalation to the teacher queue;
+- per-student daily limit, organization budget circuit, cache accounting, and `ai_usage` logs.
+
 Demo mode currently resolves the first student profile when no authenticated student ID is supplied. Supabase JWT authentication and server-side role middleware must be completed before public deployment.
 
 ## Local Start
@@ -66,8 +75,13 @@ Demo mode currently resolves the first student profile when no authenticated stu
 cd backend
 npm install
 npm run seed:demo
+npm run seed:tutor
 npm start
 ```
+
+`npm run seed:tutor` sends only the three teacher-approved Loops checkpoint excerpts to OpenAI to create embeddings. Run it only after the organization has approved that external data transfer. Lexical grounding and refusal still work without embeddings.
+
+Keep `AI_ALLOW_APPROVED_CONTENT_EXPORT=false` until that approval is recorded. While the gate is off, no student question or approved lesson excerpt is sent to OpenAI; Tutor generation and `seed:tutor` both fail closed.
 
 In a second terminal:
 

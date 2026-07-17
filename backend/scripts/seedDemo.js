@@ -10,6 +10,7 @@ const shouldResetProgress = process.argv.includes("--reset-progress");
 
 const IDS = {
   organization: "00000000-0000-0000-0000-000000000001",
+  loopSourceDocument: "70000000-0000-4000-8000-000000000001",
   skills: {
     intro: "10000000-0000-4000-8000-000000000001",
     events: "10000000-0000-4000-8000-000000000002",
@@ -90,6 +91,23 @@ async function resetDemoProgress(studentId) {
       .eq("action_type", "quiz_mastery_reward"),
     "Reset demo quiz EXP events",
   );
+
+  const sessionsResult = await supabase
+    .from("tutor_sessions")
+    .select("id")
+    .eq("user_id", studentId);
+  const sessions = assertResult(sessionsResult, "Find demo Tutor sessions") || [];
+  if (sessions.length > 0) {
+    const sessionIds = sessions.map((session) => session.id);
+    assertResult(
+      await supabase.from("tutor_escalations").delete().in("session_id", sessionIds),
+      "Reset demo Tutor escalations",
+    );
+    assertResult(
+      await supabase.from("tutor_sessions").delete().in("id", sessionIds),
+      "Reset demo Tutor sessions",
+    );
+  }
 }
 
 async function seed() {
@@ -352,6 +370,19 @@ async function seed() {
     ],
   };
 
+  assertResult(
+    await supabase.from("source_documents").upsert({
+      id: IDS.loopSourceDocument,
+      uploaded_by: teacher.id,
+      skill_node_id: IDS.skills.loops,
+      storage_path: "demo/loops-approved-source.md",
+      extracted_text: loopLessonContent.checkpoints
+        .map((checkpoint) => `${checkpoint.title}\n${checkpoint.body}\n${checkpoint.takeaway}`)
+        .join("\n\n"),
+    }),
+    "Upsert approved Loops source document",
+  );
+
   const lessons = skillNodes.map((node, index) => ({
     id: `20000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
     skill_node_id: node.id,
@@ -395,11 +426,25 @@ async function seed() {
           ],
           quizHints: [],
         },
+    source_document_id: node.id === IDS.skills.loops ? IDS.loopSourceDocument : null,
     generated_by: "human-authored-demo",
     reviewed_by: teacher.id,
     published_at: daysAgo(30 - index),
   }));
   assertResult(await supabase.from("lessons").upsert(lessons), "Publish demo lessons");
+
+  assertResult(
+    await supabase.from("document_chunks").upsert(
+      loopLessonContent.checkpoints.map((checkpoint, index) => ({
+        id: `71000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+        source_document_id: IDS.loopSourceDocument,
+        skill_node_id: IDS.skills.loops,
+        chunk_index: index,
+        content: `${checkpoint.title}\n${checkpoint.body}\n${checkpoint.takeaway}`,
+      })),
+    ),
+    "Upsert approved Loops knowledge chunks",
+  );
 
   const questions = [
     {
@@ -485,6 +530,15 @@ async function seed() {
       })),
     ),
     "Upsert weekly EXP activity",
+  );
+
+  assertResult(
+    await supabase.from("daily_cost_budgets").upsert({
+      org_id: IDS.organization,
+      date: vietnamDate(),
+      budget_usd: env.aiDailyBudgetUsd,
+    }),
+    "Upsert daily AI budget",
   );
 
   console.log("EduOne demo data is ready.");

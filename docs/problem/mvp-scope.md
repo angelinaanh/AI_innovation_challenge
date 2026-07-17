@@ -75,6 +75,6 @@ Do not build every module at once. Build one complete loop.
 |---|---|---|
 | Slice 1 — Student Dashboard + Path | Complete | Supabase-backed dashboard, 7-node path, deterministic explanations, responsive QA |
 | Slice 2 — Lesson Player + Quiz + Hint | Complete | 3 checkpoints, layered hints, server grading, first-correct rewards, path refresh |
-| Slice 3 — AI Tutor + Escalation | Next | model and RAG routing documented |
+| Slice 3 — AI Tutor + Escalation | In progress | drawer, refusal, persistence, SSE, escalation, usage controls complete; approved-source provider E2E pending explicit transfer approval |
 | Slice 4 — Content Studio | Planned | review/publish workflow documented |
 | Slice 5 — Teacher/Admin proof panels | Planned | analytics and cost contracts documented |
