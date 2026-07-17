@@ -51,6 +51,7 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_FViOIxMjuN6Eu91INSN5zA_oLkjM
 | Feature blueprint | `docs/problem/feature-blueprint.md` |
 | API contract | `docs/api/api-contract.md` |
 | AI workflows | `docs/ai/ai-workflows.md` |
+| AI model application plan | `docs/ai/model-application-plan.md` |
 | MVP scope | `docs/problem/mvp-scope.md` |
 | Test strategy | `docs/testing/test-strategy.md` |
 | Database design note | `docs/databasedesign.md` |

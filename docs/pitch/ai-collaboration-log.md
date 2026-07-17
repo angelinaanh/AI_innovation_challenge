@@ -35,3 +35,21 @@ Decision:
 Reason:
 
 This prevents feature drift and gives implementation a traceable source-of-truth before coding starts.
+
+## 2026-07-18 — AI Model Application Plan
+
+Prompt:
+
+> Plan how to apply OpenAI models to each system feature.
+
+Decision:
+
+- Added `docs/ai/model-application-plan.md`.
+- Defined AI Gateway model aliases instead of scattering raw model names.
+- Mapped OpenAI text, embedding, moderation, and realtime models to each `M1-M11` module.
+- Kept rule-based modules non-AI: RBAC, scoring, path engine, EXP, risk score, cost circuit, audit.
+- Added backend env placeholders for OpenAI model aliases without storing the provided API key.
+
+Reason:
+
+This keeps model usage traceable, cheap, safe for children, and aligned with the two primary project documents.

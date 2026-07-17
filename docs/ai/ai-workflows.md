@@ -9,6 +9,8 @@ AI is the workflow engine for content production and support, but not the author
 - Personalization: deterministic rules, not LLM.
 - Cost: every call goes through AI Gateway.
 
+Model selection and feature routing live in `docs/ai/model-application-plan.md`. Feature code should call model aliases through AI Gateway rather than hardcoding model names.
+
 ## 2. AI Gateway
 
 Responsibilities:
@@ -116,4 +118,3 @@ Metrics:
 | `ai/prompts/tutor_socratic.md` | Tutor answer with citations |
 | `ai/prompts/refusal.md` | Out-of-scope refusal |
 | `ai/prompts/safety_classifier.md` | Safety triage |
-
