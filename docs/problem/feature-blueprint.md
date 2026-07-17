@@ -341,3 +341,16 @@ MVP đạt yêu cầu khi:
 8. Teacher heatmap + Admin cost.
 
 Điểm tinh tế: bắt đầu bằng mock có cấu trúc giống thật, không hardcode lung tung. Mỗi mock response phải giống contract API cuối cùng để thay backend thật không vỡ UI.
+
+## 9. Bổ sung Slice 5 — AI Tutor sinh bài luyện tương tác
+
+Nguồn: mở rộng `FR9` -> `FR9.7` (Tutor sinh bài luyện formative grounded), features `F-610`..`F-613`, quy trình `P-05b`, vẫn thuộc `M6`, vai trò `R1` (làm) và `R2` (duyệt promotion).
+
+| Feature | MVP | UI | Backend | Database/AI | Acceptance |
+|---|---:|---|---|---|---|
+| F-610 Sinh bài luyện grounded | Must | Thanh "Luyện tập" trong Tutor | `POST /tutor/exercises` | `tutor_exercises`, LLM structured output | 4 dạng, grounded chunk đã duyệt |
+| F-611 Bốn dạng tương tác | Must | MCQ, matching kéo-thả, ordering, cloze | inputs controlled | payload không đáp án | Kéo-thả có fallback bàn phím (WCAG) |
+| F-612 Chấm + EXP nỗ lực | Must | Kết quả + lời giải | `POST /.../submit` | `exp_events` (không score_events) | Không đụng STEAM, không mở khoá |
+| F-613 Promote thành câu hỏi thật | Should | "Gửi giáo viên duyệt" | `POST /.../promote`, `/teacher/exercise-proposals` | tạo `questions` DRAFT (mcq) | HITL: giáo viên duyệt mới thành nguồn |
+
+Ràng buộc must-not bổ sung: bài luyện Tutor **không bao giờ** ghi `score_events`/đổi STEAM/mở khoá; answer_key **không bao giờ** rời server; item chỉ vào ngân hàng câu hỏi **sau** khi giáo viên duyệt.

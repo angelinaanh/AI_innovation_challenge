@@ -174,3 +174,16 @@ The Tutor is an unframed right-side workspace on desktop and a full-screen layer
 - no horizontal overflow or button-label overflow at 390x844.
 
 The drawer overlays rather than resizing the lesson, preserving checkpoint context underneath. It does not show hidden prompts, model names, confidence numbers, or token/cost data to students.
+
+## 12. Tutor Interactive Exercises (Slice 5)
+
+The Tutor drawer gains a "Luyện tập" bar with four chips (Trắc nghiệm, Nối cột, Sắp thứ tự, Điền khuyết). A generated exercise renders as a card inline in the conversation, tagged "Bài luyện · không tính điểm" so a student never confuses practice with graded assessment.
+
+| Type | Interaction | Accessibility |
+|---|---|---|
+| MCQ | tap an option | radio semantics, keyboard focus |
+| Matching | drag a right-column chip into a left slot | click-to-select fallback; slots are keyboard-activatable |
+| Ordering | drag to reorder | up/down buttons as the reliable path |
+| Cloze | choose/type into each blank | native `select`/`input` per blank |
+
+After "Kiểm tra": the card shows correct/partial result, the explanation, correct-answer highlighting, and a small `+EXP` chip. A correct item offers "Gửi giáo viên duyệt thành câu hỏi thật". States reuse the calm success/wrong palette; no shame copy, consistent with "safe to fail".

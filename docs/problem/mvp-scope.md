@@ -76,5 +76,6 @@ Do not build every module at once. Build one complete loop.
 | Slice 1 — Student Dashboard + Path | Complete | Supabase-backed dashboard, 7-node path, deterministic explanations, responsive QA |
 | Slice 2 — Lesson Player + Quiz + Hint | Complete | 3 checkpoints, layered hints, server grading, first-correct rewards, path refresh |
 | Slice 3 — AI Tutor + Escalation | In progress | drawer, refusal, persistence, SSE, escalation, usage controls complete; approved-source provider E2E pending explicit transfer approval |
+| Slice 4 — Tutor interactive exercises | In progress | 4 grounded exercise types (mcq/matching/ordering/cloze), server grading + effort EXP, HITL promotion to question bank; pure grading unit-tested; live generation needs `OPENAI_API_KEY` + export gate |
 | Slice 5 — Content Studio | Planned | review/publish workflow documented |
 | Slice 6 — Teacher/Admin proof panels | Planned | analytics and cost contracts documented |

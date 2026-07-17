@@ -169,3 +169,26 @@ SSE events for Tutor:
 - `refusal`: `{ "content", "mode", "studentMessageId", "escalationRecommended" }`
 - `done`: `{ "messageId", "studentMessageId", "mode", "confidence", "cached" }`
 - `error`: safe code/message/request ID with no provider detail
+
+## 8. Tutor Interactive Exercises
+
+All under the authenticated student Tutor scope. Answer keys never leave the server.
+
+| Method | Path | Role | Purpose |
+|---|---|---|---|
+| POST | `/tutor/exercises` | student | Generate one grounded practice exercise for a session `{ sessionId, type }` |
+| POST | `/tutor/exercises/:exerciseId/submit` | student | Grade a response, award effort EXP, return solution `{ response }` |
+| POST | `/tutor/exercises/:exerciseId/promote` | student | Send a correct item to the teacher review queue |
+| GET | `/teacher/exercise-proposals` | teacher | List promoted practice items awaiting review |
+| POST | `/teacher/exercise-proposals/:exerciseId/review` | teacher | `{ decision: "approve" | "reject" }`; approving an MCQ seeds a `DRAFT` question |
+
+`type` is one of `mcq | matching | ordering | cloze`. The generate response returns the render payload only (no answer key):
+
+```json
+POST /tutor/exercises  { "sessionId": "uuid", "type": "matching" }
+-> { "id": "uuid", "type": "matching", "prompt": "...",
+     "left": [{ "id": "l1", "label": "move" }],
+     "right": [{ "id": "r2", "label": "di chuyển" }], "formative": true }
+```
+
+Response shapes for submit (`response` field): mcq `{ selectedIndex }`, matching `{ pairs: { leftId: rightId } }`, ordering `{ order: [id,...] }`, cloze `{ answers: { blankId: value } }`. Submit returns `{ isCorrect, score, solution, explanation, award, canPromote }`. These exercises are formative: they write `tutor_exercises` / `tutor_exercise_attempts` and `exp_events`, never `score_events`.

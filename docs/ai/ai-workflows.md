@@ -137,3 +137,19 @@ Implemented:
 - fail-closed `AI_ALLOW_APPROVED_CONTENT_EXPORT` gate around embedding, student-question moderation, and grounded generation.
 
 Safety tradeoff: Tutor output is buffered until moderation passes, then delivered in SSE chunks. This adds first-token latency but prevents unmoderated model text from reaching a child.
+
+## 9. Tutor Interactive Exercises (Slice 5)
+
+The Tutor can generate interactive practice inside the chat instead of only answering. Four types: `mcq`, `matching`, `ordering`, `cloze`.
+
+Generation constraints (same trust model as the grounded answer):
+
+- grounded only on approved `document_chunks` for the current Skill Node;
+- fails closed behind `AI_ALLOW_APPROVED_CONTENT_EXPORT`;
+- structured JSON output (`text.format = json_object`) via `CONTENT_FAST_MODEL`, tier 2, logged to `ai_usage` as feature `tutor_exercise`;
+- schema-validated (`validateExercise`) and output-moderated before it can render;
+- server splits the model item into a render `payload` (no answers) and a server-only `answer_key`.
+
+Safety separation: exercises are formative. Grading (`gradeExercise`, deterministic, unit-tested) awards small effort EXP through `exp_events` and never writes `score_events` or unlocks content. A correct item can be promoted to the teacher; approving an MCQ seeds a `DRAFT` question in the bank — a human-in-the-loop path from AI practice to reviewed content. Prompt: `ai/prompts/exercise_generator.md`.
+
+Evaluation additions: generated exercises must (a) be answerable from the cited chunks, (b) pass schema validation, (c) never render an answer key, (d) grade a fully-correct response as correct and a wrong one as incorrect.

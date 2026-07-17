@@ -372,3 +372,13 @@ Ba policy này là đại diện, không phải toàn bộ — mỗi bảng còn
 ### Kết luận đánh giá
 
 Phương hướng "event-sourcing + RLS-as-enforcement + JSONB có chọn lọc" khớp với đúng những gì đề xuất đã tự đặt ra ở mục 9.3 và 5.2 (HITL là ràng buộc dữ liệu, không phải tính năng cộng thêm) — nghĩa là schema không chỉ lưu trữ đúng, mà **tự thực thi** một phần các cam kết an toàn của đề bài thay vì phó thác hoàn toàn cho tầng ứng dụng. Hai lỗ hổng cần vá trước khi dùng cho pilot thật: (1) RAG chưa lọc theo trạng thái publish ở tầng chunk, (2) cầu dao chi phí chưa có cơ chế tự động trip. Cả hai đều sửa được bằng cách bổ sung một policy và một scheduled function, không cần đổi cấu trúc bảng.
+---
+
+## Phần 4 — Bổ sung: Bài luyện tương tác của Tutor (migration 0002)
+
+Tính năng "AI Tutor sinh bài luyện tương tác" thêm hai bảng (SQL đầy đủ ở `database/migrations/0002_tutor_interactive_exercises.sql`):
+
+- `tutor_exercises` — một bài luyện grounded (mcq | matching | ordering | cloze) gắn với một `tutor_sessions`. `payload` (jsonb) là dữ liệu render KHÔNG chứa đáp án; `answer_key` (jsonb) chỉ server đọc; `source_chunk_ids` lưu provenance; `status` theo vòng đời `active -> promoted_pending -> promoted_approved | rejected` cho luồng HITL đẩy item tốt thành `questions` DRAFT.
+- `tutor_exercise_attempts` — lượt làm của học sinh, có `is_correct` và `score` (0..1 cho chấm một phần).
+
+Nguyên tắc giữ nguyên bất biến hệ thống: đây là **luyện tập (formative)** — chỉ ghi `exp_events` (EXP nỗ lực), **không** ghi `score_events`, **không** đổi `steam_profiles`, **không** mở khoá (khớp mục 6.2 / FR6.6 / NFR-10). RLS theo khuôn sở hữu phiên; answer_key vẫn phải che ở tầng API.

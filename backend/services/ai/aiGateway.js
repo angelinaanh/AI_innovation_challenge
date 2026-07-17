@@ -179,6 +179,46 @@ export async function createEmbeddings({ texts, orgId, userId }) {
   }
 }
 
+export async function generateStructuredExercise({ instructions, input, orgId, userId }) {
+  try {
+    const model = env.openAiModels.contentFast;
+    const response = await getOpenAiClient().responses.create({
+      model,
+      instructions,
+      input,
+      reasoning: { effort: "low" },
+      max_output_tokens: 700,
+      text: { format: { type: "json_object" } },
+      store: false,
+    });
+    const tokensIn = Number(response.usage?.input_tokens || 0);
+    const tokensOut = Number(response.usage?.output_tokens || 0);
+    await recordAiUsage({
+      orgId,
+      userId,
+      feature: "tutor_exercise",
+      model,
+      tier: 2,
+      tokensIn,
+      tokensOut,
+    });
+    let item = null;
+    try {
+      item = JSON.parse(response.output_text || "{}");
+    } catch {
+      item = null;
+    }
+    return { item, model, tokensIn, tokensOut };
+  } catch (error) {
+    if (["AI_UNAVAILABLE", "DATABASE_ERROR"].includes(error.code)) throw error;
+    throw appError(
+      "AI_PROVIDER_ERROR",
+      "Không thể sinh bài luyện lúc này. Bạn có thể tiếp tục hỏi Tutor.",
+      error,
+    );
+  }
+}
+
 export async function generateTutorAnswer({ instructions, input, orgId, userId }) {
   try {
     const response = await getOpenAiClient().responses.create({

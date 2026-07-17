@@ -78,6 +78,16 @@ Slice 4 replaces the demo identity fallback with real authentication:
 
 Seed data remains available for repeatable QA, but the API never selects the first student and never accepts a client-supplied student ID.
 
+Slice 5 makes the AI Tutor intervene beyond chat with interactive practice:
+
+- the Tutor generates four interactive exercise types inside the chat — multiple choice, matching (drag-and-drop columns), ordering, and cloze fill-in-the-blank;
+- every exercise is grounded on the same teacher-approved chunks the Tutor cites and is validated against a schema and moderated before it renders;
+- exercises are **formative practice only**: they are graded on the server, award small effort EXP, and never change the STEAM profile or unlock content, preserving the "AI never reaches students unreviewed" invariant;
+- a correct item can be sent to the teacher, who reviews it and — for multiple choice — seeds a `DRAFT` question in the real question bank (a human-in-the-loop path from Tutor practice to reviewed content);
+- new tables `tutor_exercises` and `tutor_exercise_attempts` (migration `database/migrations/0002_tutor_interactive_exercises.sql`), answer keys kept server-side.
+
+Live exercise generation requires `OPENAI_API_KEY` and `AI_ALLOW_APPROVED_CONTENT_EXPORT=true`; with the gate off it fails closed like the rest of the Tutor. Apply migration `0002` to the Supabase project before use.
+
 ## Local Start
 
 ```bash
