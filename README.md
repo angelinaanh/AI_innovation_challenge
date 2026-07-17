@@ -122,7 +122,7 @@ npm install
 npm run dev
 ```
 
-Open `http://127.0.0.1:5173/login`. New public registrations always create a student account; teacher and admin accounts must be provisioned by an administrator.
+Open `http://127.0.0.1:5173/login`. Registration lets a user choose **Học sinh** or **Giáo viên**; a teacher account activates immediately (no grade band or guardian consent), a student under 16 stays `PENDING` until guardian consent. Admin accounts are still provisioned by an administrator.
 
 ## Documentation Map
 

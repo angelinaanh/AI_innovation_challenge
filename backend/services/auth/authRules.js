@@ -82,6 +82,17 @@ export function normalizeStudentOnboarding(user, payload = {}, currentDate = new
   };
 }
 
+export function normalizeTeacherOnboarding(user, payload = {}) {
+  const metadata = user?.user_metadata || {};
+  const fullName = String(
+    payload.fullName ?? metadata.full_name ?? metadata.name ?? "",
+  ).trim();
+  if (fullName.length < 2 || fullName.length > 80) {
+    throw validationError("Họ tên cần có từ 2 đến 80 ký tự.");
+  }
+  return { fullName, accountStatus: "ACTIVE" };
+}
+
 export function normalizeAccountStatus(value, fallback = "ACTIVE") {
   const normalized = String(value || "").toUpperCase();
   return ACCOUNT_STATUSES.has(normalized) ? normalized : fallback;
