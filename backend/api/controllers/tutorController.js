@@ -5,14 +5,10 @@ import {
 } from "../../services/tutor/tutorService.js";
 import { encodeSse } from "../../services/tutor/tutorRules.js";
 
-function requestedStudentId(request) {
-  return request.header("x-demo-student-id") || null;
-}
-
 export async function createSession(request, response, next) {
   try {
     const data = await createOrResumeTutorSession(
-      requestedStudentId(request),
+      request.auth.profile.id,
       request.body?.skillNodeId,
     );
     response.status(201).json({ data });
@@ -42,7 +38,7 @@ export async function streamMessage(request, response) {
 
   try {
     await streamTutorMessage({
-      requestedStudentId: requestedStudentId(request),
+      requestedStudentId: request.auth.profile.id,
       sessionId: request.params.sessionId,
       rawMessage: request.body?.message,
       emit,
@@ -69,7 +65,7 @@ export async function streamMessage(request, response) {
 export async function escalate(request, response, next) {
   try {
     const data = await escalateTutorMessage(
-      requestedStudentId(request),
+      request.auth.profile.id,
       request.params.messageId,
     );
     response.status(201).json({ data });

@@ -537,19 +537,8 @@ export async function escalateTutorMessage(requestedStudentId, messageId) {
 }
 
 export async function listTutorEscalations(requestedTeacherId) {
-  let teacherId = requestedTeacherId;
-  if (!teacherId) {
-    const teacherResult = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("role", "teacher")
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    throwDatabaseError(teacherResult.error, "resolve demo teacher");
-    teacherId = teacherResult.data?.id;
-  }
-  if (!teacherId) throw appError("DEMO_DATA_MISSING", "Không tìm thấy giáo viên demo.");
+  const teacherId = requestedTeacherId;
+  if (!teacherId) throw appError("AUTH_REQUIRED", "Authenticated teacher identity is required.");
 
   const escalationResult = await supabase
     .from("tutor_escalations")

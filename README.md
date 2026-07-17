@@ -67,7 +67,16 @@ Slice 3 is implemented as a safety-first AI Tutor workflow:
 - refusal and student-requested escalation to the teacher queue;
 - per-student daily limit, organization budget circuit, cache accounting, and `ai_usage` logs.
 
-Demo mode currently resolves the first student profile when no authenticated student ID is supplied. Supabase JWT authentication and server-side role middleware must be completed before public deployment.
+Slice 4 replaces the demo identity fallback with real authentication:
+
+- email/password and Google sign-in through Supabase Auth;
+- student registration, email confirmation, forgot/reset password, and OAuth onboarding;
+- backend-verified Supabase JWT on every student, Tutor, teacher, and Socket.IO request;
+- server-side profile bootstrap with role fixed to `student`, plus initial STEAM/EXP/streak projections;
+- role-aware protected routes and real local sign-out;
+- under-16 registration requires a guardian email and remains `PENDING` until consent is recorded.
+
+Seed data remains available for repeatable QA, but the API never selects the first student and never accepts a client-supplied student ID.
 
 ## Local Start
 
@@ -75,11 +84,10 @@ Demo mode currently resolves the first student profile when no authenticated stu
 cd backend
 npm install
 npm run seed:demo
-npm run seed:tutor
 npm start
 ```
 
-`npm run seed:tutor` sends only the three teacher-approved Loops checkpoint excerpts to OpenAI to create embeddings. Run it only after the organization has approved that external data transfer. Lexical grounding and refusal still work without embeddings.
+`npm run seed:tutor` is optional and sends only the three teacher-approved Loops checkpoint excerpts to OpenAI to create embeddings. Run it only after the organization has approved that external data transfer. Lexical grounding and refusal still work without embeddings.
 
 Keep `AI_ALLOW_APPROVED_CONTENT_EXPORT=false` until that approval is recorded. While the gate is off, no student question or approved lesson excerpt is sent to OpenAI; Tutor generation and `seed:tutor` both fail closed.
 
@@ -91,7 +99,7 @@ npm install
 npm run dev
 ```
 
-Open `http://127.0.0.1:5173/student`.
+Open `http://127.0.0.1:5173/login`. New public registrations always create a student account; teacher and admin accounts must be provisioned by an administrator.
 
 ## Documentation Map
 

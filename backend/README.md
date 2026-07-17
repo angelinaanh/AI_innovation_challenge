@@ -32,6 +32,8 @@ Node.js + Express backend for application rules, realtime events, AI orchestrati
 | Endpoint | Data source | Behavior |
 |---|---|---|
 | `GET /api/health` | process | API and realtime readiness |
+| `GET /api/auth/me` | Supabase Auth + `profiles` | verified account, role, grade, and learning-access state |
+| `POST /api/auth/bootstrap` | Supabase Auth + student projections | create a student profile after email/OAuth authentication |
 | `GET /api/student/dashboard` | Supabase | profile, STEAM, EXP, streak, badges, activity, next quest |
 | `GET /api/student/path` | Supabase + path engine | completed/current/locked nodes and explainable reasons |
 | `GET /api/student/lessons/:skillNodeId` | `PUBLISHED` lessons/questions | checkpoint lesson with answer keys removed |
@@ -39,7 +41,7 @@ Node.js + Express backend for application rules, realtime events, AI orchestrati
 | `POST /api/tutor/sessions` | Tutor sessions + published lesson | create/resume a scoped Tutor session |
 | `POST /api/tutor/sessions/:id/messages/stream` | moderation + grounded retrieval + Responses API | SSE token/citation/refusal/done events |
 | `POST /api/tutor/messages/:id/escalate` | Tutor escalation | send one unresolved question to the assigned teacher |
-| `GET /api/teacher/escalations` | Tutor escalation queue | demo teacher view without exposing unrelated chat history |
+| `GET /api/teacher/escalations` | Tutor escalation queue | teacher-scoped view without exposing unrelated chat history |
 
 The path engine is deterministic and has no LLM dependency. A Skill Node is available only when its prerequisites, STEAM thresholds, and `PUBLISHED` lesson requirement are all satisfied.
 
@@ -79,14 +81,15 @@ Quiz rules:
 - only the first correct attempt creates STEAM and EXP events;
 - using hints changes the XP reward from 80 to 50 but does not erase mastery evidence.
 
-During Slice 1 demo mode, the API uses `DEMO_STUDENT_ID` when configured or resolves the first student profile. This fallback must be removed or disabled when Supabase JWT middleware is introduced.
+Every protected REST request must carry `Authorization: Bearer <supabase_access_token>`. The backend validates that token with Supabase Auth, loads the matching `profiles` row, verifies role and account status, and derives the student ID from that verified identity. Socket.IO performs the same validation during its handshake. There is no first-student or `x-demo-student-id` fallback.
+
+Public registration cannot choose a role. `POST /api/auth/bootstrap` always creates `student`; teacher and admin profiles must be provisioned by trusted administrative code. Students under 16 are stored as `PENDING` in trusted Auth app metadata and cannot call learning APIs or connect realtime until `guardian_consent_at` activates them.
 
 ## Limitations
 
 - Backend must never bypass published-only content rules for student APIs.
 - Backend service role key is local/deployment secret only.
 - Backend should keep prompts outside code.
-- Service-role demo endpoints must not be exposed publicly before authentication and RBAC middleware are enabled.
 - Before pilot, attempt + score event + EXP projection writes should move into one Postgres RPC transaction.
 - AI budget updates should move into a transactional Postgres RPC to avoid concurrent spend races.
-- Demo teacher/student headers and Socket.IO room claims must be replaced by verified Supabase JWT roles.
+- Guardian verification delivery and the parent consent action are still pending; the current account gate is deliberately fail-closed.

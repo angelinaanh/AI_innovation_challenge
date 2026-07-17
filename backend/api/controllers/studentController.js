@@ -7,13 +7,9 @@ import {
   submitQuizAttempt,
 } from "../../services/learning/learningService.js";
 
-function requestedStudentId(request) {
-  return request.header("x-demo-student-id") || null;
-}
-
 export async function dashboard(request, response, next) {
   try {
-    const data = await getStudentDashboard(requestedStudentId(request));
+    const data = await getStudentDashboard(request.auth.profile.id);
     response.json({ data });
   } catch (error) {
     next(error);
@@ -22,7 +18,7 @@ export async function dashboard(request, response, next) {
 
 export async function path(request, response, next) {
   try {
-    const data = await getStudentPath(requestedStudentId(request));
+    const data = await getStudentPath(request.auth.profile.id);
     response.json({ data });
   } catch (error) {
     next(error);
@@ -32,7 +28,7 @@ export async function path(request, response, next) {
 export async function lesson(request, response, next) {
   try {
     const data = await getPublishedLesson(
-      requestedStudentId(request),
+      request.auth.profile.id,
       request.params.skillNodeId,
     );
     response.json({ data });
@@ -43,7 +39,7 @@ export async function lesson(request, response, next) {
 
 export async function attempt(request, response, next) {
   try {
-    const data = await submitQuizAttempt(requestedStudentId(request), request.body);
+    const data = await submitQuizAttempt(request.auth.profile.id, request.body);
     response.status(201).json({ data });
   } catch (error) {
     next(error);

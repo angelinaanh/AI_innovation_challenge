@@ -12,7 +12,7 @@ All authenticated requests include a Supabase JWT:
 Authorization: Bearer <supabase_access_token>
 ```
 
-Slice 1 currently runs in explicit demo mode while authentication UI is pending. The student endpoints accept an optional `x-demo-student-id` header, otherwise the backend uses `DEMO_STUDENT_ID` or the first student profile. This fallback is for local judging/demo only and must be replaced by the verified JWT user before public deployment.
+`GET /api/health` is public. All other implemented application endpoints derive identity from the verified JWT; client-supplied user IDs and demo identity headers are ignored/not supported.
 
 ## 1. Error Shape
 
@@ -30,11 +30,14 @@ Slice 1 currently runs in explicit demo mode while authentication UI is pending.
 
 | Method | Path | Role | Purpose |
 |---|---|---|---|
-| GET | `/me` | all | Current profile, role, org, consent state |
-| PATCH | `/me` | all | Update own profile fields |
-| POST | `/guardian-consent` | student/parent | Record guardian consent |
+| GET | `/auth/me` | authenticated profile | Current account, role, grade, status, learning access |
+| POST | `/auth/bootstrap` | authenticated user without profile | Create student profile and zero-value projections |
+| PATCH | `/me` | all | Planned: update allowed own profile fields |
+| POST | `/guardian-consent` | student/parent | Planned: verify and record guardian consent |
 
-Supabase Auth handles email/password and OAuth. Backend enriches with `profiles`.
+Supabase Auth handles email/password, email confirmation, Google OAuth, refresh, sign-out, and password recovery. The browser never sends role or account status as trusted data. The backend hardcodes self-registration to `student`, stores status/date-of-birth/guardian email in service-written Auth app metadata, and enriches the session with `profiles`.
+
+Relevant auth errors include `AUTH_REQUIRED` (401), `AUTH_INVALID` (401), `AUTH_FORBIDDEN` (403), `PROFILE_ONBOARDING_REQUIRED` (409), `GUARDIAN_CONSENT_REQUIRED` (403), and `ACCOUNT_INACTIVE` (403).
 
 ## 3. Student Learning
 
@@ -148,6 +151,8 @@ Tutor response metadata:
 ## 7. Realtime Events
 
 Socket.IO events:
+
+The handshake requires `auth.accessToken`. Rooms are derived only from the verified profile, and `PENDING`, `SUSPENDED`, or `EXPIRED` accounts are rejected before connection.
 
 | Event | Room | Payload |
 |---|---|---|

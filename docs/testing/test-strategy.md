@@ -9,6 +9,8 @@ Test the workflows that carry the most product risk, AI risk, and demo risk.
 | Area | Test |
 |---|---|
 | Auth/RBAC | student cannot access teacher/admin endpoints |
+| Account bootstrap | self-registration can create only `student` and initializes projections |
+| Guardian gate | under-16 account remains `PENDING` until consent |
 | Published-only content | student cannot fetch DRAFT lessons |
 | Score events | normal learning cannot lower STEAM score |
 | Path engine | recommendations include correct unlock reasons |
@@ -29,7 +31,9 @@ Use focused component tests for:
 - teacher publish toolbar requires explicit action;
 - admin cost warning state.
 
-Browser smoke tests must load `http://localhost:5173/` from a clean navigation, verify the wildcard route reaches `/student`, confirm `#root` has rendered children, and assert that the console has no error. After dependency or Vite config changes, `/src/main.jsx` must use `react/jsx-dev-runtime`; a stale classic transform that references an undefined global `React` is a white-screen regression.
+Browser smoke tests must load `http://localhost:5173/` from a clean signed-out navigation, verify it reaches `/login`, confirm `#root` has rendered children, and assert that the console has no error. After dependency or Vite config changes, `/src/main.jsx` must use `react/jsx-dev-runtime`; a stale classic transform that references an undefined global `React` is a white-screen regression.
+
+Authentication browser smoke tests start signed out at `/login`, verify `/register` has no role selector, confirm an under-16 date reveals required guardian email, sign in with the controlled QA account, wait for authenticated dashboard data/realtime, and sign out back to login. Do not create arbitrary live users during automated QA.
 
 ## 4. Backend Tests
 
@@ -113,3 +117,14 @@ Slice 3 verification adds:
 - staged-secret scan excluding ignored local environment files.
 
 The approved-source embedding and generated-answer E2E test is intentionally blocked until external transfer of published lesson excerpts is explicitly approved.
+
+Slice 4 authentication verification adds:
+
+- backend auth-rule tests for the age boundary, guardian requirement, status normalization, and learning access;
+- frontend tests for the same under-16 threshold and open-redirect protection;
+- public health endpoint returns 200 while missing/invalid JWT requests return 401;
+- real Supabase login loads the correct student profile, 1,470 XP, learning path, and authenticated Socket.IO connection;
+- real local sign-out returns the protected route to login;
+- desktop and 390x844 login/register layout checks with no horizontal overflow or console error;
+- under-16 registration reveals guardian email and recovery URL without a session cannot update a password;
+- production frontend build and staged-secret scan.

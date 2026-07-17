@@ -1,32 +1,64 @@
+import { supabase } from "./supabaseClient.js";
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000/api";
 
-export async function apiGet(path, signal) {
+export class ApiError extends Error {
+  constructor(message, { code = "API_ERROR", status = 500, requestId = null } = {}) {
+    super(message);
+    this.name = "ApiError";
+    this.code = code;
+    this.status = status;
+    this.requestId = requestId;
+  }
+}
+
+async function accessTokenHeaders(accessToken, headers = {}) {
+  let token = accessToken;
+  if (!token) {
+    const { data } = await supabase.auth.getSession();
+    token = data.session?.access_token;
+  }
+  return {
+    ...headers,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
+
+function apiError(response, payload, fallback) {
+  return new ApiError(payload.error?.message || fallback, {
+    code: payload.error?.code,
+    status: response.status,
+    requestId: payload.error?.requestId,
+  });
+}
+
+export async function apiGet(path, signal, accessToken) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: { Accept: "application/json" },
+    headers: await accessTokenHeaders(accessToken, { Accept: "application/json" }),
     signal,
   });
   const payload = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(payload.error?.message || "Không thể kết nối với EduOne.");
+    throw apiError(response, payload, "Không thể kết nối với EduOne.");
   }
   return payload.data;
 }
 
-export async function apiPost(path, body, signal) {
+export async function apiPost(path, body, signal, accessToken) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
-    headers: {
+    headers: await accessTokenHeaders(accessToken, {
       Accept: "application/json",
       "Content-Type": "application/json",
-    },
+    }),
     body: JSON.stringify(body),
     signal,
   });
   const payload = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(payload.error?.message || "Không thể gửi dữ liệu tới EduOne.");
+    throw apiError(response, payload, "Không thể gửi dữ liệu tới EduOne.");
   }
   return payload.data;
 }
@@ -34,17 +66,17 @@ export async function apiPost(path, body, signal) {
 export async function streamPost(path, body, { onEvent, signal } = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
-    headers: {
+    headers: await accessTokenHeaders(null, {
       Accept: "text/event-stream",
       "Content-Type": "application/json",
-    },
+    }),
     body: JSON.stringify(body),
     signal,
   });
 
   if (!response.ok || !response.body) {
     const payload = await response.json().catch(() => ({}));
-    throw new Error(payload.error?.message || "Không thể kết nối với AI Tutor.");
+    throw apiError(response, payload, "Không thể kết nối với AI Tutor.");
   }
 
   const reader = response.body.getReader();
@@ -73,6 +105,13 @@ export async function streamPost(path, body, { onEvent, signal } = {}) {
 }
 
 export const api = {
+  getMe: (signal, accessToken) => apiGet("/auth/me", signal, accessToken),
+  bootstrapAccount: (profile, signal, accessToken) => apiPost(
+    "/auth/bootstrap",
+    profile,
+    signal,
+    accessToken,
+  ),
   getDashboard: (signal) => apiGet("/student/dashboard", signal),
   getPath: (signal) => apiGet("/student/path", signal),
   getLesson: (skillNodeId, signal) => apiGet(

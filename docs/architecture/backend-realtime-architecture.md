@@ -131,13 +131,16 @@ Implemented:
 - AI Gateway with model aliases, moderation, usage/cost accounting, daily limits, and budget circuit.
 - Tutor session persistence, approved-source hybrid retrieval, Responses API generation, safe SSE delivery, and escalation queue.
 - Teacher-scoped `tutor.escalated` Socket.IO event without raw conversation content.
+- Supabase access-token verification for REST and Socket.IO.
+- Server-side profile, role, and active-account middleware on every protected route.
+- Student-only profile bootstrap with initial STEAM/EXP/streak projections.
+- Guardian-pending and inactive account gates shared by REST and realtime.
+- Removal of all first-student and client-supplied identity fallbacks.
 
-Pending before public deployment:
+Pending before pilot scale:
 
-- Supabase JWT verification and `requireRole` middleware;
-- removal of first-student demo fallback;
 - production structured logger and rate limiting;
-- authenticated Socket.IO rooms.
 - transactional Postgres RPC for attempt + score + EXP writes before pilot scale.
 - transactional Postgres RPC for AI usage + daily budget projection updates.
-- verified JWT Socket.IO room claims; current handshake IDs are local-demo scaffolding only.
+- guardian consent delivery/verification and parent-link workflow;
+- administrator service for teacher/admin account provisioning.

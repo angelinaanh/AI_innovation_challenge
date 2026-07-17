@@ -4,6 +4,7 @@ import {
   ChevronDown,
   Flame,
   LayoutDashboard,
+  LogOut,
   Map,
   Menu,
   Radio,
@@ -11,6 +12,7 @@ import {
 } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 
+import { useAuth } from "../../app/AuthProvider.jsx";
 import { useStudentData } from "../../app/StudentDataProvider.jsx";
 import { Brand } from "../ui/Brand.jsx";
 
@@ -18,6 +20,12 @@ const navItems = [
   { to: "/student", label: "Tổng quan", icon: LayoutDashboard, end: true },
   { to: "/student/path", label: "Lộ trình học", icon: Map },
 ];
+
+const gradeBandLabels = {
+  primary: "Tiểu học",
+  secondary: "THCS",
+  high_school: "THPT",
+};
 
 function Navigation({ onNavigate }) {
   return (
@@ -44,6 +52,7 @@ export function StudentShell() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [activePanel, setActivePanel] = useState(null);
   const { dashboard, realtimeStatus } = useStudentData();
+  const { account, signOut } = useAuth();
   const gamification = dashboard?.gamification;
   const student = dashboard?.student;
 
@@ -160,9 +169,9 @@ export function StudentShell() {
                 aria-expanded={activePanel === "profile"}
                 onClick={() => setActivePanel((current) => current === "profile" ? null : "profile")}
               >
-                <div className="avatar">{student?.fullName?.charAt(0) || "M"}</div>
+                <div className="avatar">{student?.fullName?.charAt(0) || account?.fullName?.charAt(0) || "E"}</div>
                 <div className="hidden text-left xl:block">
-                  <div className="max-w-32 truncate text-sm font-extrabold">{student?.fullName || "Đang tải"}</div>
+                  <div className="max-w-32 truncate text-sm font-extrabold">{student?.fullName || account?.fullName || "Đang tải"}</div>
                   <div className="text-xs text-slate-500">Học sinh</div>
                 </div>
                 <ChevronDown className="hidden text-slate-400 xl:block" size={15} />
@@ -170,11 +179,17 @@ export function StudentShell() {
               {activePanel === "profile" && (
                 <div className="header-popover">
                   <p className="text-xs font-black uppercase text-slate-400">Hồ sơ học tập</p>
-                  <p className="mt-3 text-sm font-extrabold text-slate-900">{student?.fullName || "Học sinh EduOne"}</p>
-                  <p className="mt-1 text-xs text-slate-500">Khối THCS · Tài khoản demo</p>
-                  <div className="mt-3 border-t border-slate-100 pt-3 text-xs font-bold text-emerald-700">
-                    Dữ liệu đang đồng bộ với Supabase
-                  </div>
+                  <p className="mt-3 text-sm font-extrabold text-slate-900">{student?.fullName || account?.fullName || "Học sinh EduOne"}</p>
+                  <p className="mt-1 truncate text-xs text-slate-500">{account?.email}</p>
+                  <p className="mt-1 text-xs font-bold text-emerald-700">{gradeBandLabels[account?.gradeBand] || "Hồ sơ học sinh"}</p>
+                  <button
+                    type="button"
+                    className="mt-4 flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-slate-200 text-xs font-black text-slate-700 hover:bg-slate-50"
+                    onClick={signOut}
+                  >
+                    <LogOut size={16} />
+                    Đăng xuất
+                  </button>
                 </div>
               )}
             </div>

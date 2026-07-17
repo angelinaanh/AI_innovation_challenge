@@ -61,9 +61,9 @@ Nguồn: `FR0`, `F-101 -> F-107`, `P-01`, `R1-R4`.
 
 | Feature | MVP | UI | Backend | Database | Acceptance criteria |
 |---|---:|---|---|---|---|
-| Student login/demo profile | Must | Login/demo switch | `GET /me` | `profiles` | Có role và grade_band |
+| Student login + register | Must | Login/register/recovery/onboarding | `GET /auth/me`, `POST /auth/bootstrap` | Supabase Auth + `profiles` | JWT thật, role student cố định, có grade_band |
 | RBAC server-side | Must | Route guard chỉ để UX | `requireAuth`, `requireRole` | RLS + profiles.role | Student không gọi được teacher/admin API |
-| Guardian consent | Should for real pilot | Consent state banner | consent middleware | `guardian_consent_at` | Dưới 16 tuổi chưa consent không vào học thật |
+| Guardian consent | Must gate / workflow next | Consent state screen | active-account middleware | `guardian_consent_at` + trusted app metadata | Dưới 16 tuổi ở `PENDING`, không vào REST/realtime học tập |
 | Parent link | P2 | Invite code | parent endpoints | `parent_student_links` | Hoãn khỏi MVP demo nếu core chưa xong |
 
 Điểm cần giữ: frontend không quyết định quyền thật; backend và RLS mới là nguồn chặn.
@@ -332,13 +332,12 @@ MVP đạt yêu cầu khi:
 ## 8. Thứ tự code khuyến nghị
 
 1. Scaffold frontend/backend + shared contracts.
-2. Seed demo data cho Scratch 7 Skill Nodes.
-3. Student Dashboard + Path Engine mock/data-backed.
-4. Lesson Player + Attempts + EXP.
-5. Tutor drawer + mock RAG response + refusal/escalation.
-6. Content Studio review/publish with mock AI generation.
-7. Replace mock AI/RAG with real AI Gateway + pgvector.
+2. Supabase Auth + profile bootstrap + server RBAC.
+3. Seed QA content cho Scratch 7 Skill Nodes.
+4. Student Dashboard + Path Engine data-backed.
+5. Lesson Player + Attempts + EXP.
+6. Tutor drawer + grounded retrieval + refusal/escalation.
+7. Content Studio review/publish with AI generation.
 8. Teacher heatmap + Admin cost.
 
 Điểm tinh tế: bắt đầu bằng mock có cấu trúc giống thật, không hardcode lung tung. Mỗi mock response phải giống contract API cuối cùng để thay backend thật không vỡ UI.
-

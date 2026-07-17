@@ -111,3 +111,22 @@ Decision:
 Reason:
 
 This proves that EduOne's Tutor is a bounded learning workflow with evidence and a human exit, rather than an unrestricted chatbot.
+
+## 2026-07-18 — Slice 4 Real Authentication & RBAC
+
+Prompt:
+
+> The web system is still a demo and has no login/register. Make it practical.
+
+Decision:
+
+- Replaced first-student/demo-header identity with Supabase Auth sessions and backend-validated JWT.
+- Added email/password and Google login, student registration, email confirmation callback, onboarding, forgot/reset password, and account-state screens.
+- Hardcoded self-registration to student; teacher/admin remain administrator-provisioned per F-103.
+- Added server-side role and active-account middleware to REST and Socket.IO.
+- Added fail-closed guardian pending behavior for students under 16, matching F-102 while consent delivery remains the next security slice.
+- Verified the real QA login loads the correct Supabase dashboard and realtime session, then signs out safely.
+
+Reason:
+
+This converts the existing learning workflow from a shared seeded identity into a user-owned session with enforceable server boundaries, while preserving the database and approved-content safety rules.

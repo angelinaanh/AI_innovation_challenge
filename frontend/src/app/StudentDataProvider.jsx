@@ -2,10 +2,12 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 
 import { api } from "../lib/apiClient.js";
 import { connectRealtime } from "../lib/realtimeClient.js";
+import { useAuth } from "./AuthProvider.jsx";
 
 const StudentDataContext = createContext(null);
 
 export function StudentDataProvider({ children }) {
+  const { session } = useAuth();
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -35,12 +37,13 @@ export function StudentDataProvider({ children }) {
   }, [loadDashboard]);
 
   useEffect(() => {
-    const socket = connectRealtime();
+    if (!session?.access_token) return undefined;
+    const socket = connectRealtime(session.access_token);
     socket.on("connect", () => setRealtimeStatus("connected"));
     socket.on("disconnect", () => setRealtimeStatus("offline"));
     socket.on("connect_error", () => setRealtimeStatus("offline"));
     return () => socket.close();
-  }, []);
+  }, [session?.access_token]);
 
   const value = useMemo(
     () => ({

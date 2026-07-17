@@ -3,9 +3,16 @@ import crypto from "node:crypto";
 import cors from "cors";
 import express from "express";
 
+import { authRouter } from "./api/routes/authRoutes.js";
 import { studentRouter } from "./api/routes/studentRoutes.js";
 import { teacherRouter } from "./api/routes/teacherRoutes.js";
 import { tutorRouter } from "./api/routes/tutorRoutes.js";
+import {
+  authenticateRequest,
+  requireActiveAccount,
+  requireProfile,
+  requireRole,
+} from "./middleware/auth.js";
 import { errorHandler, notFound } from "./middleware/errorHandler.js";
 import { env } from "./utils/env.js";
 
@@ -40,9 +47,31 @@ export function createApp() {
     });
   });
 
-  app.use("/api/student", studentRouter);
-  app.use("/api/tutor", tutorRouter);
-  app.use("/api/teacher", teacherRouter);
+  app.use("/api/auth", authRouter);
+  app.use(
+    "/api/student",
+    authenticateRequest,
+    requireProfile,
+    requireRole("student"),
+    requireActiveAccount,
+    studentRouter,
+  );
+  app.use(
+    "/api/tutor",
+    authenticateRequest,
+    requireProfile,
+    requireRole("student"),
+    requireActiveAccount,
+    tutorRouter,
+  );
+  app.use(
+    "/api/teacher",
+    authenticateRequest,
+    requireProfile,
+    requireRole("teacher"),
+    requireActiveAccount,
+    teacherRouter,
+  );
   app.use(notFound);
   app.use(errorHandler);
 

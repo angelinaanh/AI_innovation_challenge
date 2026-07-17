@@ -42,7 +42,14 @@ frontend/
 
 | Route | Role | Screen |
 |---|---|---|
-| `/login` | public | Auth |
+| `/login` | public | Email/password and Google login |
+| `/register` | public | Student registration only |
+| `/forgot-password` | public | Password recovery request |
+| `/reset-password` | recovery session | New password |
+| `/auth/callback` | public callback | Email/OAuth completion |
+| `/auth-error` | authenticated | Recoverable account-service error |
+| `/onboarding` | authenticated, no profile | Student profile bootstrap |
+| `/account-pending` | authenticated | Guardian consent pending |
 | `/student` | student | Dashboard |
 | `/student/path` | student | Learning Path |
 | `/student/lessons/:skillNodeId` | student | Lesson Player |
@@ -56,6 +63,7 @@ frontend/
 ## 4. State Strategy
 
 - Use Supabase Auth session as the source of identity.
+- Use `AuthProvider` to hydrate the trusted application account from `/api/auth/me`.
 - Use server responses as the source of application state.
 - Keep local UI state small: selected tab, modal state, draft form fields.
 - Add React Query later if API state grows; do not over-engineer on day one.
@@ -103,14 +111,22 @@ Frontend must not:
 - call AI providers directly;
 - store service role keys.
 
-## 8. First Build Slice
+## 8. Authentication Boundary
 
-Build in this order:
+- The browser may hold only the Supabase publishable key and short-lived user session.
+- API and Socket.IO clients attach the access token automatically.
+- Public registration never exposes a role selector and always bootstraps `student` on the backend.
+- A missing profile routes to onboarding; `PENDING` and inactive statuses route to blocking account-state screens.
+- Local sign-out clears the browser session and protected routes immediately return to login.
+- Frontend role guards are navigation UX only; Express repeats every role/status decision.
 
-1. Shell layout, role-aware nav, auth placeholder.
-2. Student dashboard with mock/Supabase-backed data.
+## 9. Build Status
+
+Implemented:
+
+1. Real Supabase Auth, recovery, onboarding, protected routes, and account states.
+2. Student dashboard backed by authenticated Supabase data.
 3. Learning path with explainable reasons.
-4. Lesson player and Tutor drawer.
-5. Teacher Studio review screen.
-6. Admin cost snapshot.
+4. Lesson Player and Tutor drawer.
 
+Next role-facing slices are Teacher Studio, parent summary/linking, and Admin cost/user controls.

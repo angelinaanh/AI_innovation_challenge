@@ -27,7 +27,6 @@ export const env = Object.freeze({
   ],
   supabaseUrl: process.env.SUPABASE_URL,
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-  demoStudentId: process.env.DEMO_STUDENT_ID || null,
   openAiApiKey: process.env.OPENAI_API_KEY || null,
   openAiModels: Object.freeze({
     contentHigh: process.env.OPENAI_CONTENT_HIGH_MODEL || "gpt-5.6-sol",

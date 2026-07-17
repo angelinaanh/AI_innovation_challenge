@@ -12,7 +12,7 @@ Do not build every module at once. Build one complete loop.
 
 | Area | MVP behavior |
 |---|---|
-| Auth/Roles | student, teacher, admin demo accounts |
+| Auth/Roles | real student sign-up/login, admin-provisioned staff, JWT + server RBAC |
 | Student Dashboard | STEAM radar, next quest, XP/streak/badges |
 | Path Engine | rule-based next Skill Node with reason |
 | Lesson Player | published checkpoint lesson, quiz, hints |
@@ -24,7 +24,6 @@ Do not build every module at once. Build one complete loop.
 
 ## 3. Should Have
 
-- Supabase Auth connected end-to-end.
 - Real pgvector retrieval.
 - Content job progress via Socket.IO.
 - Edit rate and human minutes calculation.
@@ -73,8 +72,9 @@ Do not build every module at once. Build one complete loop.
 
 | Slice | Status | Proof |
 |---|---|---|
+| Slice 0 — Auth + RBAC foundation | Complete | Supabase login/register/recovery, JWT middleware, role/account gates, authenticated realtime |
 | Slice 1 — Student Dashboard + Path | Complete | Supabase-backed dashboard, 7-node path, deterministic explanations, responsive QA |
 | Slice 2 — Lesson Player + Quiz + Hint | Complete | 3 checkpoints, layered hints, server grading, first-correct rewards, path refresh |
 | Slice 3 — AI Tutor + Escalation | In progress | drawer, refusal, persistence, SSE, escalation, usage controls complete; approved-source provider E2E pending explicit transfer approval |
-| Slice 4 — Content Studio | Planned | review/publish workflow documented |
-| Slice 5 — Teacher/Admin proof panels | Planned | analytics and cost contracts documented |
+| Slice 5 — Content Studio | Planned | review/publish workflow documented |
+| Slice 6 — Teacher/Admin proof panels | Planned | analytics and cost contracts documented |
