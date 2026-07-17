@@ -86,6 +86,13 @@ Slice 5 makes the AI Tutor intervene beyond chat with interactive practice:
 - a correct item can be sent to the teacher, who reviews it and — for multiple choice — seeds a `DRAFT` question in the real question bank (a human-in-the-loop path from Tutor practice to reviewed content);
 - new tables `tutor_exercises` and `tutor_exercise_attempts` (migration `database/migrations/0002_tutor_interactive_exercises.sql`), answer keys kept server-side.
 
+The AI Tutor chat itself is deeper than one-shot Q&A:
+
+- **agentic** — after a grounded answer it proactively offers a matching practice exercise (`exercise_offer`), and when a student asks for the answer it nudges toward practice instead;
+- **personalised** — answers use the student's STEAM profile and what they recently got wrong in the node (best-effort, never blocking);
+- **"Vì sao mình sai?"** — a wrong exercise offers a one-click grounded explanation back in the chat;
+- **richer rendering** — inline `code`/**bold** (e.g. Scratch block names) and expandable source snippets on each citation.
+
 Live exercise generation requires `OPENAI_API_KEY` and `AI_ALLOW_APPROVED_CONTENT_EXPORT=true`; with the gate off it fails closed like the rest of the Tutor. Apply migration `0002` to the Supabase project before use.
 
 ## Local Start

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CheckCircle2, LoaderCircle, PartyPopper, Send, Sparkles, XCircle } from "lucide-react";
+import { CheckCircle2, HelpCircle, LoaderCircle, PartyPopper, Send, Sparkles, XCircle } from "lucide-react";
 
 import { exerciseApi } from "../../../lib/exerciseApi.js";
 import {
@@ -30,7 +30,7 @@ function isAnswerable(exercise, response) {
   return exercise.blanks.every((blank) => String(response.answers[blank.id] || "").trim().length > 0);
 }
 
-export function ExerciseCard({ exercise }) {
+export function ExerciseCard({ exercise, onAskTutor }) {
   const [response, setResponse] = useState(() => initialResponse(exercise));
   const [result, setResult] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -103,6 +103,14 @@ export function ExerciseCard({ exercise }) {
             {result.award && <span className="ex-exp-chip"><PartyPopper size={13} /> +{result.award.xp} EXP</span>}
           </div>
           {result.explanation && <p className="mt-2 text-sm leading-6">{result.explanation}</p>}
+          {!result.isCorrect && onAskTutor && (
+            <button
+              className="secondary-button mt-3 w-full"
+              onClick={() => onAskTutor(`Vì sao mình chưa trả lời đúng câu: "${exercise.prompt}"? Giải thích dựa trên bài học.`)}
+            >
+              <HelpCircle size={15} /> Vì sao mình sai?
+            </button>
+          )}
           {result.canPromote && !promoted && (
             <button className="secondary-button mt-3 w-full" onClick={promote} disabled={busy}>
               <Send size={15} /> Gửi giáo viên duyệt thành câu hỏi thật

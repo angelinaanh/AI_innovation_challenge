@@ -153,3 +153,12 @@ Generation constraints (same trust model as the grounded answer):
 Safety separation: exercises are formative. Grading (`gradeExercise`, deterministic, unit-tested) awards small effort EXP through `exp_events` and never writes `score_events` or unlocks content. A correct item can be promoted to the teacher; approving an MCQ seeds a `DRAFT` question in the bank — a human-in-the-loop path from AI practice to reviewed content. Prompt: `ai/prompts/exercise_generator.md`.
 
 Evaluation additions: generated exercises must (a) be answerable from the cited chunks, (b) pass schema validation, (c) never render an answer key, (d) grade a fully-correct response as correct and a wrong one as incorrect.
+
+## 10. Deeper Tutor chat (Slice 5+)
+
+The grounded chat gains four upgrades that keep the same safety model:
+
+- **Agentic offers** — after any real answer the Tutor emits an `exercise_offer` SSE event with a rotated exercise type; on answer-seeking it steers to practice instead of the answer. Deterministic (no extra model call).
+- **Personalisation** — the answer prompt includes a best-effort learning context (STEAM profile + the student's recent wrong attempts in the current node). It never blocks or leaks beyond the student's own data.
+- **Ask-why loop** — a wrong exercise sends a grounded "vì sao mình sai" question referencing the item prompt, answered by the normal cited Tutor path.
+- **Richer messages** — citations carry a `snippet` (expandable in the UI) and answers render inline `code`/**bold**. No new external calls; still moderated, cited, and refusable.

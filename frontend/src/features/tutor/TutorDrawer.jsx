@@ -136,6 +136,9 @@ export function TutorDrawer({ skillNodeId, skillNodeName }) {
               streaming: false,
             }));
           }
+          if (event === "exercise_offer") {
+            updateAssistant(assistantTempId, (message) => ({ ...message, offer: data }));
+          }
           if (event === "error") {
             setError(data.message);
             updateAssistant(assistantTempId, (message) => ({
@@ -252,8 +255,8 @@ export function TutorDrawer({ skillNodeId, skillNodeName }) {
               )}
               {messages.map((message) => (
                 message.kind === "exercise"
-                  ? <ExerciseCard key={message.id} exercise={message.exercise} />
-                  : <TutorMessage key={message.id} message={message} onEscalate={escalate} />
+                  ? <ExerciseCard key={message.id} exercise={message.exercise} onAskTutor={sendMessage} />
+                  : <TutorMessage key={message.id} message={message} onEscalate={escalate} onPractice={generateExercise} />
               ))}
               <div ref={endRef} />
             </div>

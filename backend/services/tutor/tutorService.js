@@ -56,6 +56,28 @@ async function loadStudentProfile(studentId) {
   return result.data;
 }
 
+// Best-effort learning context so the Tutor can personalise (STEAM profile +
+// what the student recently got wrong in this node). Never throws; personalise
+// is optional and must not break an answer.
+async function loadStudentLearningContext(studentId, skillNodeId) {
+  const [scores, wrong] = await Promise.all([
+    supabase.from("steam_profiles").select("s,t,e,a,m").eq("user_id", studentId).maybeSingle(),
+    supabase.from("attempts")
+      .select("is_correct,questions!inner(body,skill_node_id)")
+      .eq("user_id", studentId).eq("is_correct", false)
+      .eq("questions.skill_node_id", skillNodeId)
+      .order("created_at", { ascending: false }).limit(3),
+  ]);
+  const parts = [];
+  const s = scores.data;
+  if (s) parts.push(`Điểm STEAM hiện tại — S:${s.s} T:${s.t} E:${s.e} A:${s.a} M:${s.m}.`);
+  const misses = (wrong.data || [])
+    .map((a) => (Array.isArray(a.questions) ? a.questions[0] : a.questions)?.body)
+    .filter(Boolean);
+  if (misses.length) parts.push(`Gần đây em trả lời chưa đúng ở: ${misses.join(" | ")}.`);
+  return parts.join(" ");
+}
+
 async function loadOwnedSession(studentId, sessionId) {
   const result = await supabase
     .from("tutor_sessions")
@@ -437,8 +459,12 @@ export async function streamTutorMessage({ requestedStudentId, sessionId, rawMes
   const approvedContext = retrieval.sources
     .map((source, index) => `[Nguồn ${index + 1}: ${source.title}]\n${source.content}`)
     .join("\n\n");
+  const learningContext = await loadStudentLearningContext(studentId, session.skill_node_id);
   const modelInput = [
     `Chế độ: ${mode}`,
+    learningContext
+      ? `Bối cảnh học sinh (dùng để cá nhân hoá cách giải thích; đừng đọc lại như số liệu):\n${learningContext}`
+      : "",
     recentHistory ? `Hội thoại gần đây:\n${recentHistory}` : "",
     `Nguồn đã duyệt:\n${approvedContext}`,
     `Câu hỏi hiện tại:\n${question}`,
@@ -495,7 +521,10 @@ export async function streamTutorMessage({ requestedStudentId, sessionId, rawMes
     return;
   }
 
-  const citations = retrieval.sources.map(({ content: _content, ...citation }) => citation);
+  const citations = retrieval.sources.map(({ content, ...citation }) => ({
+    ...citation,
+    snippet: String(content || "").slice(0, 180),
+  }));
   const assistantMessage = await saveMessage({
     sessionId: session.id,
     role: "assistant",
@@ -512,6 +541,17 @@ export async function streamTutorMessage({ requestedStudentId, sessionId, rawMes
     citations,
     emit,
     cached: false,
+  });
+
+  // Agentic nudge: after a real answer, proactively offer a grounded practice
+  // exercise. Deterministic type rotation — no extra model call.
+  const OFFER_TYPES = ["mcq", "matching", "ordering", "cloze"];
+  const answeredSoFar = previousMessages.filter((message) => message.role === "assistant").length;
+  emit("exercise_offer", {
+    type: OFFER_TYPES[answeredSoFar % OFFER_TYPES.length],
+    reason: mode === "socratic"
+      ? "Thay vì xem đáp án, thử một bài luyện để tự rút ra nhé."
+      : "Thử một bài luyện nhỏ để chắc kiến thức vừa học.",
   });
 }
 
