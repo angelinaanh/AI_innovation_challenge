@@ -6,6 +6,8 @@ const supabase = createClient(env.supabaseUrl, env.supabaseServiceRoleKey, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
+const shouldResetProgress = process.argv.includes("--reset-progress");
+
 const IDS = {
   organization: "00000000-0000-0000-0000-000000000001",
   skills: {
@@ -48,6 +50,46 @@ function daysAgo(days) {
   value.setHours(10, 0, 0, 0);
   value.setDate(value.getDate() - days);
   return value.toISOString();
+}
+
+function vietnamDate(date = new Date()) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+async function resetDemoProgress(studentId) {
+  const loopsQuestionId = "30000000-0000-4000-8000-000000000003";
+  const attemptsResult = await supabase
+    .from("attempts")
+    .select("id")
+    .eq("user_id", studentId)
+    .eq("question_id", loopsQuestionId);
+  const attempts = assertResult(attemptsResult, "Find demo Loops attempts") || [];
+
+  if (attempts.length > 0) {
+    const attemptIds = attempts.map((attempt) => attempt.id);
+    assertResult(
+      await supabase.from("score_events").delete().in("source_id", attemptIds),
+      "Reset demo quiz score events",
+    );
+    assertResult(
+      await supabase.from("attempts").delete().in("id", attemptIds),
+      "Reset demo Loops attempts",
+    );
+  }
+
+  assertResult(
+    await supabase
+      .from("exp_events")
+      .delete()
+      .eq("user_id", studentId)
+      .eq("action_type", "quiz_mastery_reward"),
+    "Reset demo quiz EXP events",
+  );
 }
 
 async function seed() {
@@ -96,6 +138,10 @@ async function seed() {
     ]),
     "Upsert demo profiles",
   );
+
+  if (shouldResetProgress) {
+    await resetDemoProgress(student.id);
+  }
 
   const skillNodes = [
     {
@@ -221,7 +267,7 @@ async function seed() {
       user_id: student.id,
       current_streak: 5,
       longest_streak: 9,
-      last_active_date: new Date().toISOString().slice(0, 10),
+      last_active_date: vietnamDate(),
     }),
     "Upsert streak",
   );
@@ -258,21 +304,97 @@ async function seed() {
     "Award demo badges",
   );
 
+  const loopLessonContent = {
+    title: "Vòng lặp kỳ diệu",
+    summary: "Biến những chuỗi lệnh lặp lại thành chương trình ngắn gọn, dễ đọc và dễ sửa.",
+    estimatedMinutes: 24,
+    learningObjectives: [
+      "Nhận ra mẫu hành động đang lặp lại",
+      "Chọn đúng repeat hoặc forever",
+      "Tạo hoạt ảnh bằng vòng lặp hữu hạn",
+    ],
+    checkpoints: [
+      {
+        id: "loops-pattern",
+        title: "Tìm mẫu đang lặp",
+        type: "concept",
+        durationMinutes: 6,
+        eyebrow: "Checkpoint 1",
+        body: "Khi cùng một hành động xuất hiện nhiều lần, chương trình đang có một mẫu lặp. Thay vì kéo sáu khối di chuyển giống nhau, ta có thể mô tả số lần lặp và hành động bên trong.",
+        blocks: ["di chuyển 10 bước", "di chuyển 10 bước", "di chuyển 10 bước"],
+        takeaway: "Mẫu lặp = cùng hành động + số lần thực hiện.",
+      },
+      {
+        id: "loops-repeat",
+        title: "Làm chủ khối repeat",
+        type: "guided_practice",
+        durationMinutes: 8,
+        eyebrow: "Checkpoint 2",
+        body: "Khối repeat chạy các lệnh bên trong đúng số lần đã chọn rồi dừng. Đây là lựa chọn phù hợp khi ta biết trước nhân vật cần lặp bao nhiêu lần.",
+        blocks: ["lặp lại 6 lần", "di chuyển 10 bước", "xoay 15 độ"],
+        takeaway: "repeat có điểm dừng; forever tiếp tục cho tới khi chương trình dừng.",
+      },
+      {
+        id: "loops-build",
+        title: "Xây hoạt ảnh chuyển động",
+        type: "challenge",
+        durationMinutes: 10,
+        eyebrow: "Checkpoint 3",
+        body: "Hãy tưởng tượng nhân vật cần tiến lên và xoay nhẹ sáu lần để tạo một cung tròn. Xác định khối nào nằm bên ngoài, khối nào nằm bên trong vòng lặp.",
+        blocks: ["khi bấm cờ xanh", "lặp lại 6 lần", "di chuyển 10 bước", "xoay 15 độ"],
+        takeaway: "Chỉ đặt các hành động cần lặp vào bên trong khối repeat.",
+      },
+    ],
+    quizHints: [
+      "Tìm phương án có ghi rõ số lần thực hiện.",
+      "Khối forever không tự dừng sau 6 lần.",
+      "Đặt khối di chuyển vào bên trong repeat 6 để không phải sao chép lệnh.",
+    ],
+  };
+
   const lessons = skillNodes.map((node, index) => ({
     id: `20000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
     skill_node_id: node.id,
     status: "PUBLISHED",
     difficulty: index < 3 ? "basic" : "advanced",
-    content: {
-      title: node.name,
-      summary: node.description,
-      estimatedMinutes: 18 + index * 2,
-      checkpoints: [
-        { id: `${node.id}-observe`, title: "Quan sát", type: "concept" },
-        { id: `${node.id}-build`, title: "Thử thách", type: "practice" },
-        { id: `${node.id}-reflect`, title: "Tự đánh giá", type: "reflection" },
-      ],
-    },
+    content: node.id === IDS.skills.loops
+      ? loopLessonContent
+      : {
+          title: node.name,
+          summary: node.description,
+          estimatedMinutes: 18 + index * 2,
+          learningObjectives: ["Hiểu khái niệm chính", "Áp dụng vào một thử thách Scratch"],
+          checkpoints: [
+            {
+              id: `${node.id}-observe`,
+              title: "Quan sát",
+              type: "concept",
+              durationMinutes: 6,
+              eyebrow: "Checkpoint 1",
+              body: `Quan sát ví dụ về ${node.name.toLowerCase()} và tìm những khối lệnh tạo nên hành vi chính.`,
+              takeaway: "Gọi tên được khái niệm trước khi bắt đầu xây dựng.",
+            },
+            {
+              id: `${node.id}-build`,
+              title: "Thử thách",
+              type: "practice",
+              durationMinutes: 9,
+              eyebrow: "Checkpoint 2",
+              body: `Sắp xếp các bước cần thiết để áp dụng ${node.name.toLowerCase()} vào một dự án Scratch nhỏ.`,
+              takeaway: "Chia thử thách thành các hành động ngắn và kiểm tra từng bước.",
+            },
+            {
+              id: `${node.id}-reflect`,
+              title: "Tự đánh giá",
+              type: "reflection",
+              durationMinutes: 5,
+              eyebrow: "Checkpoint 3",
+              body: "Mô tả điều đã hoạt động, điều cần sửa và một cách bạn có thể dùng kỹ năng này trong dự án khác.",
+              takeaway: "Giải thích được cách làm là dấu hiệu bạn đã hiểu sâu hơn.",
+            },
+          ],
+          quizHints: [],
+        },
     generated_by: "human-authored-demo",
     reviewed_by: teacher.id,
     published_at: daysAgo(30 - index),
@@ -304,6 +426,26 @@ async function seed() {
       body: "Khối nào bắt đầu chương trình khi nhấn cờ xanh?",
       options: ["Khi bấm vào tôi", "Khi bấm cờ xanh", "Đợi 1 giây"],
       answer_key: { index: 1 },
+      status: "PUBLISHED",
+    },
+    {
+      id: "30000000-0000-4000-8000-000000000003",
+      lesson_id: lessons[2].id,
+      skill_node_id: IDS.skills.loops,
+      grade_band: "secondary",
+      type: "mcq",
+      difficulty: "medium",
+      steam_weights: { T: 0.45, M: 0.35, E: 0.2 },
+      body: "Khối lệnh nào giúp nhân vật tiến 10 bước đúng 6 lần mà không sao chép lệnh?",
+      options: [
+        "Dùng 6 khối di chuyển 10 bước rời nhau",
+        "Đặt di chuyển 10 bước bên trong repeat 6",
+        "Đặt di chuyển 10 bước bên trong forever",
+      ],
+      answer_key: {
+        index: 1,
+        explanation: "Chính xác! repeat 6 thực hiện khối di chuyển đúng sáu lần rồi dừng.",
+      },
       status: "PUBLISHED",
     },
   ];

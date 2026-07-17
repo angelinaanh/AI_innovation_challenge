@@ -60,8 +60,11 @@ export function DashboardPage() {
             {recommendation?.unlockReason || "EduOne đang phân tích hồ sơ STEAM để chọn bước tiếp theo."}
           </p>
           <div className="mt-6 flex flex-wrap items-center gap-3">
-            <Link to="/student/path" className="hero-button">
-              Xem nhiệm vụ <ArrowRight size={18} />
+            <Link
+              to={recommendation ? `/student/lessons/${recommendation.id}` : "/student/path"}
+              className="hero-button"
+            >
+              Bắt đầu học <ArrowRight size={18} />
             </Link>
             <div className="flex items-center gap-2 text-xs font-bold text-white/90">
               <ShieldCheck size={16} /> Lộ trình dùng luật minh bạch

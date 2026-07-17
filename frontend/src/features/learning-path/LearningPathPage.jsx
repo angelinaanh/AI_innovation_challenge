@@ -6,6 +6,7 @@ import {
   Compass,
   LockKeyhole,
   RefreshCw,
+  RotateCcw,
   Sparkles,
 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -22,6 +23,8 @@ const STATUS = {
 function PathCard({ node, index }) {
   const state = STATUS[node.status] || STATUS.locked;
   const Icon = state.icon;
+  const canOpen = node.hasPublishedLesson && node.status !== "locked";
+  const ActionIcon = node.status === "completed" ? RotateCcw : ArrowRight;
   return (
     <article className={`learning-node ${state.className}`}>
       <div className="node-index">{String(index + 1).padStart(2, "0")}</div>
@@ -41,10 +44,15 @@ function PathCard({ node, index }) {
           <p className="mt-4 text-sm font-bold leading-5 text-slate-600">{node.lockedReason}</p>
         )}
       </div>
-      {node.status === "current" && (
-        <div className="node-action" aria-hidden="true">
-          <ArrowRight size={19} />
-        </div>
+      {canOpen && (
+        <Link
+          className="node-action"
+          to={`/student/lessons/${node.id}`}
+          aria-label={`${node.status === "completed" ? "Học lại" : "Bắt đầu"} ${node.name}`}
+          title={node.status === "completed" ? "Học lại" : "Bắt đầu bài học"}
+        >
+          <ActionIcon size={19} />
+        </Link>
       )}
     </article>
   );

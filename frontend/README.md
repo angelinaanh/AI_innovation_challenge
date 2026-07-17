@@ -31,8 +31,11 @@ React + JavaScript + Tailwind app for student, teacher, parent, and admin experi
 |---|---|
 | `/student` | adaptive dashboard with quest, STEAM radar, XP, streak, badges, and path preview |
 | `/student/path` | seven-node Scratch path with approved state and numeric unlock guidance |
+| `/student/lessons/:skillNodeId` | checkpoint Lesson Player, Scratch block visualization, layered hints, and quiz |
 
 The interface is responsive from 390px mobile through desktop, has loading/error states, keyboard focus styles, and a working mobile navigation drawer. It calls only the Express API; no service key or OpenAI key is present in the browser bundle.
+
+The Lesson Player supports direct checkpoint navigation, visible progress, MCQ radio semantics, disabled/submitting states, wrong-answer retry, first-correct reward feedback, and a link back to the recalculated path.
 
 ## Commands
 

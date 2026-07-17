@@ -126,6 +126,8 @@ Implemented:
 - Pure rule-based path engine with unit tests.
 - Socket.IO server and client connection-ready event.
 - Idempotent demo seed for the existing Supabase schema.
+- Published-only lesson service and server-side quiz grading.
+- First-correct score/EXP event writes, projection update, and streak refresh.
 
 Pending before public deployment:
 
@@ -133,3 +135,4 @@ Pending before public deployment:
 - removal of first-student demo fallback;
 - production structured logger and rate limiting;
 - authenticated Socket.IO rooms.
+- transactional Postgres RPC for attempt + score + EXP writes before pilot scale.

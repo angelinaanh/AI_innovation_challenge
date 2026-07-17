@@ -101,5 +101,8 @@ Run `npm run seed:demo` inside `backend/`. The idempotent script uses existing t
 - seven Scratch Skill Nodes and prerequisite edges;
 - seven `PUBLISHED` lessons reviewed by the demo teacher;
 - STEAM profile, completed attempts, EXP activity, streak, and badges.
+- a complete Loops lesson with three checkpoints, layered hints, and a published MCQ.
 
 The seeded student is intentionally below the Arts and selected Tech/Engineering thresholds so the UI can demonstrate explainable recovery paths.
+
+Use `npm run reset:demo` after an end-to-end presentation. The reset is narrowly scoped to the demo student and the seeded Loops question, then restores the documented STEAM/EXP/streak baseline. Production users are never included.

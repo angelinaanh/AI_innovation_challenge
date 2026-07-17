@@ -48,10 +48,12 @@ button:focus-visible, a:focus-visible { outline: 3px solid #38bdf8; outline-offs
 .quest-hero { position: relative; min-height: 248px; overflow: hidden; border-radius: 22px; padding: 28px; background: linear-gradient(120deg, #8b5cf6 0%, #0ea5e9 48%, #10b981 100%); box-shadow: 0 6px 0 #bfdbfe; }
 .quest-hero::after { content: ""; position: absolute; width: 340px; height: 340px; right: -120px; top: -190px; border: 52px solid rgba(255,255,255,0.13); border-radius: 50%; }
 .quest-symbol { position: absolute; right: 42px; bottom: 28px; display: grid; width: 112px; height: 112px; place-items: center; border-radius: 34px; background: rgba(255,255,255,0.14); color: #fde047; transform: rotate(-5deg); }
-.hero-button, .primary-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; border-radius: 8px; padding: 0 18px; font-size: 14px; font-weight: 900; transition: 160ms ease; }
+.hero-button, .primary-button, .secondary-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; border-radius: 8px; padding: 0 18px; font-size: 14px; font-weight: 900; transition: 160ms ease; }
 .hero-button { background: white; color: #6d28d9; box-shadow: 0 4px 0 rgba(76,29,149,0.25); }
 .hero-button:hover { transform: translateY(-1px); }
 .primary-button { background: #16a34a; color: white; box-shadow: 0 3px 0 #bbf7d0; }
+.primary-button:disabled { cursor: not-allowed; background: #cbd5e1; color: #64748b; box-shadow: none; }
+.secondary-button { border: 1px solid #cbd5e1; background: white; color: #475569; }
 
 .metric-card { display: flex; min-height: 116px; align-items: center; gap: 14px; padding: 18px; }
 .metric-icon { display: grid; width: 46px; height: 46px; flex: 0 0 auto; place-items: center; border-radius: 14px; }
@@ -93,6 +95,36 @@ button:focus-visible, a:focus-visible { outline: 3px solid #38bdf8; outline-offs
 .node-action { display: grid; width: 46px; height: 46px; flex: 0 0 auto; place-items: center; border-radius: 50%; background: #7c3aed; color: white; box-shadow: 0 4px 0 #c4b5fd; transition: 160ms ease; }
 .node-action:hover { transform: translateX(2px); }
 
+.lesson-header { position: relative; min-height: 244px; overflow: hidden; border-radius: 18px; padding: 28px; background: linear-gradient(118deg, #312e81 0%, #2563eb 52%, #0f9f76 100%); box-shadow: 0 5px 0 #bfdbfe; }
+.lesson-header::after { content: ""; position: absolute; right: -80px; top: -140px; width: 320px; height: 320px; border: 46px solid rgba(255,255,255,0.1); border-radius: 50%; }
+.lesson-header-icon { position: absolute; right: 38px; bottom: 28px; display: grid; width: 94px; height: 94px; place-items: center; border-radius: 24px; background: rgba(255,255,255,0.13); color: #fde047; transform: rotate(4deg); }
+.lesson-approved, .lesson-meta { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 6px 10px; font-size: 11px; font-weight: 900; }
+.lesson-approved { background: #dcfce7; color: #166534; }
+.lesson-meta { background: rgba(255,255,255,0.13); color: white; }
+.lesson-step-button { display: flex; width: 100%; min-height: 58px; align-items: center; gap: 11px; border-radius: 8px; padding: 8px 10px; color: #64748b; transition: 160ms ease; }
+.lesson-step-button:hover { background: #f8fafc; }
+.lesson-step-active { background: #f5f3ff; color: #6d28d9; }
+.lesson-step-icon { display: grid; width: 30px; height: 30px; flex: 0 0 auto; place-items: center; border-radius: 50%; background: #e2e8f0; color: #64748b; }
+.lesson-step-active .lesson-step-icon { background: #7c3aed; color: white; }
+.lesson-step-done { background: #16a34a; color: white; }
+.scratch-block { min-height: 42px; width: min(100%, 430px); border-radius: 7px; padding: 11px 16px; color: white; font-size: 14px; font-weight: 900; box-shadow: inset 0 -3px 0 rgba(15,23,42,0.18); }
+.scratch-block-amber { background: #f59e0b; }
+.scratch-block-blue { background: #0ea5e9; }
+.scratch-block-violet { background: #8b5cf6; }
+.scratch-block-coral { background: #f43f5e; }
+.quiz-option { display: flex; width: 100%; min-height: 62px; align-items: center; gap: 14px; border: 2px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; text-align: left; color: #334155; font-size: 14px; font-weight: 800; transition: 150ms ease; }
+.quiz-option:hover:not(:disabled) { border-color: #a78bfa; background: #faf5ff; }
+.quiz-option-selected { border-color: #7c3aed; background: #f5f3ff; color: #4c1d95; }
+.quiz-option-letter { display: grid; width: 34px; height: 34px; flex: 0 0 auto; place-items: center; border-radius: 8px; background: #f1f5f9; color: #475569; font-size: 12px; font-weight: 950; }
+.quiz-option-selected .quiz-option-letter { background: #7c3aed; color: white; }
+.hint-button { min-height: 36px; border-radius: 8px; border: 1px solid #fcd34d; background: #fffbeb; padding: 0 12px; color: #b45309; font-size: 12px; font-weight: 900; }
+.hint-row { display: flex; gap: 10px; border-radius: 8px; background: #fffbeb; padding: 11px 13px; color: #78350f; font-size: 13px; font-weight: 700; line-height: 1.5; }
+.hint-row span { display: grid; width: 22px; height: 22px; flex: 0 0 auto; place-items: center; border-radius: 50%; background: #fbbf24; color: #78350f; font-size: 11px; font-weight: 950; }
+.quiz-feedback { margin-top: 20px; display: flex; gap: 12px; border-radius: 8px; border: 1px solid; padding: 16px; }
+.quiz-feedback-correct { border-color: #86efac; background: #f0fdf4; color: #166534; }
+.quiz-feedback-wrong { border-color: #fda4af; background: #fff1f2; color: #9f1239; }
+.reward-chip { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; background: white; padding: 5px 9px; font-size: 11px; font-weight: 950; }
+
 .skeleton { overflow: hidden; border-radius: 8px; background: linear-gradient(90deg, #e2e8f0 25%, #f8fafc 45%, #e2e8f0 65%); background-size: 220% 100%; animation: skeleton 1.4s infinite linear; }
 @keyframes skeleton { to { background-position: -220% 0; } }
 
@@ -104,6 +136,11 @@ button:focus-visible, a:focus-visible { outline: 3px solid #38bdf8; outline-offs
   .node-index { width: 42px; height: 42px; box-shadow: none; }
   .node-action { position: absolute; right: 14px; top: 14px; width: 38px; height: 38px; }
   .path-card-current .node-status { margin-right: 42px; }
+  .lesson-header { min-height: 300px; padding: 22px 20px; }
+  .lesson-header-icon { right: 16px; bottom: 18px; width: 66px; height: 66px; border-radius: 18px; opacity: 0.8; }
+  .lesson-header-icon svg { width: 36px; height: 36px; }
+  .scratch-block { font-size: 13px; }
+  .quiz-option { align-items: flex-start; }
 }
 
 @media (prefers-reduced-motion: reduce) {

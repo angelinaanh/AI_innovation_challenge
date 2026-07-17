@@ -55,6 +55,28 @@ Implemented response highlights:
 - `/student/path` returns normalized `scores`, all `nodes`, `recommendation`, `completedCount`, and `totalCount`.
 - Every non-completed node includes either `unlockReason` or `lockedReason`; locked responses include numeric `deficits` by STEAM axis.
 
+### Lesson response
+
+`GET /student/lessons/:skillNodeId` verifies that the node is completed/current/available and that the lesson and questions are `PUBLISHED`. It returns:
+
+- `skillNode` metadata and current `pathStatus`;
+- approved lesson content, checkpoints, objectives, and layered hints;
+- published questions with `id`, `body`, `options`, difficulty, and STEAM weights;
+- no `answer_key` field.
+
+### Attempt request
+
+```json
+{
+  "questionId": "uuid",
+  "answerIndex": 1,
+  "usedHint": true,
+  "durationMs": 64000
+}
+```
+
+`POST /student/attempts` grades on the server and returns `isCorrect`, constructive `feedback`, retry state, optional first-correct `award`, and optional recalculated `pathUpdate`. Wrong answers never lose XP. A correct answer is rewarded once per student/question.
+
 ## 4. AI Tutor
 
 | Method | Path | Role | Purpose |

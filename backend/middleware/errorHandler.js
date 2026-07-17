@@ -3,6 +3,10 @@ import crypto from "node:crypto";
 const STATUS_BY_CODE = {
   DEMO_DATA_MISSING: 503,
   DATABASE_ERROR: 502,
+  LESSON_NOT_FOUND: 404,
+  QUESTION_NOT_AVAILABLE: 404,
+  SKILL_NODE_LOCKED: 403,
+  VALIDATION_ERROR: 400,
 };
 
 export function notFound(request, response) {

@@ -31,3 +31,5 @@ Supabase schema, migrations, seeds, RLS policy notes, and database hardening scr
 ## Demo Data
 
 The current schema is already provisioned in Supabase. No migration is required for Slice 1. Use `backend/scripts/seedDemo.js` through `npm run seed:demo` to populate the existing tables with an idempotent seven-node Scratch learning path and demo users.
+
+Slice 2 still requires no schema migration. `npm run reset:demo` resets only Loops quiz progress for the known demo student so the end-to-end lesson can be presented repeatedly.

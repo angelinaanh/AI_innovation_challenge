@@ -72,3 +72,22 @@ Decision:
 Reason:
 
 This completes the first judge-visible proof: a student can immediately understand what to learn next, why it is available, and what to improve for locked paths.
+
+## 2026-07-18 — Slice 2 Lesson Player + Quiz
+
+Prompt:
+
+> Continue coding after the Student Dashboard and Learning Path.
+
+Decision:
+
+- Built the complete “Vòng lặp kỳ diệu” lesson with three checkpoints and visual Scratch blocks.
+- Added layered hints, server-side grading, constructive retry, and first-correct reward rules.
+- Kept answer keys out of frontend responses and blocked locked/unpublished lesson access.
+- Connected correct attempts to append-only STEAM/EXP events, projections, streak, and path recalculation.
+- Added a narrowly scoped demo reset for repeatable judging presentations.
+- Verified desktop/mobile layout and the full wrong-to-correct workflow against Supabase.
+
+Reason:
+
+This turns the explainable recommendation from Slice 1 into a working learning loop where one student action visibly changes mastery, XP, and the next Skill Node.

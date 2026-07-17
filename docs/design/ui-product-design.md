@@ -143,3 +143,18 @@ The current student experience implements the reference direction with EduOne-sp
 - visible “Giáo viên đã duyệt” state on published lessons.
 
 Browser QA covers 1440x1000 desktop and 390x844 mobile. Both views have no horizontal overflow; the mobile drawer and dashboard-to-path navigation work.
+
+## 10. Slice 2 Lesson Player
+
+The implemented Lesson Player uses a focused learning workspace rather than dashboard cards:
+
+- approved-content banner with duration and difficulty;
+- four-step outline: three checkpoints plus quiz;
+- stable progress bar and direct checkpoint navigation;
+- visual Scratch block stack for each concept;
+- learning objectives and concise takeaway states;
+- layered hints revealed one at a time;
+- accessible answer choices with selected, disabled, loading, wrong, and correct states;
+- explicit XP/STEAM reward and newly unlocked node after first mastery.
+
+Browser QA covers the complete checkpoint-to-quiz flow, wrong-answer retry, correct reward, path recalculation, 1440px desktop, and 390px mobile without horizontal overflow.

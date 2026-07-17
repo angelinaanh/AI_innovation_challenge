@@ -40,7 +40,7 @@ VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_FViOIxMjuN6Eu91INSN5zA_oLkjMTcI
 
 ## Current Implementation
 
-Slice 1 is working against the existing Supabase project:
+Slices 1 and 2 are working against the existing Supabase project. Slice 1 provides:
 
 - responsive Student Dashboard at `/student`;
 - explainable Learning Path at `/student/path`;
@@ -48,6 +48,15 @@ Slice 1 is working against the existing Supabase project:
 - deterministic rule-based path engine with numeric unlock and recovery reasons;
 - Express REST API and Socket.IO connection status;
 - idempotent Scratch demo seed with 7 Skill Nodes.
+
+Slice 2 adds a complete learning loop:
+
+- published-only Lesson Player at `/student/lessons/:skillNodeId`;
+- three checkpoint lesson for “Vòng lặp kỳ diệu”;
+- layered hints that never reveal the answer immediately;
+- server-graded MCQ with instant constructive feedback;
+- first-correct STEAM/XP/streak update and refreshed Learning Path;
+- replayable demo reset with `npm run reset:demo`.
 
 Demo mode currently resolves the first student profile when no authenticated student ID is supplied. Supabase JWT authentication and server-side role middleware must be completed before public deployment.
 

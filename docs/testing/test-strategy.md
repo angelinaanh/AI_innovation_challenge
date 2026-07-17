@@ -81,3 +81,15 @@ Slice 1 verification includes:
 - desktop layout check at 1440x1000;
 - mobile layout and drawer check at 390x844;
 - horizontal overflow assertions for dashboard, path, and all path cards.
+
+Slice 2 verification adds:
+
+- MCQ answer validation and grading unit test;
+- deterministic STEAM delta unit test;
+- hinted/non-hinted reward and level unit test;
+- live check that lesson API exposes no `answer_key`;
+- wrong-answer feedback and retry browser flow;
+- correct-answer reward with real Supabase score/EXP writes;
+- verified path change from Loops to Variables;
+- controlled demo reset back to the baseline;
+- desktop/mobile Lesson Player overflow and button-content checks.
