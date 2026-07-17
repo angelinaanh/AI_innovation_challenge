@@ -192,3 +192,34 @@ POST /tutor/exercises  { "sessionId": "uuid", "type": "matching" }
 ```
 
 Response shapes for submit (`response` field): mcq `{ selectedIndex }`, matching `{ pairs: { leftId: rightId } }`, ordering `{ order: [id,...] }`, cloze `{ answers: { blankId: value } }`. Submit returns `{ isCorrect, score, solution, explanation, award, canPromote }`. These exercises are formative: they write `tutor_exercises` / `tutor_exercise_attempts` and `exp_events`, never `score_events`.
+
+## 9. Classes & subjects
+
+Authenticated; role-gated by the mount (`/teacher` = teacher, `/student` = student).
+
+Subjects catalog (STEAM classification, GDPT 2018), available to both roles:
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/student/subjects` · `/teacher/subjects` | List subjects; optional `?gradeBand=primary|secondary|high_school` |
+
+Teacher:
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/teacher/classes` | Create a class `{ name, gradeBand, subjectId? }` (auto join code) |
+| GET | `/teacher/classes` | List own classes with member/pending counts |
+| GET | `/teacher/classes/:classId/members` | Active members + pending (invited/requested) |
+| POST | `/teacher/classes/:classId/invite` | Invite a student `{ studentEmail }` |
+| POST | `/teacher/memberships/:membershipId/decision` | Approve/reject a join request `{ decision: "approve"|"reject" }` |
+
+Student:
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/student/classes` | My active classes |
+| GET | `/student/invitations` | Pending invitations from teachers |
+| POST | `/student/classes/join` | Request to join by code `{ joinCode }` |
+| POST | `/student/memberships/:membershipId/respond` | Accept/decline an invitation `{ response: "accept"|"decline" }` |
+
+Membership states: `invited` (teacher invited) / `requested` (student asked) → `active` (accepted/approved) / `rejected`. An invite and a request for the same class/student converge to `active`.

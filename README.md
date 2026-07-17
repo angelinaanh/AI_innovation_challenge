@@ -102,8 +102,11 @@ cd backend
 npm install
 npm run seed:demo
 npm run seed:sources
+npm run seed:subjects
 npm start
 ```
+
+`npm run seed:subjects` loads the STEAM subject catalog (GDPT 2018 classification) used by the classes feature. Apply migrations `0002` and `0003` to the Supabase project before running the source/subject seeds.
 
 `npm run seed:sources` backfills approved grounding chunks from each published lesson's own checkpoint content, so the grounded Tutor chat and interactive exercises work on **every** Skill Node, not only the seeded Loops lesson. It is idempotent and preserves the hand-authored Loops source. Without it, only the Loops node has approved material and the Tutor correctly refuses / cannot build exercises elsewhere.
 
