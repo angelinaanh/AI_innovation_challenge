@@ -129,3 +129,17 @@ Avoid playful visuals here. Use dense tables, filters, status chips, and predict
 - Loading and error states for every remote action.
 - Responsive from 360px width.
 
+## 9. Slice 1 Implementation
+
+The current student experience implements the reference direction with EduOne-specific safeguards:
+
+- desktop sidebar and mobile drawer with working route states;
+- private XP/Level/Streak summary without a public leaderboard;
+- next quest hero with the exact rule-based recommendation reason;
+- STEAM radar with visible numeric values for all five axes;
+- seven-day activity and personal badges;
+- path cards with `completed`, `current`, and `locked` states;
+- numeric recovery copy such as “cần thêm 16 điểm A”;
+- visible “Giáo viên đã duyệt” state on published lessons.
+
+Browser QA covers 1440x1000 desktop and 390x844 mobile. Both views have no horizontal overflow; the mobile drawer and dashboard-to-path navigation work.

@@ -116,3 +116,20 @@ Log these events:
 - Cost limits are checked before AI calls.
 - Parent APIs never return raw tutor messages.
 
+## 9. Slice 1 Implementation Status
+
+Implemented:
+
+- Express app, request IDs, stable error envelope, health endpoint, and CORS allowlist.
+- Supabase server client isolated under `backend/services`.
+- Student dashboard aggregation service.
+- Pure rule-based path engine with unit tests.
+- Socket.IO server and client connection-ready event.
+- Idempotent demo seed for the existing Supabase schema.
+
+Pending before public deployment:
+
+- Supabase JWT verification and `requireRole` middleware;
+- removal of first-student demo fallback;
+- production structured logger and rate limiting;
+- authenticated Socket.IO rooms.

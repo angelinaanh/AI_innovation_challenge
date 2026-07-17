@@ -53,3 +53,22 @@ Decision:
 Reason:
 
 This keeps model usage traceable, cheap, safe for children, and aligned with the two primary project documents.
+
+## 2026-07-18 — Slice 1 Student Dashboard + Path
+
+Prompt:
+
+> Start building with the existing Supabase tables, system documents, folder process, and reference UI.
+
+Decision:
+
+- Connected Express to the existing Supabase schema and confirmed all required tables.
+- Added an idempotent seven-node Scratch demo seed because the provisioned tables were empty.
+- Implemented deterministic Skill Node recommendation and numeric recovery reasons without an LLM.
+- Built responsive Student Dashboard and Learning Path screens in React, JavaScript, Tailwind, Recharts, and Lucide.
+- Added Socket.IO readiness, error/loading states, tests, and desktop/mobile browser QA.
+- Kept public leaderboard patterns out and marked every student lesson as teacher-approved.
+
+Reason:
+
+This completes the first judge-visible proof: a student can immediately understand what to learn next, why it is available, and what to improve for locked paths.

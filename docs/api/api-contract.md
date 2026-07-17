@@ -12,6 +12,8 @@ All authenticated requests include a Supabase JWT:
 Authorization: Bearer <supabase_access_token>
 ```
 
+Slice 1 currently runs in explicit demo mode while authentication UI is pending. The student endpoints accept an optional `x-demo-student-id` header, otherwise the backend uses `DEMO_STUDENT_ID` or the first student profile. This fallback is for local judging/demo only and must be replaced by the verified JWT user before public deployment.
+
 ## 1. Error Shape
 
 ```json
@@ -46,6 +48,12 @@ Supabase Auth handles email/password and OAuth. Backend enriches with `profiles`
 | GET | `/student/profile/history` | student | Score and EXP event history |
 
 Important: `/student/lessons/:skillNodeId` must only return `PUBLISHED` content.
+
+Implemented response highlights:
+
+- `/student/dashboard` returns `student`, `steamProfile`, `gamification`, `badges`, `weekActivity`, `pathProgress`, `recommendation`, and `pathPreview`.
+- `/student/path` returns normalized `scores`, all `nodes`, `recommendation`, `completedCount`, and `totalCount`.
+- Every non-completed node includes either `unlockReason` or `lockedReason`; locked responses include numeric `deficits` by STEAM axis.
 
 ## 4. AI Tutor
 
@@ -120,4 +128,3 @@ SSE events for Tutor:
 - `refusal`
 - `done`
 - `error`
-

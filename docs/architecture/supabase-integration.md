@@ -5,8 +5,8 @@
 Frontend public env:
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=https://wpxddpyuabztdstszgwk.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_FViOIxMjuN6Eu91INSN5zA_oLkjMTcI
+VITE_SUPABASE_URL=https://wpxddpyuabztdstszgwk.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_FViOIxMjuN6Eu91INSN5zA_oLkjMTcI
 ```
 
 Backend env:
@@ -17,6 +17,8 @@ SUPABASE_SERVICE_ROLE_KEY=local_only
 ```
 
 The publishable key can be used by the browser. Service role keys must never be committed.
+
+The current frontend reads application data through Express, so the publishable key is reserved for the upcoming Supabase Auth flow. The service secret stays in `backend/.env` only.
 
 ## 2. Supabase Responsibilities
 
@@ -91,3 +93,13 @@ Every schema change must include:
 3. Update to this file if RLS/API behavior changes.
 4. Seed or sample data if it affects demo flows.
 
+## 7. Demo Seed
+
+Run `npm run seed:demo` inside `backend/`. The idempotent script uses existing tables only; it does not create or alter schema objects. It seeds:
+
+- one organization, student, and teacher profile;
+- seven Scratch Skill Nodes and prerequisite edges;
+- seven `PUBLISHED` lessons reviewed by the demo teacher;
+- STEAM profile, completed attempts, EXP activity, streak, and badges.
+
+The seeded student is intentionally below the Arts and selected Tech/Engineering thresholds so the UI can demonstrate explainable recovery paths.

@@ -34,9 +34,41 @@ Use local env files only. Do not commit real `.env` files.
 Frontend variables:
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=https://wpxddpyuabztdstszgwk.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_FViOIxMjuN6Eu91INSN5zA_oLkjMTcI
+VITE_SUPABASE_URL=https://wpxddpyuabztdstszgwk.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_FViOIxMjuN6Eu91INSN5zA_oLkjMTcI
 ```
+
+## Current Implementation
+
+Slice 1 is working against the existing Supabase project:
+
+- responsive Student Dashboard at `/student`;
+- explainable Learning Path at `/student/path`;
+- real STEAM, EXP, streak, badge, lesson, and attempt data from Supabase;
+- deterministic rule-based path engine with numeric unlock and recovery reasons;
+- Express REST API and Socket.IO connection status;
+- idempotent Scratch demo seed with 7 Skill Nodes.
+
+Demo mode currently resolves the first student profile when no authenticated student ID is supplied. Supabase JWT authentication and server-side role middleware must be completed before public deployment.
+
+## Local Start
+
+```bash
+cd backend
+npm install
+npm run seed:demo
+npm start
+```
+
+In a second terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open `http://127.0.0.1:5173/student`.
 
 ## Documentation Map
 

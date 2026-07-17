@@ -28,3 +28,6 @@ Supabase schema, migrations, seeds, RLS policy notes, and database hardening scr
 - Schema changes require docs updates.
 - RAG retrieval must be published-only before real pilot use.
 
+## Demo Data
+
+The current schema is already provisioned in Supabase. No migration is required for Slice 1. Use `backend/scripts/seedDemo.js` through `npm run seed:demo` to populate the existing tables with an idempotent seven-node Scratch learning path and demo users.

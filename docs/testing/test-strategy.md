@@ -69,3 +69,15 @@ Before any live demo:
 - verify fallback screenshots/video exist;
 - verify no `.env` or service role key is committed.
 
+## 7. Current Verification Record
+
+Slice 1 verification includes:
+
+- three path-engine unit tests: recommendation, numeric recovery, and published-lesson gate;
+- production frontend build;
+- live Supabase API smoke test for `/api/student/dashboard`;
+- browser navigation from dashboard to Learning Path;
+- Socket.IO connected state;
+- desktop layout check at 1440x1000;
+- mobile layout and drawer check at 390x844;
+- horizontal overflow assertions for dashboard, path, and all path cards.
