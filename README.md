@@ -101,8 +101,11 @@ Live exercise generation requires `OPENAI_API_KEY` and `AI_ALLOW_APPROVED_CONTEN
 cd backend
 npm install
 npm run seed:demo
+npm run seed:sources
 npm start
 ```
+
+`npm run seed:sources` backfills approved grounding chunks from each published lesson's own checkpoint content, so the grounded Tutor chat and interactive exercises work on **every** Skill Node, not only the seeded Loops lesson. It is idempotent and preserves the hand-authored Loops source. Without it, only the Loops node has approved material and the Tutor correctly refuses / cannot build exercises elsewhere.
 
 `npm run seed:tutor` is optional and sends only the three teacher-approved Loops checkpoint excerpts to OpenAI to create embeddings. Run it only after the organization has approved that external data transfer. Lexical grounding and refusal still work without embeddings.
 
