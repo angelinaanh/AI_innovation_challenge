@@ -49,6 +49,8 @@ npm run build
 
 Local frontend URL: `http://127.0.0.1:5173/student`.
 
+Vite pins React's automatic JSX runtime in `vite.config.js`. If the browser loads a blank `#root` after dependency or config changes, check for duplicate IPv4/IPv6 listeners with `lsof -nP -iTCP:5173 -sTCP:LISTEN`, stop only the stale process for this frontend, and restart with `npm run dev -- --force`.
+
 ## Limitations
 
 - Frontend does not enforce official RBAC.

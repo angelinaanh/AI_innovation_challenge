@@ -29,6 +29,8 @@ Use focused component tests for:
 - teacher publish toolbar requires explicit action;
 - admin cost warning state.
 
+Browser smoke tests must load `http://localhost:5173/` from a clean navigation, verify the wildcard route reaches `/student`, confirm `#root` has rendered children, and assert that the console has no error. After dependency or Vite config changes, `/src/main.jsx` must use `react/jsx-dev-runtime`; a stale classic transform that references an undefined global `React` is a white-screen regression.
+
 ## 4. Backend Tests
 
 Use API integration tests for:
