@@ -5,6 +5,9 @@ import {
   generateJoinCode,
   isGradeBand,
   isGradeInBand,
+  isSubjectInGrade,
+  gradeBandForLevel,
+  normalizeGradeLevel,
   nextMembershipStatus,
 } from "./classroomRules.js";
 
