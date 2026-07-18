@@ -11,14 +11,13 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
+import { gradeLabel } from "../../lib/academicCatalog.js";
 import { api } from "../../lib/apiClient.js";
 import { FormAlert, FormField } from "../auth/AuthFormControls.jsx";
 
-const gradeLabels = {
-  primary: "Tiểu học",
-  secondary: "THCS",
-  high_school: "THPT",
-};
+function classSubjects(item) {
+  return item?.subjects?.length ? item.subjects : item?.subject ? [item.subject] : [];
+}
 
 export function TeacherClassDetailPage() {
   const { classId } = useParams();
@@ -85,6 +84,7 @@ export function TeacherClassDetailPage() {
     window.setTimeout(() => setCopied(false), 1600);
   }
 
+  const subjects = classSubjects(data?.class);
   const isFull = Boolean(data?.class.maxMembers) && data.active.length >= data.class.maxMembers;
 
   if (loading && !data) {
@@ -101,9 +101,9 @@ export function TeacherClassDetailPage() {
           <header className="surface p-5 md:p-6">
             <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
               <div className="min-w-0">
-                <p className="eyebrow">{data.class.subjects?.map((s) => s.steam_axis).join(" · ") || "STEAM"} · {data.class.grade ? `Lớp ${data.class.grade}` : gradeLabels[data.class.gradeBand]}</p>
+                <p className="eyebrow">{subjects.map((s) => s.steam_axis).join(" · ") || "STEAM"} · {gradeLabel(data.class.gradeLevel)}</p>
                 <h1 className="mt-2 truncate text-2xl font-black md:text-3xl">{data.class.name}</h1>
-                <p className="mt-2 text-sm font-bold text-slate-500">{data.class.subjects?.length ? data.class.subjects.map((s) => s.name).join(", ") : "Chưa chọn môn học"}</p>
+                <p className="mt-2 text-sm font-bold text-slate-500">{subjects.length ? subjects.map((s) => s.name).join(", ") : "Chưa chọn môn học"}</p>
                 <p className="mt-1 text-xs font-bold text-slate-400">{data.active.length}{data.class.maxMembers ? `/${data.class.maxMembers}` : ""} thành viên</p>
                 {data.class.description && <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">{data.class.description}</p>}
               </div>

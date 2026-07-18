@@ -35,7 +35,7 @@ Authorization: Bearer <supabase_access_token>
 | PATCH | `/me` | all | Planned: update allowed own profile fields |
 | POST | `/guardian-consent` | student/parent | Planned: verify and record guardian consent |
 
-Supabase Auth handles email/password, email confirmation, Google OAuth, refresh, sign-out, and password recovery. The selected onboarding role may be `student` or `teacher`; teacher self-registration becomes `ACTIVE` immediately by an explicit product decision that differs from Functional Spec `F-103`. Account status remains service-written app metadata, and Admin is never available through public bootstrap.
+Supabase Auth handles email/password, email confirmation, Google OAuth, refresh, sign-out, and password recovery. Student bootstrap requires `gradeLevel` from 1 to 12 and derives `gradeBand` server-side; teacher self-registration becomes `ACTIVE` immediately by an explicit product decision that differs from Functional Spec `F-103`. Account status remains service-written app metadata, and Admin is never available through public bootstrap.
 
 Relevant auth errors include `AUTH_REQUIRED` (401), `AUTH_INVALID` (401), `AUTH_FORBIDDEN` (403), `PROFILE_ONBOARDING_REQUIRED` (409), `GUARDIAN_CONSENT_REQUIRED` (403), and `ACCOUNT_INACTIVE` (403).
 
@@ -219,13 +219,13 @@ Subjects catalog (STEAM classification, GDPT 2018), available to both roles:
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/student/subjects` · `/teacher/subjects` | List subjects; optional `?gradeBand=primary|secondary|high_school` |
+| GET | `/student/subjects` · `/teacher/subjects` | List grade-specific subjects; optional `?gradeLevel=1..12` |
 
 Teacher:
 
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `/teacher/classes` | Create `{ name, gradeBand, grade, subjectIds: [id,...], description?, maxMembers? }` (auto join code, max description 500, `grade` 1-5/6-9/10-12 must match `gradeBand`, `subjectIds` requires ≥1 and each must fall inside the subject's `min_grade`-`max_grade`, `maxMembers` 1-100 or omitted for unlimited) |
+| POST | `/teacher/classes` | Create `{ name, gradeLevel, subjectIds: [id,...], description?, maxMembers? }` (auto-derived grade band and join code; `subjectIds` requires at least one subject from the same exact `grade_level`; `maxMembers` 1-100 or omitted for unlimited) |
 | GET | `/teacher/classes` | List own classes with subject metadata and member/pending counts |
 | GET | `/teacher/classes/:classId/members` | Class/subject metadata, active roster, invited/requested rows |
 | POST | `/teacher/classes/:classId/invite` | Invite a student `{ studentEmail }` |
@@ -242,4 +242,4 @@ Student:
 
 Membership states: `invited` (teacher invited) / `requested` (student asked) → `active` (accepted/approved) / `rejected`. An invite and a request for the same class/student converge to `active`.
 
-Server invariants: the class owner must match the teacher JWT; class/subject/actor must share `org_id`; the subject and student must match `grade_band`; a class may hold multiple subjects via `class_subjects` (migration 0005). Relevant errors are `SUBJECT_INVALID` (400), `GRADE_BAND_MISMATCH` (409), and `CLASS_FULL` (409, when a membership would go `active` past `max_members`).
+Server invariants: the class owner must match the teacher JWT; class/subject/actor must share `org_id`; every class subject and every joining student must match the exact `grade_level`. A class may hold multiple subjects via `class_subjects` (migration 0005). `grade_band` is derived server-side and checked again in Postgres. Relevant errors are `SUBJECT_INVALID` (400), `GRADE_LEVEL_MISMATCH` (409), and `CLASS_FULL` (409, when a membership would go `active` past `max_members`).

@@ -152,8 +152,8 @@ export const api = {
     {},
     signal,
   ),
-  getTeacherSubjects: (gradeBand, signal) => apiGet(
-    `/teacher/subjects${gradeBand ? `?gradeBand=${encodeURIComponent(gradeBand)}` : ""}`,
+  getTeacherSubjects: (gradeLevel, signal) => apiGet(
+    `/teacher/subjects${gradeLevel ? `?gradeLevel=${encodeURIComponent(gradeLevel)}` : ""}`,
     signal,
   ),
   getTeacherClasses: (signal) => apiGet("/teacher/classes", signal),

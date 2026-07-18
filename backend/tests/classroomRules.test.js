@@ -3,7 +3,9 @@ import test from "node:test";
 
 import {
   generateJoinCode,
+  gradeBandForLevel,
   isGradeBand,
+  isGradeLevel,
   membershipActor,
   nextMembershipStatus,
 } from "../services/classroom/classroomRules.js";
@@ -22,6 +24,16 @@ test("grade bands are validated", () => {
   assert.equal(isGradeBand("secondary"), true);
   assert.equal(isGradeBand("high_school"), true);
   assert.equal(isGradeBand("college"), false);
+});
+
+test("exact grade levels derive the compatible grade band", () => {
+  assert.equal(isGradeLevel(1), true);
+  assert.equal(isGradeLevel("12"), true);
+  assert.equal(isGradeLevel(0), false);
+  assert.equal(isGradeLevel(13), false);
+  assert.equal(gradeBandForLevel(5), "primary");
+  assert.equal(gradeBandForLevel(6), "secondary");
+  assert.equal(gradeBandForLevel(10), "high_school");
 });
 
 test("membership state machine allows only legal transitions", () => {

@@ -15,18 +15,20 @@ const uid = (request) => request.auth?.profile?.id;
 
 export async function getSubjects(request, response, next) {
   try {
-    response.json({ data: await listSubjects(uid(request), request.query.gradeBand) });
+    response.json({ data: await listSubjects(uid(request), request.query.gradeLevel) });
   } catch (error) { next(error); }
 }
 
 // -- Teacher --
 export async function postClass(request, response, next) {
   try {
+    const rawSubjectIds = Array.isArray(request.body?.subjectIds)
+      ? request.body.subjectIds
+      : request.body?.subjectId ? [request.body.subjectId] : [];
     const data = await createClass(uid(request), {
       name: request.body?.name,
-      gradeBand: request.body?.gradeBand,
-      grade: request.body?.grade,
-      subjectIds: request.body?.subjectIds,
+      gradeLevel: request.body?.gradeLevel,
+      subjectIds: rawSubjectIds,
       description: request.body?.description,
       maxMembers: request.body?.maxMembers,
     });

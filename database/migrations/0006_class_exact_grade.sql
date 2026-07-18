@@ -1,29 +1,38 @@
--- ============================================================
--- Migration 0006 — Chọn lớp cụ thể (1-12) khi tạo lớp học
---
--- classes.grade_band (migration 0003) chỉ có 3 mức, không đủ để giáo viên
--- chọn đúng "Lớp 6" thay vì chỉ "THCS", và không đủ để khớp chính xác với
--- subjects.min_grade/max_grade (migration 0004) khi kiểm tra môn học có
--- dạy ở đúng lớp đó không (VD lớp 1 không được chọn môn "Khoa học",
--- vốn chỉ dạy lớp 4-5, dù cùng band 'primary').
---
--- Yêu cầu: classes, grades, subjects.min_grade/max_grade
--- (migration 0003, 0004) đã tồn tại và migration 0004 đã được apply.
--- ============================================================
+-- Migration 0006: reconcile the older classes.grade approach with grade_level.
+-- The canonical schema now uses classes.grade_level from migration 0004.
+begin;
 
-alter table public.classes
-  add column if not exists grade smallint references public.grades(grade_number);
+alter table public.classes add column if not exists grade_level smallint;
 
--- Nullable: các lớp tạo trước migration này không có dữ liệu để suy ra
--- đúng 1 con số từ grade_band, nên giữ null thay vì đoán. Lớp tạo mới
--- sau migration này bắt buộc có grade (ép ở tầng service, xem
--- classroomService.js createClass).
-alter table public.classes
-  add constraint classes_grade_in_band check (
-    grade is null
-    or (grade_band = 'primary' and grade between 1 and 5)
-    or (grade_band = 'secondary' and grade between 6 and 9)
-    or (grade_band = 'high_school' and grade between 10 and 12)
-  );
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'classes' and column_name = 'grade'
+  ) then
+    update public.classes
+    set grade_level = coalesce(grade_level, grade)
+    where grade is not null;
+  end if;
+end $$;
 
-create index if not exists idx_classes_grade on public.classes (grade);
+alter table public.classes drop constraint if exists classes_grade_in_band;
+drop index if exists public.idx_classes_grade;
+alter table public.classes drop column if exists grade;
+
+alter table public.classes drop constraint if exists classes_grade_level_check;
+alter table public.classes add constraint classes_grade_level_check
+  check (grade_level between 1 and 12);
+
+alter table public.classes drop constraint if exists classes_grade_band_consistency;
+alter table public.classes add constraint classes_grade_band_consistency check (
+  grade_band = case
+    when grade_level <= 5 then 'primary'
+    when grade_level <= 9 then 'secondary'
+    else 'high_school'
+  end
+);
+
+create index if not exists idx_classes_grade_level on public.classes(org_id, grade_level);
+
+commit;

@@ -194,7 +194,7 @@ The teacher workspace is deliberately denser and calmer than the student dashboa
 
 - fixed teacher shell with class navigation, identity, sign-out, and realtime status;
 - compact class/student/pending metrics followed by a scannable class grid;
-- class creation modal uses native grade and subject controls from the GDPT 2018 catalog;
+- class creation uses native dependent controls: exact grade 1-12 first, then only valid GDPT 2018 subjects with their S/T/E/A/M tag;
 - class detail keeps join code, roster, invite form, and pending decisions in one operational view;
 - approval/rejection uses explicit actions and stable pending/loading states.
 

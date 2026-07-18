@@ -168,3 +168,21 @@ Decision:
 Reason:
 
 This closes the product loop promised by the proposal: AI accelerates teacher preparation, human review remains the authority, and one publish action has a visible, auditable effect on the student experience and grounded Tutor knowledge.
+
+## 2026-07-18 — Exact Grade 1-12 Subject Constraints
+
+Prompt:
+
+> Add the supplied subjects for every grade from 1 to 12, attach STEAM tags, and constrain dependent options.
+
+Decision:
+
+- Replaced broad grade-band input with exact `gradeLevel` for student onboarding and teacher class creation while preserving derived `grade_band` for adaptive content.
+- Expanded the catalog from 28 band rows to 101 exact grade-subject rows and normalized “Tự nhiên và Xã hội” / “Lịch sử và Địa lý”.
+- Made the subject select depend on the chosen grade and display the S/T/E/A/M tag.
+- Added backend exact-grade validation and database CHECK/composite-FK constraints for profile, class, and subject consistency.
+- Added catalog/boundary unit tests and updated the seed, API contract, database notes, UI notes, and test plan.
+
+Reason:
+
+The class roster is now operationally precise: a grade-6 student cannot join grade 7, and a teacher cannot attach a grade-10 subject such as Vật lý to a grade-9 class through either the UI or a direct API call.

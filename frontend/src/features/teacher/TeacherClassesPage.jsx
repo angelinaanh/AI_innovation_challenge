@@ -10,14 +10,13 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
+import {
+  GRADE_GROUPS,
+  STEAM_AXIS_LABELS,
+  gradeLabel,
+} from "../../lib/academicCatalog.js";
 import { api } from "../../lib/apiClient.js";
 import { FormAlert, FormField } from "../auth/AuthFormControls.jsx";
-
-const gradeLabels = {
-  primary: "Tiểu học",
-  secondary: "THCS",
-  high_school: "THPT",
-};
 
 const axisStyles = {
   S: "bg-emerald-100 text-emerald-800",
@@ -27,20 +26,25 @@ const axisStyles = {
   M: "bg-violet-100 text-violet-800",
 };
 
-const gradeRangeByBand = {
-  primary: [1, 5],
-  secondary: [6, 9],
-  high_school: [10, 12],
-};
-
 const initialForm = {
   name: "",
-  gradeBand: "secondary",
-  grade: "",
+  gradeLevel: "6",
   subjectIds: [],
   description: "",
   maxMembers: "",
 };
+
+function classSubjects(item) {
+  return item.subjects?.length ? item.subjects : item.subject ? [item.subject] : [];
+}
+
+function classMaxMembers(item) {
+  return item.maxMembers ?? item.max_members ?? null;
+}
+
+function classGradeLevel(item) {
+  return item.gradeLevel ?? item.grade_level;
+}
 
 export function TeacherClassesPage() {
   const [classes, setClasses] = useState([]);
@@ -90,8 +94,7 @@ export function TeacherClassesPage() {
     setForm((current) => ({
       ...current,
       [field]: value,
-      ...(field === "gradeBand" ? { grade: "", subjectIds: [] } : {}),
-      ...(field === "grade" ? { subjectIds: [] } : {}),
+      ...(field === "gradeLevel" ? { subjectIds: [] } : {}),
     }));
   }
 
@@ -111,7 +114,7 @@ export function TeacherClassesPage() {
     try {
       const created = await api.createTeacherClass({
         ...form,
-        grade: Number(form.grade),
+        gradeLevel: Number(form.gradeLevel),
         maxMembers: form.maxMembers ? Number(form.maxMembers) : null,
       });
       setCreateOpen(false);
@@ -167,25 +170,35 @@ export function TeacherClassesPage() {
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {classes.map((item) => (
-              <Link key={item.id} to={`/teacher/classes/${item.id}`} className="surface group block min-h-52 p-5 transition hover:-translate-y-0.5 hover:border-emerald-300">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="grid h-11 w-11 place-items-center rounded-lg bg-emerald-700 text-white"><BookOpenCheck size={21} /></div>
-                  <div className="flex flex-wrap justify-end gap-1">
-                    {(item.subjects?.length ? item.subjects : [null]).map((subject, index) => (
-                      <span key={subject?.id || index} className={`rounded-md px-2 py-1 text-xs font-black ${axisStyles[subject?.steam_axis] || "bg-slate-100 text-slate-600"}`}>{subject?.steam_axis || "STEAM"}</span>
-                    ))}
+            {classes.map((item) => {
+              const subjectsForClass = classSubjects(item);
+              const maxMembers = classMaxMembers(item);
+              return (
+                <Link key={item.id} to={`/teacher/classes/${item.id}`} className="surface group block min-h-52 p-5 transition hover:-translate-y-0.5 hover:border-emerald-300">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="grid h-11 w-11 place-items-center rounded-lg bg-emerald-700 text-white"><BookOpenCheck size={21} /></div>
+                    <div className="flex flex-wrap justify-end gap-1">
+                      {(subjectsForClass.length ? subjectsForClass : [null]).map((subject, index) => (
+                        <span
+                          key={subject?.id || index}
+                          title={STEAM_AXIS_LABELS[subject?.steam_axis] || "STEAM"}
+                          className={`rounded-md px-2 py-1 text-xs font-black ${axisStyles[subject?.steam_axis] || "bg-slate-100 text-slate-600"}`}
+                        >
+                          {subject?.steam_axis || "STEAM"}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </div>
-                <h3 className="mt-5 truncate text-lg font-black text-slate-950">{item.name}</h3>
-                <p className="mt-1 truncate text-sm font-bold text-slate-500">{item.subjects?.length ? item.subjects.map((s) => s.name).join(", ") : "Chưa chọn môn"} · {item.grade ? `Lớp ${item.grade}` : gradeLabels[item.grade_band]}</p>
-                <div className="mt-5 flex items-center gap-4 border-t border-slate-100 pt-4 text-xs font-bold text-slate-500">
-                  <span>{item.memberCount}{item.max_members ? `/${item.max_members}` : ""} học sinh</span>
-                  <span>{item.pendingCount} chờ duyệt</span>
-                  <ArrowRight className="ml-auto text-emerald-700 transition group-hover:translate-x-1" size={18} />
-                </div>
-              </Link>
-            ))}
+                  <h3 className="mt-5 truncate text-lg font-black text-slate-950">{item.name}</h3>
+                  <p className="mt-1 truncate text-sm font-bold text-slate-500">{subjectsForClass.length ? subjectsForClass.map((s) => s.name).join(", ") : "Chưa chọn môn"} · {gradeLabel(classGradeLevel(item))}</p>
+                  <div className="mt-5 flex items-center gap-4 border-t border-slate-100 pt-4 text-xs font-bold text-slate-500">
+                    <span>{item.memberCount}{maxMembers ? `/${maxMembers}` : ""} học sinh</span>
+                    <span>{item.pendingCount} chờ duyệt</span>
+                    <ArrowRight className="ml-auto text-emerald-700 transition group-hover:translate-x-1" size={18} />
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         )}
       </section>
@@ -199,13 +212,15 @@ export function TeacherClassesPage() {
             </div>
             <form className="mt-6 space-y-5" onSubmit={createClass}>
               <FormField label="Tên lớp" value={form.name} onChange={(event) => update("name", event.target.value)} placeholder="Ví dụ: Scratch cơ bản 6A" required />
-              <div className="grid gap-5 sm:grid-cols-3">
-                <label className="block"><span className="mb-2 block text-xs font-black text-slate-700">Khối lớp</span><select className="auth-input px-3.5" value={form.gradeBand} onChange={(event) => update("gradeBand", event.target.value)}><option value="primary">Tiểu học</option><option value="secondary">THCS</option><option value="high_school">THPT</option></select></label>
+              <div className="grid gap-5 sm:grid-cols-2">
                 <label className="block">
                   <span className="mb-2 block text-xs font-black text-slate-700">Lớp</span>
-                  <select className="auth-input px-3.5" value={form.grade} onChange={(event) => update("grade", Number(event.target.value))} required>
-                    <option value="">Chọn lớp</option>
-                    {gradeOptions.map((g) => <option key={g} value={g}>Lớp {g}</option>)}
+                  <select className="auth-input px-3.5" value={form.gradeLevel} onChange={(event) => update("gradeLevel", event.target.value)}>
+                    {GRADE_GROUPS.map((group) => (
+                      <optgroup key={group.label} label={group.label}>
+                        {group.grades.map((gradeLevel) => <option key={gradeLevel} value={gradeLevel}>Lớp {gradeLevel}</option>)}
+                      </optgroup>
+                    ))}
                   </select>
                 </label>
                 <FormField label="Số thành viên tối đa" type="number" min={1} max={100} value={form.maxMembers} onChange={(event) => update("maxMembers", event.target.value)} placeholder="Không giới hạn" />
@@ -235,7 +250,7 @@ export function TeacherClassesPage() {
               <label className="block"><span className="mb-2 block text-xs font-black text-slate-700">Mô tả</span><textarea className="auth-input min-h-24 resize-y px-3.5 py-3" maxLength={500} value={form.description} onChange={(event) => update("description", event.target.value)} placeholder="Mục tiêu hoặc lịch học của lớp" /></label>
               <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                 <button type="button" className="secondary-button" onClick={() => setCreateOpen(false)}>Hủy</button>
-                <button type="submit" className="primary-button" disabled={creating || !form.name || !form.grade || form.subjectIds.length === 0}>{creating ? "Đang tạo..." : "Tạo lớp"}</button>
+                <button type="submit" className="primary-button" disabled={creating || !form.name || form.subjectIds.length === 0}>{creating ? "Đang tạo..." : "Tạo lớp"}</button>
               </div>
             </form>
           </div>

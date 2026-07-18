@@ -8,14 +8,13 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
+import { gradeLabel } from "../../lib/academicCatalog.js";
 import { api } from "../../lib/apiClient.js";
 import { FormAlert, FormField } from "../auth/AuthFormControls.jsx";
 
-const gradeLabels = {
-  primary: "Tiểu học",
-  secondary: "THCS",
-  high_school: "THPT",
-};
+function classSubjects(item) {
+  return item.subjects?.length ? item.subjects : item.subject ? [item.subject] : [];
+}
 
 export function StudentClassesPage() {
   const [classes, setClasses] = useState([]);
@@ -110,16 +109,19 @@ export function StudentClassesPage() {
               <div className="px-5 py-10 text-center"><MailCheck className="mx-auto text-slate-300" size={32} /><p className="mt-3 text-sm font-bold text-slate-400">Không có lời mời mới.</p></div>
             ) : (
               <div className="divide-y divide-slate-100">
-                {invitations.map((invite) => (
-                  <div key={invite.membershipId} className="px-5 py-4">
-                    <p className="text-sm font-black">{invite.name}</p>
-                    <p className="mt-1 text-xs font-bold text-slate-500">{invite.subjects?.length ? invite.subjects.map((s) => s.name).join(", ") : "STEAM"} · {invite.teacher?.full_name || "Giáo viên"}</p>
-                    <div className="mt-3 flex gap-2">
-                      <button type="button" className="primary-button min-h-9 flex-1 px-3 text-xs" disabled={actingId === invite.membershipId} onClick={() => respond(invite.membershipId, "accept")}><Check size={15} />Chấp nhận</button>
-                      <button type="button" className="secondary-button min-h-9 flex-1 px-3 text-xs" disabled={actingId === invite.membershipId} onClick={() => respond(invite.membershipId, "decline")}><X size={15} />Từ chối</button>
+                {invitations.map((invite) => {
+                  const subjects = classSubjects(invite);
+                  return (
+                    <div key={invite.membershipId} className="px-5 py-4">
+                      <p className="text-sm font-black">{invite.name}</p>
+                      <p className="mt-1 text-xs font-bold text-slate-500">{subjects.length ? subjects.map((s) => s.name).join(", ") : "STEAM"} · {invite.teacher?.full_name || "Giáo viên"}</p>
+                      <div className="mt-3 flex gap-2">
+                        <button type="button" className="primary-button min-h-9 flex-1 px-3 text-xs" disabled={actingId === invite.membershipId} onClick={() => respond(invite.membershipId, "accept")}><Check size={15} />Chấp nhận</button>
+                        <button type="button" className="secondary-button min-h-9 flex-1 px-3 text-xs" disabled={actingId === invite.membershipId} onClick={() => respond(invite.membershipId, "decline")}><X size={15} />Từ chối</button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -133,21 +135,24 @@ export function StudentClassesPage() {
             <div className="surface px-6 py-14 text-center"><School className="mx-auto text-slate-300" size={36} /><h3 className="mt-4 text-lg font-black">Bạn chưa tham gia lớp nào</h3></div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
-              {classes.map((item) => (
-                <article key={item.id} className="surface min-h-44 p-5">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="grid h-11 w-11 place-items-center rounded-lg bg-sky-100 text-sky-800"><School size={21} /></div>
-                    <div className="flex flex-wrap justify-end gap-1">
-                      {(item.subjects?.length ? item.subjects : [null]).map((subject, index) => (
-                        <span key={subject?.id || index} className="rounded-md bg-slate-100 px-2 py-1 text-xs font-black text-slate-600">{subject?.steam_axis || "STEAM"}</span>
-                      ))}
+              {classes.map((item) => {
+                const subjects = classSubjects(item);
+                return (
+                  <article key={item.id} className="surface min-h-44 p-5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="grid h-11 w-11 place-items-center rounded-lg bg-sky-100 text-sky-800"><School size={21} /></div>
+                      <div className="flex flex-wrap justify-end gap-1">
+                        {(subjects.length ? subjects : [null]).map((subject, index) => (
+                          <span key={subject?.id || index} className="rounded-md bg-slate-100 px-2 py-1 text-xs font-black text-slate-600">{subject?.steam_axis || "STEAM"}</span>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                  <h3 className="mt-4 truncate text-lg font-black">{item.name}</h3>
-                  <p className="mt-1 truncate text-sm font-bold text-slate-500">{item.subjects?.length ? item.subjects.map((s) => s.name).join(", ") : "Chưa chọn môn"} · {item.grade ? `Lớp ${item.grade}` : gradeLabels[item.gradeBand]}</p>
-                  <p className="mt-4 border-t border-slate-100 pt-3 text-xs font-bold text-slate-500">{item.teacher?.full_name || "Giáo viên phụ trách"}</p>
-                </article>
-              ))}
+                    <h3 className="mt-4 truncate text-lg font-black">{item.name}</h3>
+                    <p className="mt-1 truncate text-sm font-bold text-slate-500">{subjects.length ? subjects.map((s) => s.name).join(", ") : "Chưa chọn môn"} · {gradeLabel(item.gradeLevel)}</p>
+                    <p className="mt-4 border-t border-slate-100 pt-3 text-xs font-bold text-slate-500">{item.teacher?.full_name || "Giáo viên phụ trách"}</p>
+                  </article>
+                );
+              })}
             </div>
           )}
         </section>
