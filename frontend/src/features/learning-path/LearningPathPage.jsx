@@ -15,6 +15,7 @@ import {
 import { Link } from "react-router-dom";
 
 import { useStudentData } from "../../app/StudentDataProvider.jsx";
+import { gradeLabel } from "../../lib/academicCatalog.js";
 import { api } from "../../lib/apiClient.js";
 
 const GRADE_BANDS = [
@@ -261,22 +262,90 @@ function SubjectDetail({ entry, onBack }) {
 }
 
 function ClassCard({ cls }) {
+  // Ưu tiên danh sách nhiều môn (class_subjects); `subject` chỉ là môn đầu tiên
+  // và tồn tại để tương thích ngược.
+  const subjects = cls.subjects?.length ? cls.subjects : cls.subject ? [cls.subject] : [];
   return (
-    <div className="class-card">
+    <div className="class-card !items-start">
       <div className="class-card-icon">
         <Users size={18} />
       </div>
       <div className="min-w-0 flex-1">
-        <div className="class-card-name">{cls.name}</div>
-        {(cls.subject || cls.teacher) && (
-          <div className="class-card-sub">
-            {[cls.subject?.name, cls.teacher?.full_name && `GV: ${cls.teacher.full_name}`]
-              .filter(Boolean)
-              .join(" · ")}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="class-card-name">{cls.name}</span>
+          {cls.gradeLevel && (
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-black text-slate-600">
+              {gradeLabel(cls.gradeLevel)}
+            </span>
+          )}
+        </div>
+        {cls.teacher?.full_name && (
+          <div className="class-card-sub">GV: {cls.teacher.full_name}</div>
+        )}
+        {subjects.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {subjects.map((subject) => {
+              const meta = STEAM_META[subject.steam_axis];
+              return (
+                <span
+                  key={subject.id}
+                  className="rounded-md px-2 py-0.5 text-[11px] font-black"
+                  style={meta ? { background: meta.bg, color: meta.text } : undefined}
+                >
+                  {subject.name}
+                </span>
+              );
+            })}
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * Khối "Lớp học của tôi" đặt ngay đầu trang: học sinh cần thấy mình đang ở lớp
+ * nào trước khi duyệt lộ trình theo khối (Tiểu học / THCS / THPT), vì hai khái
+ * niệm này khác nhau và dễ nhầm.
+ */
+function MyClassesPanel({ classes, gradeLevel }) {
+  return (
+    <section className="surface p-5 md:p-6">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <GraduationCap size={17} className="text-emerald-600" aria-hidden="true" />
+        <h2 className="text-sm font-black text-slate-900">Lớp học của tôi</h2>
+        {gradeLevel && (
+          <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-black text-emerald-700">
+            {gradeLabel(gradeLevel)}
+          </span>
+        )}
+        {classes.length > 0 && <span className="count-badge">{classes.length}</span>}
+      </div>
+
+      {classes.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-center">
+          <p className="text-sm font-bold text-slate-600">Bạn chưa tham gia lớp nào.</p>
+          <p className="mt-1 text-xs font-medium text-slate-500">
+            Vào lớp để nhận bài giảng giáo viên biên soạn cho lớp bạn.
+          </p>
+          <Link to="/student/classes" className="secondary-button mt-3 inline-flex">
+            Tham gia lớp <ArrowRight size={15} />
+          </Link>
+        </div>
+      ) : (
+        <>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {classes.map((cls) => <ClassCard key={cls.id} cls={cls} />)}
+          </div>
+          <Link
+            to="/student/ai-lessons"
+            className="mt-3 inline-flex items-center gap-1.5 text-sm font-black text-emerald-700 hover:text-emerald-900"
+          >
+            Xem bài giảng của lớp <ArrowRight size={16} />
+          </Link>
+        </>
+      )}
+    </section>
   );
 }
 
@@ -373,6 +442,10 @@ export function LearningPathPage() {
         )}
       </div>
 
+      {!selected && (
+        <MyClassesPanel classes={classes} gradeLevel={dashboard?.student?.gradeLevel} />
+      )}
+
       {!path ? (
         <div className="space-y-4">
           <div className="skeleton h-12 w-72 rounded-full" />
@@ -384,7 +457,11 @@ export function LearningPathPage() {
         <SubjectDetail entry={selected} onBack={() => setSelectedKey(null)} />
       ) : (
         <div style={{ animation: "popIn .35s ease" }}>
-          {/* Grade band tabs */}
+          {/* Grade band tabs — "khối" khác với "lớp" ở panel phía trên: khối là
+              cấp học (Tiểu học/THCS/THPT), lớp là lớp cụ thể của học sinh. */}
+          <p className="mb-2 text-xs font-bold text-slate-500">
+            Lộ trình theo cấp học — chấm xanh là cấp bạn đang theo
+          </p>
           <div className="tab-pill-row mb-6">
             {GRADE_BANDS.map((band) => (
               <button
@@ -428,19 +505,6 @@ export function LearningPathPage() {
         </div>
       )}
 
-      {/* My Classes */}
-      {!selected && classes.length > 0 && (
-        <section>
-          <div className="mb-3 flex items-center gap-2">
-            <GraduationCap size={16} className="text-slate-400" aria-hidden="true" />
-            <h2 className="text-sm font-black text-slate-900">Lớp học của tôi</h2>
-            <span className="count-badge">{classes.length}</span>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {classes.map((cls) => <ClassCard key={cls.id} cls={cls} />)}
-          </div>
-        </section>
-      )}
     </div>
   );
 }
