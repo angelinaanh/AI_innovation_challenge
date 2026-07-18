@@ -177,7 +177,6 @@ export async function createClass(teacherId, {
       .insert(subjects.map((subject) => ({
         class_id: result.data.id,
         subject_id: subject.id,
-        grade_level: gradeLevel,
       })));
     if (subjectLinks.error) {
       await supabase.from("classes").delete().eq("id", result.data.id);

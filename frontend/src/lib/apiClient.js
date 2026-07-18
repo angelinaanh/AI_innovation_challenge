@@ -242,4 +242,22 @@ export const api = {
     { response },
     signal,
   ),
+  getCommunityPosts: (filters, signal) => {
+    const params = new URLSearchParams();
+    if (filters?.gradeLevel) params.append("gradeLevel", filters.gradeLevel);
+    if (filters?.subjectId) params.append("subjectId", filters.subjectId);
+    if (filters?.type) params.append("type", filters.type);
+    const qs = params.toString();
+    return apiGet(`/community/posts${qs ? `?${qs}` : ""}`, signal);
+  },
+  getCommunityPost: (postId, signal) => apiGet(`/community/posts/${encodeURIComponent(postId)}`, signal),
+  createCommunityPost: (payload, signal) => apiPost("/community/posts", payload, signal),
+  createCommunityReply: (postId, payload, signal) => apiPost(`/community/posts/${encodeURIComponent(postId)}/replies`, payload, signal),
+  incrementCommunityPostView: (postId, signal) => apiPost(`/community/posts/${encodeURIComponent(postId)}/view`, {}, signal),
+  voteCommunityPost: (postId, vote, type, signal) => apiPost(`/community/posts/${encodeURIComponent(postId)}/vote`, { vote, type }, signal),
+  toggleCommunityBookmark: (postId, signal) => apiPost(`/community/posts/${encodeURIComponent(postId)}/bookmark`, {}, signal),
+  getCommunitySubjects: (signal) => apiGet("/community/subjects", signal),
+  getCommunityStats: (signal) => apiGet("/community/stats", signal),
+  getCommunityBookmarks: (signal) => apiGet("/community/bookmarks", signal),
+  acceptCommunityReply: (replyId, signal) => apiPost(`/community/replies/${encodeURIComponent(replyId)}/accept`, {}, signal),
 };

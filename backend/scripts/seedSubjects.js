@@ -29,6 +29,8 @@ async function main() {
       steam_axis: subject.steamAxis,
       grade_level: subject.gradeLevel,
       grade_band: subject.gradeBand,
+      min_grade: subject.gradeLevel,
+      max_grade: subject.gradeLevel,
     })));
 
   const { error: upsertError } = await db
