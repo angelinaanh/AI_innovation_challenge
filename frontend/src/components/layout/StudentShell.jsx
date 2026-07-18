@@ -11,6 +11,7 @@ import {
   Radio,
   School,
   X,
+  Users,
 } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 
@@ -24,6 +25,7 @@ const navItems = [
   { to: "/student/path", label: "Lộ trình học", icon: Map },
   { to: "/student/content", label: "Nội dung", icon: BookOpenCheck },
   { to: "/student/classes", label: "Lớp học", icon: School },
+  { to: "/student/community", label: "Cộng đồng", icon: Users },
 ];
 
 function Navigation({ onNavigate }) {

@@ -7,6 +7,7 @@ import {
   School,
   Sparkles,
   X,
+  Users,
 } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 
@@ -18,6 +19,7 @@ const navItems = [
   { to: "/teacher", label: "Lớp học", icon: School, end: true },
   { to: "/teacher/content", label: "Nội dung", icon: BookOpenCheck },
   { to: "/teacher/ai-lessons", label: "Tạo bài giảng AI", icon: Sparkles },
+  { to: "/teacher/community", label: "Cộng đồng", icon: Users },
 ];
 
 function Navigation({ onNavigate }) {

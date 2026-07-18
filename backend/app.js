@@ -7,6 +7,7 @@ import { authRouter } from "./api/routes/authRoutes.js";
 import { studentRouter } from "./api/routes/studentRoutes.js";
 import { teacherRouter } from "./api/routes/teacherRoutes.js";
 import { tutorRouter } from "./api/routes/tutorRoutes.js";
+import communityRouter from "./api/routes/communityRoutes.js";
 import {
   authenticateRequest,
   requireActiveAccount,
@@ -71,6 +72,13 @@ export function createApp() {
     requireRole("teacher"),
     requireActiveAccount,
     teacherRouter,
+  );
+  app.use(
+    "/api/community",
+    authenticateRequest,
+    requireProfile,
+    requireActiveAccount,
+    communityRouter,
   );
   app.use(notFound);
   app.use(errorHandler);

@@ -32,6 +32,8 @@ import { TeacherContentPage } from "../features/teacher-content/TeacherContentPa
 import { TeacherLessonGeneratorPage } from "../features/teacher-content/TeacherLessonGeneratorPage.jsx";
 import { TeacherClassDetailPage } from "../features/teacher/TeacherClassDetailPage.jsx";
 import { TeacherClassesPage } from "../features/teacher/TeacherClassesPage.jsx";
+import { CommunityHubPage } from "../features/community/CommunityHubPage.jsx";
+import { CommunityPostDetailPage } from "../features/community/CommunityPostDetailPage.jsx";
 import { AuthProvider } from "./AuthProvider.jsx";
 import { StudentDataProvider } from "./StudentDataProvider.jsx";
 
@@ -65,6 +67,8 @@ export function App() {
               <Route path="/student/path" element={<LearningPathPage />} />
               <Route path="/student/content" element={<StudentContentPage />} />
               <Route path="/student/classes" element={<StudentClassesPage />} />
+              <Route path="/student/community" element={<CommunityHubPage />} />
+              <Route path="/student/community/:id" element={<CommunityPostDetailPage />} />
               <Route path="/student/lessons/:skillNodeId" element={<LessonPlayerPage />} />
             </Route>
           </Route>
@@ -76,6 +80,8 @@ export function App() {
               <Route path="/teacher/content" element={<TeacherContentPage />} />
               <Route path="/teacher/ai-lessons" element={<TeacherLessonGeneratorPage />} />
               <Route path="/teacher/content/:lessonId" element={<TeacherContentEditorPage />} />
+              <Route path="/teacher/community" element={<CommunityHubPage />} />
+              <Route path="/teacher/community/:id" element={<CommunityPostDetailPage />} />
             </Route>
           </Route>
 
