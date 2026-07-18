@@ -27,6 +27,7 @@ import { LearningPathPage } from "../features/learning-path/LearningPathPage.jsx
 import { LessonPlayerPage } from "../features/lesson-player/LessonPlayerPage.jsx";
 import { StudentClassesPage } from "../features/student-classes/StudentClassesPage.jsx";
 import { StudentContentPage } from "../features/student-content/StudentContentPage.jsx";
+import { SoftSkillLessonPage } from "../features/student-content/SoftSkillLessonPage.jsx";
 import {
   StudentAiLessonDetailPage,
   StudentAiLessonsPage,
@@ -69,6 +70,7 @@ export function App() {
               <Route path="/student" element={<DashboardPage />} />
               <Route path="/student/path" element={<LearningPathPage />} />
               <Route path="/student/content" element={<StudentContentPage />} />
+              <Route path="/student/soft-skills/:id" element={<SoftSkillLessonPage />} />
               <Route path="/student/ai-lessons" element={<StudentAiLessonsPage />} />
               <Route path="/student/ai-lessons/:lessonId" element={<StudentAiLessonDetailPage />} />
               <Route path="/student/classes" element={<StudentClassesPage />} />

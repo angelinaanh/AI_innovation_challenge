@@ -9,6 +9,44 @@ import {
   membershipActor,
   nextMembershipStatus,
 } from "../services/classroom/classroomRules.js";
+import { serializeClass } from "../services/classroom/classroomService.js";
+
+// Giáo viên phát mã này cho học sinh vào lớp. Quên map snake_case -> camelCase
+// thì giao diện hiện `undefined` mà không có lỗi nào ở backend, nên khoá lại
+// bằng test thay vì trông chờ phát hiện bằng mắt.
+test("serializeClass exposes the join code in camelCase", () => {
+  const row = {
+    id: "c1",
+    name: "Lớp 8A",
+    grade_level: 8,
+    grade_band: "secondary",
+    max_members: 40,
+    join_code: "ABC234",
+    created_at: "2026-07-19T00:00:00Z",
+  };
+  const serialized = serializeClass(row, []);
+
+  assert.equal(serialized.joinCode, "ABC234");
+  assert.equal(serialized.gradeLevel, 8);
+  assert.equal(serialized.gradeBand, "secondary");
+  assert.equal(serialized.maxMembers, 40);
+  assert.equal(serialized.createdAt, "2026-07-19T00:00:00Z");
+
+  // Không cột snake_case nào của bảng classes được phép thiếu bản camelCase.
+  const CAMEL_OF = {
+    grade_level: "gradeLevel",
+    grade_band: "gradeBand",
+    max_members: "maxMembers",
+    join_code: "joinCode",
+    created_at: "createdAt",
+    teacher_id: "teacherId",
+    org_id: "orgId",
+  };
+  for (const [snake, camel] of Object.entries(CAMEL_OF)) {
+    if (row[snake] === undefined) continue;
+    assert.equal(serialized[camel], row[snake], `thiếu map ${snake} -> ${camel}`);
+  }
+});
 
 test("join codes are readable, fixed-length, unambiguous", () => {
   const code = generateJoinCode(6);

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bot, Loader2, Send, Sparkles } from "lucide-react";
+import { Bot, Loader2, Send, Sparkles, X, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 
 import { api } from "../../lib/apiClient.js";
 import { RadarProfile } from "../student-dashboard/RadarProfile.jsx";
@@ -7,11 +7,22 @@ import { RadarProfile } from "../student-dashboard/RadarProfile.jsx";
 const AXIS_LABEL = { S: "Khoa học", T: "Công nghệ", E: "Kỹ thuật", A: "Nghệ thuật", M: "Toán học" };
 const BRAND_GRADIENT = { background: "var(--gradient-brand)" };
 
-function BotAvatar({ size = 40 }) {
+function BotAvatar({ type = "header", size = 40 }) {
+  if (type === "chat") {
+    return (
+      <div
+        className="grid shrink-0 place-items-center rounded-xl bg-emerald-100 text-emerald-700"
+        style={{ width: size, height: size }}
+      >
+        <Bot size={size * 0.55} strokeWidth={2.4} />
+      </div>
+    );
+  }
+  
   return (
     <div
-      className="grid shrink-0 place-items-center rounded-2xl text-white shadow-sm"
-      style={{ ...BRAND_GRADIENT, width: size, height: size }}
+      className="grid shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#004e92] to-[#000428] text-white shadow-sm"
+      style={{ width: size, height: size }}
     >
       <Bot size={size * 0.55} strokeWidth={2.4} />
     </div>
@@ -21,13 +32,13 @@ function BotAvatar({ size = 40 }) {
 function ChatBubble({ role, content }) {
   const isAssistant = role === "assistant";
   return (
-    <div className={`flex items-end gap-2 ${isAssistant ? "justify-start" : "justify-end"}`}>
-      {isAssistant && <BotAvatar size={30} />}
+    <div className={`flex items-end gap-3 w-full ${isAssistant ? "justify-start" : "justify-end"}`}>
+      {isAssistant && <BotAvatar type="chat" size={32} />}
       <div
-        className={`max-w-[78%] px-4 py-2.5 text-sm leading-6 ${
+        className={`px-5 py-3 text-[15px] leading-relaxed shadow-sm ${
           isAssistant
-            ? "rounded-2xl rounded-bl-md bg-emerald-50 text-emerald-950"
-            : "rounded-2xl rounded-br-md bg-emerald-600 font-semibold text-white"
+            ? "rounded-2xl rounded-bl-sm bg-white text-slate-700 border border-slate-100 max-w-[85%]"
+            : "rounded-2xl rounded-br-sm bg-emerald-600 font-semibold text-white max-w-[78%]"
         }`}
       >
         {content}
@@ -85,8 +96,8 @@ function ChatPhase({ onComplete }) {
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <div ref={scrollRef} className="min-h-[320px] flex-1 space-y-3 overflow-y-auto px-1 py-2">
+    <div className="flex h-full flex-col bg-slate-50 rounded-b-[30px] p-2 md:p-6">
+      <div ref={scrollRef} className="min-h-[320px] flex-1 space-y-4 overflow-y-auto px-2 py-4">
         {messages.map((message, index) => <ChatBubble key={index} {...message} />)}
         {busy && (
           <div className="flex items-center gap-2 pl-1 text-sm text-slate-400">
@@ -94,24 +105,27 @@ function ChatPhase({ onComplete }) {
           </div>
         )}
       </div>
-      {error && <p className="px-1 pb-2 text-xs font-bold text-rose-500">{error}</p>}
-      <form className="mt-2 flex items-center gap-2" onSubmit={submit}>
-        <input
-          className="auth-input flex-1 px-4"
-          placeholder="Nhập câu trả lời của bạn..."
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          disabled={busy}
-          autoFocus
-        />
-        <button
-          type="submit"
-          className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-emerald-700 text-white shadow-md transition hover:bg-emerald-800 disabled:opacity-40"
-          disabled={busy || !input.trim()}
-          aria-label="Gửi"
-        >
-          <Send size={18} />
-        </button>
+      {error && <p className="px-2 pb-2 text-xs font-bold text-rose-500">{error}</p>}
+      <form className="mt-4 flex flex-col items-center gap-3 relative" onSubmit={submit}>
+        <div className="relative w-full">
+          <input
+            className="w-full h-14 rounded-full border-none bg-white pl-6 pr-14 text-[15px] shadow-sm outline-none ring-1 ring-slate-200 transition focus:ring-2 focus:ring-emerald-500"
+            placeholder="Nhập câu trả lời của bạn..."
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            disabled={busy}
+            autoFocus
+          />
+          <button
+            type="submit"
+            className="absolute right-1.5 top-1.5 grid h-11 w-11 shrink-0 place-items-center rounded-full bg-emerald-600 text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-40"
+            disabled={busy || !input.trim()}
+            aria-label="Gửi"
+          >
+            <Send size={18} className="mr-0.5" />
+          </button>
+        </div>
+        <p className="text-[11px] font-semibold text-slate-400">Sử dụng phím Enter để gửi nhanh</p>
       </form>
     </div>
   );
@@ -307,7 +321,7 @@ function ResultPhase({ result, onFinish }) {
       </div>
       {result.feedbacks && result.feedbacks.length > 0 && (
         <div className="mt-4 space-y-3">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Nhận xét từ Giáo viên AI</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Nhận xét tổng quan từ Giáo viên AI</p>
           {result.feedbacks.map((fb, idx) => (
             <div key={idx} className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-sm leading-6 text-slate-700 shadow-sm">
               <Sparkles size={14} className="mb-1 inline-block text-amber-500" /> {fb}
@@ -315,7 +329,68 @@ function ResultPhase({ result, onFinish }) {
           ))}
         </div>
       )}
-      <button className="auth-primary-button mt-5" type="button" onClick={onFinish}>
+
+      {result.questionDetails && result.questionDetails.length > 0 && (
+        <div className="mt-8">
+          <h3 className="mb-4 text-[15px] font-black text-slate-800">Chi tiết Bài kiểm tra</h3>
+          <div className="space-y-4">
+            {result.questionDetails.map((q, idx) => (
+              <div key={q.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 shrink-0">
+                    {q.isCorrect ? (
+                      <CheckCircle2 className="text-emerald-500" size={22} />
+                    ) : (
+                      <XCircle className="text-rose-500" size={22} />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-bold text-slate-800 text-sm leading-relaxed">
+                      <span className="text-slate-500 mr-1">Câu {idx + 1}:</span> {q.body}
+                    </p>
+                    
+                    <div className="mt-2.5 text-sm">
+                      <span className="font-semibold text-slate-600">Đã trả lời: </span>
+                      {q.type === "mcq" || !q.type ? (
+                        q.options?.[q.selectedIndex] ? (
+                          <span className={q.isCorrect ? "text-emerald-700 font-medium" : "text-rose-600 font-medium"}>
+                            {q.options[q.selectedIndex]}
+                          </span>
+                        ) : (
+                          <span className="italic text-slate-400">Không chọn</span>
+                        )
+                      ) : (
+                        q.textAnswer ? (
+                          <span className="text-slate-700 font-medium">"{q.textAnswer}"</span>
+                        ) : (
+                          <span className="italic text-slate-400">Bỏ trống</span>
+                        )
+                      )}
+                    </div>
+
+                    {(q.explanation || q.formativeFeedback) && (
+                      <div className="mt-3.5 rounded-xl bg-[#f8fafc] border border-slate-100 p-3.5 text-sm leading-relaxed text-slate-700">
+                        <div className="flex items-center gap-1.5 font-bold text-indigo-600 mb-1.5">
+                          <AlertCircle size={16} />
+                          Giải thích
+                        </div>
+                        {q.formativeFeedback ? (
+                          <div className="mb-2"><span className="font-semibold text-slate-600">Giáo viên AI: </span>{q.formativeFeedback}</div>
+                        ) : null}
+                        {q.explanation && (
+                          <div>{q.explanation}</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <button className="auth-primary-button mt-8" type="button" onClick={onFinish}>
         Bắt đầu hành trình học của mình 🚀
       </button>
     </div>
@@ -334,25 +409,39 @@ export function OnboardingGate({ onboarding, onFinished }) {
 
   return (
     <div className="fixed inset-0 z-[60] grid place-items-center bg-slate-900/40 p-4 backdrop-blur-sm">
-      <div className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-[24px] border border-[#f1ede4] bg-white shadow-[0_18px_60px_rgba(15,23,42,0.22)]">
-        <div className="h-1.5 w-full" style={BRAND_GRADIENT} />
-        <div className="flex items-center gap-3 border-b border-slate-100 bg-[#fbf9f5] px-6 py-4">
-          <BotAvatar size={44} />
-          <div>
-            <p className="text-xs font-black uppercase tracking-wide text-emerald-600">Trợ lý EduOne</p>
-            <h2 className="font-display text-xl font-bold leading-tight text-slate-900">{TITLES[phase]}</h2>
+      <div className="relative flex max-h-[92vh] w-full max-w-3xl flex-col rounded-[32px] bg-gradient-to-br from-[#e0f2fe] via-white to-[#fef3c7] p-[2px] shadow-2xl">
+        <div className="flex h-full flex-col overflow-hidden rounded-[30px] bg-white">
+          <div className="flex items-center justify-between px-6 py-5 md:px-8">
+            <div className="flex items-center gap-4">
+              <BotAvatar type="header" size={48} />
+              <div>
+                <p className="text-xs font-black uppercase tracking-widest text-emerald-700 mb-0.5">Trợ lý EduOne</p>
+                <h2 className="font-display text-[22px] font-bold leading-tight text-slate-900">{TITLES[phase]}</h2>
+              </div>
+            </div>
+            <button 
+              onClick={() => onFinished && onFinished()} 
+              className="text-slate-400 hover:text-slate-700 transition"
+              aria-label="Đóng"
+            >
+              <X size={24} />
+            </button>
           </div>
-        </div>
-        <div className="flex-1 overflow-y-auto px-6 py-4">
-          {phase === "chat" && <ChatPhase onComplete={() => setPhase("test")} />}
-          {phase === "test" && (
-            <TestPhase
-              onComplete={(testResult) => { setResult(testResult); setPhase("result"); }}
-            />
-          )}
-          {phase === "result" && result && (
-            <ResultPhase result={result} onFinish={onFinished} />
-          )}
+          <div className="flex-1 overflow-y-auto bg-slate-50">
+            {phase === "chat" && <ChatPhase onComplete={() => setPhase("test")} />}
+            {phase === "test" && (
+              <div className="p-6 md:p-8">
+                <TestPhase
+                  onComplete={(testResult) => { setResult(testResult); setPhase("result"); }}
+                />
+              </div>
+            )}
+            {phase === "result" && result && (
+              <div className="p-6 md:p-8">
+                <ResultPhase result={result} onFinish={onFinished} />
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

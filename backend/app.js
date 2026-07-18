@@ -15,19 +15,30 @@ import {
   requireRole,
 } from "./middleware/auth.js";
 import { errorHandler, notFound } from "./middleware/errorHandler.js";
-import { env } from "./utils/env.js";
+import { env, isOriginAllowed } from "./utils/env.js";
 
 export function createApp() {
   const app = express();
 
   app.disable("x-powered-by");
+  // Trả Error ở callback khiến cors ném vào errorHandler -> 500 TRỐNG, không kèm
+  // header Access-Control-* nào, kể cả ở preflight. Trình duyệt chỉ báo "Failed
+  // to fetch" và không đọc được body, nên nguyên nhân thật bị giấu hoàn toàn.
+  // Từ chối "mềm" (callback(null, false)) + log origin để còn lần ra được.
   app.use(cors({
     origin(origin, callback) {
-      if (!origin || env.corsOrigins.includes(origin)) {
+      if (isOriginAllowed(origin)) {
         callback(null, true);
         return;
       }
-      callback(new Error("Origin is not allowed by CORS"));
+      console.warn(JSON.stringify({
+        level: "warn",
+        code: "CORS_ORIGIN_REJECTED",
+        origin,
+        allowed: env.corsOrigins,
+        hint: "Thêm origin này vào CORS_ORIGINS trong backend/.env rồi khởi động lại backend.",
+      }));
+      callback(null, false);
     },
     credentials: true,
   }));

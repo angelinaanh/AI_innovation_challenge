@@ -80,9 +80,16 @@ export function TeacherClassDetailPage() {
   }
 
   async function copyJoinCode() {
-    await navigator.clipboard.writeText(data.class.joinCode);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
+    if (!data?.class?.joinCode) return;
+    try {
+      await navigator.clipboard.writeText(data.class.joinCode);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      // clipboard API cần secure context (https/localhost) và quyền của trình
+      // duyệt — hỏng thì báo để giáo viên tự chép tay, đừng nuốt lặng.
+      setError("Không sao chép được. Bạn hãy chép mã thủ công.");
+    }
   }
 
   const subjects = classSubjects(data?.class);
@@ -111,8 +118,14 @@ export function TeacherClassDetailPage() {
               <div className="shrink-0 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
                 <p className="text-xs font-black uppercase text-emerald-700">Mã tham gia</p>
                 <div className="mt-2 flex items-center gap-3">
-                  <code className="text-xl font-black tracking-[0.16em] text-emerald-950">{data.class.joinCode}</code>
-                  <button type="button" className="icon-button inline-grid bg-white" onClick={copyJoinCode} aria-label="Sao chép mã lớp" title="Sao chép mã lớp">{copied ? <Check size={18} /> : <Clipboard size={18} />}</button>
+                  {data.class.joinCode ? (
+                    <>
+                      <code className="text-xl font-black tracking-[0.16em] text-emerald-950">{data.class.joinCode}</code>
+                      <button type="button" className="icon-button inline-grid bg-white" onClick={copyJoinCode} aria-label="Sao chép mã lớp" title="Sao chép mã lớp">{copied ? <Check size={18} /> : <Clipboard size={18} />}</button>
+                    </>
+                  ) : (
+                    <span className="text-sm font-bold text-emerald-800">Chưa có mã — hãy tải lại trang.</span>
+                  )}
                 </div>
               </div>
             </div>

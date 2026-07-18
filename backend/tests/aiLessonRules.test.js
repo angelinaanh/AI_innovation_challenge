@@ -100,3 +100,22 @@ test("allows a lesson without a practical quest", () => {
   delete course.lessons[0].practical_quest;
   assert.equal(validateGeneratedCourse(course), null);
 });
+
+// Bài lý thuyết/dẫn nhập có thể không cần quiz — giáo viên vẫn lưu và xuất bản
+// được, dù xóa hết câu hỏi hay bỏ luôn khối evaluation.
+test("allows a lesson with no quizzes", () => {
+  const emptyList = validCourse();
+  emptyList.lessons[0].evaluation.quizzes = [];
+  assert.equal(validateGeneratedCourse(emptyList), null);
+
+  const noEvaluation = validCourse();
+  delete noEvaluation.lessons[0].evaluation;
+  assert.equal(validateGeneratedCourse(noEvaluation), null);
+});
+
+// Không bắt buộc có quiz, nhưng quiz đã tồn tại thì vẫn phải đúng shape.
+test("still validates quizzes when the lesson has them", () => {
+  const course = validCourse();
+  course.lessons[0].evaluation.quizzes[0].options = [{ text: "Chỉ một phương án", is_correct: true }];
+  assert.match(validateGeneratedCourse(course), /2 đến 6 phương án/);
+});

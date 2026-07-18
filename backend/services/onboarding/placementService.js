@@ -83,8 +83,8 @@ async function loadLatestTest(userId) {
 
 async function loadTestQuestions(testId, { withAnswers = false } = {}) {
   const columns = withAnswers
-    ? "id,order_index,steam_axis,difficulty,type,body,image_url,options,answer_index,accepted_answers,rubric"
-    : "id,order_index,steam_axis,difficulty,type,body,image_url,options";
+    ? "id,order_index,steam_axis,difficulty,type,body,image_url,options,answer_index,accepted_answers,rubric,explanation"
+    : "id,order_index,steam_axis,difficulty,type,body,image_url,options,explanation";
   const result = await supabase
     .from("placement_questions")
     .select(columns)
@@ -94,8 +94,32 @@ async function loadTestQuestions(testId, { withAnswers = false } = {}) {
   return result.data || [];
 }
 
-function submittedResult(test) {
+async function submittedResult(test) {
   const steam = test.steam_result || {};
+  
+  // Load questions and answers for result review
+  const questions = await loadTestQuestions(test.id, { withAnswers: true });
+  const { data: answers } = await supabase
+    .from("placement_answers")
+    .select("*")
+    .eq("placement_test_id", test.id);
+    
+  const questionDetails = questions.map((q) => {
+    const ans = (answers || []).find(a => a.question_id === q.id);
+    return {
+      id: q.id,
+      body: q.body,
+      type: q.type,
+      options: q.options,
+      explanation: q.explanation,
+      isCorrect: ans?.is_correct || false,
+      scoreFraction: ans?.score_fraction || 0,
+      selectedIndex: ans?.selected_index,
+      textAnswer: ans?.text_answer,
+      formativeFeedback: ans?.formative_feedback
+    };
+  });
+
   return {
     status: "submitted",
     testId: test.id,
@@ -105,6 +129,7 @@ function submittedResult(test) {
     totalQuestions: test.total_questions,
     track: test.track,
     radar: radarSummary(steam, { track: test.track }),
+    questionDetails
   };
 }
 
@@ -112,7 +137,7 @@ function submittedResult(test) {
 export async function getPlacementState(profile) {
   const test = await loadLatestTest(profile.id);
   if (!test) return { status: "not_started" };
-  if (test.status === "submitted") return submittedResult(test);
+  if (test.status === "submitted") return await submittedResult(test);
   const questions = await loadTestQuestions(test.id);
   return {
     status: "in_progress",
@@ -131,7 +156,7 @@ export async function generatePlacement(profile) {
   }
 
   const latest = await loadLatestTest(profile.id);
-  if (latest?.status === "submitted") return submittedResult(latest);
+  if (latest?.status === "submitted") return await submittedResult(latest);
   if (latest?.status === "in_progress") {
     const questions = await loadTestQuestions(latest.id);
     return {
@@ -213,7 +238,7 @@ export async function submitPlacement(profile, payload = {}) {
   if (!test || test.id !== testId) {
     throw appError("NOT_FOUND", "Không tìm thấy bài test đang làm.");
   }
-  if (test.status === "submitted") return submittedResult(test);
+  if (test.status === "submitted") return await submittedResult(test);
 
   const questions = await loadTestQuestions(testId, { withAnswers: true });
   if (questions.length === 0) {
@@ -303,6 +328,22 @@ export async function submitPlacement(profile, payload = {}) {
     .eq("id", profile.id);
   throwDatabaseError(profileUpdate.error, "set learning track");
 
+  const questionDetails = questions.map((q) => {
+    const ans = answerRows.find(a => a.question_id === q.id);
+    return {
+      id: q.id,
+      body: q.body,
+      type: q.type,
+      options: q.options,
+      explanation: q.explanation,
+      isCorrect: ans?.is_correct || false,
+      scoreFraction: ans?.score_fraction || 0,
+      selectedIndex: ans?.selected_index,
+      textAnswer: ans?.text_answer,
+      formativeFeedback: ans?.formative_feedback
+    };
+  });
+
   return {
     status: "submitted",
     testId,
@@ -313,5 +354,6 @@ export async function submitPlacement(profile, payload = {}) {
     track: graded.track,
     radar: radarSummary(graded.steam, { track: graded.track }),
     feedbacks: answerRows.map(r => r.formative_feedback).filter(Boolean),
+    questionDetails
   };
 }

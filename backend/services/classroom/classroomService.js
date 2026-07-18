@@ -105,12 +105,18 @@ async function countActiveMembers(classId) {
   return result.count || 0;
 }
 
-function serializeClass(row, subjects = []) {
+// Client dùng camelCase. Cột nào quên map ở đây sẽ ra `undefined` ngoài giao
+// diện chứ không báo lỗi, nên phải map ĐỦ các cột snake_case của bảng classes.
+export function serializeClass(row, subjects = []) {
   return {
     ...row,
     gradeLevel: row.grade_level,
     gradeBand: row.grade_band,
     maxMembers: row.max_members,
+    joinCode: row.join_code,
+    createdAt: row.created_at,
+    teacherId: row.teacher_id,
+    orgId: row.org_id,
     subjects,
     subject: subjects[0] || null,
   };
