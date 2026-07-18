@@ -66,9 +66,14 @@ function validateLesson(lesson, index) {
   if (!Array.isArray(lesson.lesson_highlights) || lesson.lesson_highlights.length === 0) {
     return `${where}: cần ít nhất một ý tổng kết.`;
   }
+  // Quiz là TÙY CHỌN: bài lý thuyết/dẫn nhập có thể không cần câu hỏi nào, và
+  // giáo viên vẫn xuất bản được. Nhưng nếu đã có quiz thì từng câu phải hợp lệ
+  // — quiz hỏng còn tệ hơn không có quiz.
   const quizzes = lesson.evaluation?.quizzes;
-  if (!Array.isArray(quizzes) || quizzes.length === 0) return `${where}: cần ít nhất một câu quiz.`;
-  for (const [quizIndex, quiz] of quizzes.entries()) {
+  if (quizzes !== undefined && quizzes !== null && !Array.isArray(quizzes)) {
+    return `${where}: danh sách quiz không hợp lệ.`;
+  }
+  for (const [quizIndex, quiz] of (quizzes || []).entries()) {
     const quizError = validateQuiz(quiz, `${where} · câu ${quizIndex + 1}`);
     if (quizError) return quizError;
   }

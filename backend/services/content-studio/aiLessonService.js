@@ -173,12 +173,18 @@ async function assignLessonRows(classId, lessonIds, assignedBy) {
 const LESSON_LIST_COLUMNS =
   "id,ai_course_id,class_id,status,difficulty,chapter_title,outline_lesson_id,order_index,published_at,created_at";
 
-function lessonCard(row) {
+// `course` để danh sách phẳng (trong lớp / phía học sinh) biết bài thuộc MÔN
+// nào — một lớp thường được gán bài từ nhiều khóa khác nhau, thiếu trường này
+// thì giao diện không thể nhóm theo môn.
+function lessonCard(row, course = null) {
   return {
     id: row.id,
     courseId: row.ai_course_id,
     classId: row.class_id,
     status: row.status,
+    subject: course?.subject || "",
+    grade: course?.grade || "",
+    level: course?.level || "",
     chapterTitle: row.chapter_title || "",
     outlineLessonId: row.outline_lesson_id || "",
     orderIndex: row.order_index,
@@ -190,6 +196,25 @@ function lessonCard(row) {
     publishedAt: row.published_at,
     createdAt: row.created_at,
   };
+}
+
+/** Nạp thông tin khóa (môn/khối) cho một tập bài giảng, tra theo ai_course_id. */
+async function coursesByIdFor(lessonRows) {
+  const courseIds = [...new Set(lessonRows.map((row) => row.ai_course_id).filter(Boolean))];
+  if (courseIds.length === 0) return new Map();
+  const result = await supabase.from("ai_lesson_courses")
+    .select("id,subject,grade,level").in("id", courseIds);
+  throwDatabaseError(result.error, "load courses for AI lessons");
+  return new Map((result.data || []).map((row) => [row.id, row]));
+}
+
+// order_index đánh số TRONG TỪNG khóa, nên sắp xếp thuần theo nó sẽ trộn lẫn
+// các môn (Bài 1.1 Toán, Bài 1.1 Lí, Bài 2.1 Toán...). Gom theo môn trước, rồi
+// mới tới thứ tự bài trong môn.
+function bySubjectThenOrder(a, b) {
+  const subject = (a.subject || "").localeCompare(b.subject || "", "vi");
+  if (subject !== 0) return subject;
+  return (a.orderIndex ?? 0) - (b.orderIndex ?? 0);
 }
 
 /** Danh sách khóa bài giảng AI của giáo viên, kèm các bài và trạng thái. */
@@ -403,7 +428,12 @@ export async function listClassAiLessons(teacherId, classId) {
     .in("id", lessonIds)
     .order("order_index", { ascending: true });
   throwDatabaseError(lessonsResult.error, "load class AI lessons");
-  return { classId: classRow.id, lessons: (lessonsResult.data || []).map(lessonCard) };
+  const lessonRows = lessonsResult.data || [];
+  const courses = await coursesByIdFor(lessonRows);
+  const lessons = lessonRows
+    .map((row) => lessonCard(row, courses.get(row.ai_course_id)))
+    .sort(bySubjectThenOrder);
+  return { classId: classRow.id, lessons };
 }
 
 /**
@@ -497,15 +527,21 @@ export async function listStudentAiLessons(studentId) {
     .eq("status", "PUBLISHED")
     .order("order_index", { ascending: true });
   throwDatabaseError(lessonsResult.error, "list student AI lessons");
-  const publishedById = new Map((lessonsResult.data || []).map((row) => [row.id, row]));
+  const publishedRows = lessonsResult.data || [];
+  const publishedById = new Map(publishedRows.map((row) => [row.id, row]));
+  const courses = await coursesByIdFor(publishedRows);
 
   // Cùng một bài gán cho nhiều lớp -> xuất hiện dưới mỗi lớp mà học sinh học.
   const lessons = assignments
     .filter((row) => publishedById.has(row.lesson_id))
-    .map((row) => ({
-      ...lessonCard(publishedById.get(row.lesson_id)),
-      classId: row.class_id,
-    }));
+    .map((row) => {
+      const lessonRow = publishedById.get(row.lesson_id);
+      return {
+        ...lessonCard(lessonRow, courses.get(lessonRow.ai_course_id)),
+        classId: row.class_id,
+      };
+    })
+    .sort(bySubjectThenOrder);
 
   const classResult = await supabase.from("classes")
     .select("id,name,grade_level,teacher_id").in("id", classIds);

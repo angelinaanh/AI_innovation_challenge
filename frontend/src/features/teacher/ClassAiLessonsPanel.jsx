@@ -13,6 +13,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { api } from "../../lib/apiClient.js";
+import { groupAiLessonsBySubject } from "../../lib/groupAiLessons.js";
 import { FormAlert } from "../auth/AuthFormControls.jsx";
 
 function StatusPill({ status }) {
@@ -216,32 +217,54 @@ export function ClassAiLessonsPanel({ classId }) {
             <p className="mt-1 text-xs text-slate-400">Thêm bài giảng AI bạn đã tạo để học sinh học được.</p>
           </div>
         ) : (
-          <div className="space-y-2">
-            {lessons.map((lesson) => (
-              <div key={lesson.id} className="flex flex-wrap items-center gap-2.5 rounded-lg border border-slate-200 px-3 py-2.5">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-extrabold text-slate-900">
-                    Bài {lesson.outlineLessonId}. {lesson.title}
-                  </p>
-                  <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-slate-500">
-                    <span>{lesson.chapterTitle}</span>
-                    <span className="flex items-center gap-1"><Sparkles size={11} />{lesson.sectionCount} mục</span>
-                    <span className="flex items-center gap-1"><ListChecks size={11} />{lesson.quizCount} quiz</span>
-                    {lesson.hasQuest && <span className="flex items-center gap-1"><Rocket size={11} />có nhiệm vụ</span>}
-                  </p>
+          <div className="space-y-6">
+            {groupAiLessonsBySubject(lessons).map((subject) => (
+              <section key={subject.subject}>
+                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 border-b border-slate-200 pb-2">
+                  <h3 className="text-sm font-black text-slate-900">
+                    <BookOpenCheck size={14} className="mr-1.5 inline text-emerald-700" />
+                    {subject.subject}
+                  </h3>
+                  {subject.grade && <span className="text-xs font-bold text-slate-400">Lớp {subject.grade}</span>}
+                  <span className="ml-auto text-xs font-bold text-slate-400">{subject.lessonCount} bài</span>
                 </div>
-                <StatusPill status={lesson.status} />
-                <button
-                  type="button"
-                  className="icon-button inline-grid"
-                  aria-label="Gỡ khỏi lớp"
-                  title="Gỡ khỏi lớp (bài giảng vẫn còn trong thư viện)"
-                  disabled={removingId === lesson.id}
-                  onClick={() => remove(lesson.id)}
-                >
-                  {removingId === lesson.id ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
-                </button>
-              </div>
+
+                <div className="mt-3 space-y-4">
+                  {subject.chapters.map((chapter) => (
+                    <div key={chapter.title}>
+                      <p className="text-xs font-black uppercase tracking-wide text-slate-400">{chapter.title}</p>
+                      <div className="mt-1.5 space-y-2">
+                        {chapter.lessons.map((lesson) => (
+                          <div key={lesson.id} className="flex flex-wrap items-center gap-2.5 rounded-lg border border-slate-200 px-3 py-2.5">
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-extrabold text-slate-900">
+                                Bài {lesson.outlineLessonId}. {lesson.title}
+                              </p>
+                              {/* Tên chương đã nằm ở tiêu đề nhóm, không lặp lại ở đây. */}
+                              <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-slate-500">
+                                <span className="flex items-center gap-1"><Sparkles size={11} />{lesson.sectionCount} mục</span>
+                                <span className="flex items-center gap-1"><ListChecks size={11} />{lesson.quizCount} quiz</span>
+                                {lesson.hasQuest && <span className="flex items-center gap-1"><Rocket size={11} />có nhiệm vụ</span>}
+                              </p>
+                            </div>
+                            <StatusPill status={lesson.status} />
+                            <button
+                              type="button"
+                              className="icon-button inline-grid"
+                              aria-label="Gỡ khỏi lớp"
+                              title="Gỡ khỏi lớp (bài giảng vẫn còn trong thư viện)"
+                              disabled={removingId === lesson.id}
+                              onClick={() => remove(lesson.id)}
+                            >
+                              {removingId === lesson.id ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
         )}

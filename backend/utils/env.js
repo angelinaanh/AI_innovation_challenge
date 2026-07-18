@@ -44,3 +44,17 @@ export const env = Object.freeze({
     process.env.AI_ALLOW_APPROVED_CONTENT_EXPORT === "true",
   nodeEnv: process.env.NODE_ENV || "development",
 });
+
+// Vite tự nhảy sang 5174, 5175... khi 5173 đã bị chiếm (thường do một dev server
+// cũ chưa tắt). Origin mới không nằm trong allowlist -> CORS chặn -> trình duyệt
+// báo "Failed to fetch" ở MỌI endpoint, rất khó đoán vì port thay đổi ngẫu
+// nhiên. Ở dev ta tin mọi origin loopback; production vẫn giữ allowlist chặt.
+const LOOPBACK_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/;
+
+export function isOriginAllowed(origin) {
+  // Không có Origin: curl, health check, server-to-server — không phải request
+  // trình duyệt nên không có gì để bảo vệ bằng CORS.
+  if (!origin) return true;
+  if (env.corsOrigins.includes(origin)) return true;
+  return env.nodeEnv !== "production" && LOOPBACK_ORIGIN.test(origin);
+}

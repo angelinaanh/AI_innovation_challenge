@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { api } from "../../lib/apiClient.js";
+import { groupAiLessonsBySubject } from "../../lib/groupAiLessons.js";
 import { FormAlert } from "../auth/AuthFormControls.jsx";
 import { SteamLessonView } from "../lesson-player/SteamLessonView.jsx";
 
@@ -130,8 +131,15 @@ export function StudentAiLessonsPage() {
                   {klass.lessons.length} bài giảng
                 </p>
               </div>
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {klass.lessons.map((lesson) => (
+              {groupAiLessonsBySubject(klass.lessons).map((subject) => (
+                <div key={subject.subject} className="space-y-3">
+                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 border-b border-slate-200 pb-2">
+                    <h3 className="text-sm font-black text-slate-900">{subject.subject}</h3>
+                    {subject.grade && <span className="text-xs font-bold text-slate-400">Lớp {subject.grade}</span>}
+                    <span className="ml-auto text-xs font-bold text-slate-400">{subject.lessonCount} bài</span>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {subject.chapters.flatMap((chapter) => chapter.lessons).map((lesson) => (
                   <article key={lesson.id} className="surface flex min-h-56 flex-col p-5">
                     <div className="flex items-start justify-between gap-3">
                       <div className="grid h-11 w-11 place-items-center rounded-lg bg-emerald-700 text-white">
@@ -164,8 +172,10 @@ export function StudentAiLessonsPage() {
                       </button>
                     </div>
                   </article>
-                ))}
-              </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </section>
           ))
         )

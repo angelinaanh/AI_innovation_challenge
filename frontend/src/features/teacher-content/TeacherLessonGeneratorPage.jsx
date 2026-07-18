@@ -33,6 +33,35 @@ const initialConfig = {
   requireQuest: true,
 };
 
+// fetch() ném TypeError trần ("Failed to fetch") cho MỌI lỗi tầng mạng — service
+// chưa chạy, sai port, CORS chặn — nên thông báo đó vô nghĩa với giáo viên và
+// tốn hàng giờ khi debug. Bọc lại để nói đúng chỗ cần sửa và kèm URL đang gọi.
+async function aiServiceFetch(path, init, fallbackMessage) {
+  let response;
+  try {
+    response = await fetch(`${AI_SERVICE_URL}${path}`, init);
+  } catch {
+    throw new Error(
+      `Không kết nối được AI service tại ${AI_SERVICE_URL}. `
+      + "Hãy khởi động service (uvicorn app.main:app --reload --port 8000 trong thư mục ai-service) "
+      + "rồi thử lại. Nếu service đang chạy ở port khác, sửa VITE_AI_SERVICE_URL trong frontend/.env.",
+    );
+  }
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(detailMessage(data?.detail) || fallbackMessage);
+  return data;
+}
+
+// FastAPI trả detail dạng chuỗi khi HTTPException, nhưng dạng mảng object khi
+// lỗi validation (422) — nếu đưa thẳng vào Error sẽ hiện "[object Object]".
+function detailMessage(detail) {
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    return detail.map((item) => item?.msg).filter(Boolean).join("; ");
+  }
+  return "";
+}
+
 async function postOutline(config, file) {
   const body = new FormData();
   body.append("file", file);
@@ -40,21 +69,19 @@ async function postOutline(config, file) {
   body.append("grade", String(config.grade));
   body.append("level", config.level);
   body.append("quiz_count", String(config.quizCount));
-  const response = await fetch(`${AI_SERVICE_URL}/api/teacher/content/outline`, { method: "POST", body });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data?.detail || "Không tạo được dàn ý. Kiểm tra AI service đã chạy chưa.");
-  return data;
+  return aiServiceFetch("/api/teacher/content/outline", { method: "POST", body }, "Không tạo được dàn ý.");
 }
 
 async function postGenerate(payload) {
-  const response = await fetch(`${AI_SERVICE_URL}/api/teacher/content/generate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data?.detail || "Không sinh được bài giảng.");
-  return data;
+  return aiServiceFetch(
+    "/api/teacher/content/generate",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    "Không sinh được bài giảng.",
+  );
 }
 
 export function TeacherLessonGeneratorPage() {
