@@ -58,6 +58,16 @@ Human gate:
 - teacher edits and publishes;
 - publish writes audit log.
 
+Implemented Slice 7 behavior:
+
+- prompt: `ai/prompts/content_studio_draft.md`;
+- model route: backend `CONTENT_FAST_MODEL` through `generateStructuredLesson`, never a browser call;
+- input: teacher-authorized text, Skill Node, grade band, title, and difficulty context;
+- output: strict JSON with summary/objectives/checkpoints/hints and one MCQ;
+- controls: organization budget check, transfer gate, JSON validation, moderation, `store: false`, and `ai_usage.feature = content_studio_draft`;
+- fallback: transfer gate off uses `local-structured-draft-v1`; provider/budget outage uses `local-fallback-after-ai-error-v1`. Both remain `DRAFT` and expose generation provenance;
+- edited checkpoints become local `document_chunks`, but Tutor cannot read them until their lesson is `PUBLISHED`.
+
 ## 4. Tutor RAG
 
 Retrieval constraints:
@@ -108,16 +118,14 @@ Metrics:
 - cost per active student;
 - cache hit rate.
 
-## 7. First Prompt Files To Create
+## 7. Prompt Inventory
 
 | File | Purpose |
 |---|---|
-| `ai/prompts/content_outline.md` | Generate checkpoint outline |
-| `ai/prompts/checkpoint_draft.md` | Generate grounded checkpoint content |
-| `ai/prompts/quiz_and_hints.md` | Generate quiz and layered hints |
+| `ai/prompts/content_studio_draft.md` | Implemented structured lesson + MCQ draft |
+| `ai/prompts/exercise_generator.md` | Implemented Tutor practice JSON |
 | `ai/prompts/tutor_socratic.md` | Tutor answer with citations |
 | `ai/prompts/refusal.md` | Out-of-scope refusal |
-| `ai/prompts/safety_classifier.md` | Safety triage |
 
 ## 8. Slice 3 Implementation
 

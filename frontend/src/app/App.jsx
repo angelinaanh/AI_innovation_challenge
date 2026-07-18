@@ -26,6 +26,9 @@ import { DashboardPage } from "../features/student-dashboard/DashboardPage.jsx";
 import { LearningPathPage } from "../features/learning-path/LearningPathPage.jsx";
 import { LessonPlayerPage } from "../features/lesson-player/LessonPlayerPage.jsx";
 import { StudentClassesPage } from "../features/student-classes/StudentClassesPage.jsx";
+import { StudentContentPage } from "../features/student-content/StudentContentPage.jsx";
+import { TeacherContentEditorPage } from "../features/teacher-content/TeacherContentEditorPage.jsx";
+import { TeacherContentPage } from "../features/teacher-content/TeacherContentPage.jsx";
 import { TeacherClassDetailPage } from "../features/teacher/TeacherClassDetailPage.jsx";
 import { TeacherClassesPage } from "../features/teacher/TeacherClassesPage.jsx";
 import { AuthProvider } from "./AuthProvider.jsx";
@@ -59,6 +62,7 @@ export function App() {
             <Route element={<StudentDataProvider><StudentShell /></StudentDataProvider>}>
               <Route path="/student" element={<DashboardPage />} />
               <Route path="/student/path" element={<LearningPathPage />} />
+              <Route path="/student/content" element={<StudentContentPage />} />
               <Route path="/student/classes" element={<StudentClassesPage />} />
               <Route path="/student/lessons/:skillNodeId" element={<LessonPlayerPage />} />
             </Route>
@@ -68,6 +72,8 @@ export function App() {
             <Route element={<TeacherShell />}>
               <Route path="/teacher" element={<TeacherClassesPage />} />
               <Route path="/teacher/classes/:classId" element={<TeacherClassDetailPage />} />
+              <Route path="/teacher/content" element={<TeacherContentPage />} />
+              <Route path="/teacher/content/:lessonId" element={<TeacherContentEditorPage />} />
             </Route>
           </Route>
 

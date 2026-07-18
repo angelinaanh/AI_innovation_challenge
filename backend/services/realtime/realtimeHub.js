@@ -20,3 +20,10 @@ export function emitClassMembershipUpdated(payload) {
     realtimeServer.to(`user:${payload.studentId}`).emit("class.membership.updated", payload);
   }
 }
+
+export function emitContentPublished(payload) {
+  if (!realtimeServer) return;
+  if (payload.orgId) {
+    realtimeServer.to(`org:${payload.orgId}`).emit("content.published", payload);
+  }
+}

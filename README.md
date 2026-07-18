@@ -106,6 +106,18 @@ Slice 6 makes the first teacher/student class workflow operational:
 
 Teacher self-registration is an intentional product override of Functional Spec `F-103`. See `docs/problem/teacher-student-role-impact.md` for the requirement trace, safety boundaries, and the next content-assignment slice.
 
+Slice 7 completes the first real teacher-to-student content loop:
+
+- `/teacher/content` lists every Skill Node with teacher-owned drafts, review state, published variants, and archived-version count;
+- a teacher pastes an authorized source, chooses Skill Node/difficulty, and receives a structured Vietnamese lesson draft from the configured OpenAI content model;
+- `AI_ALLOW_APPROVED_CONTENT_EXPORT=false` keeps the source local and uses a deterministic structured draft; provider/budget outages also fall back locally and record that generation mode;
+- `/teacher/content/:lessonId` provides source-versus-draft editing for lesson metadata, objectives, checkpoints, MCQ, correct answer, and explanation;
+- the enforced lifecycle is `DRAFT -> IN_REVIEW -> PUBLISHED`; publishing records reviewer/time/audit, publishes questions, creates approved Tutor chunks, and archives the prior version at the same node/difficulty;
+- `/student/content` is the published content library. It shows approved lessons immediately while preserving prerequisite and STEAM locks; the existing Lesson Player and Tutor then consume the published version only;
+- `content.published` is emitted to the verified organization Socket.IO room so student dashboard/path/content surfaces refresh without trusting the browser.
+
+Slice 7 reuses the existing `source_documents`, `document_chunks`, `lessons`, `questions`, `content_jobs`, and `audit_log` tables; no new migration is required. A live Supabase E2E verified AI draft, edit, review, publish, revision, old-version archive, three Tutor chunks, published question, audit trail, and the new student lesson.
+
 ## Local Start
 
 ```bash
@@ -121,9 +133,9 @@ npm start
 
 `npm run seed:sources` backfills approved grounding chunks from each published lesson's own checkpoint content, so the grounded Tutor chat and interactive exercises work on **every** Skill Node, not only the seeded Loops lesson. It is idempotent and preserves the hand-authored Loops source. Without it, only the Loops node has approved material and the Tutor correctly refuses / cannot build exercises elsewhere.
 
-`npm run seed:tutor` is optional and sends only the three teacher-approved Loops checkpoint excerpts to OpenAI to create embeddings. Run it only after the organization has approved that external data transfer. Lexical grounding and refusal still work without embeddings.
+`npm run seed:tutor` is optional and sends only teacher-approved checkpoint excerpts to OpenAI to create embeddings. Run it only after the organization has approved that external data transfer. Lexical grounding and refusal still work without embeddings.
 
-Keep `AI_ALLOW_APPROVED_CONTENT_EXPORT=false` until that approval is recorded. While the gate is off, no student question or approved lesson excerpt is sent to OpenAI; Tutor generation and `seed:tutor` both fail closed.
+Keep `AI_ALLOW_APPROVED_CONTENT_EXPORT=false` until that approval is recorded. While the gate is off, no student question, lesson excerpt, or teacher Content Studio source is sent to OpenAI; Tutor generation and `seed:tutor` fail closed, while Content Studio degrades to its local draft generator.
 
 In a second terminal:
 

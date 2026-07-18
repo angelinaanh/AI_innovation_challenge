@@ -37,10 +37,13 @@ React + JavaScript + Tailwind app for student, teacher, parent, and admin experi
 | `/onboarding` | profile bootstrap for confirmed email/OAuth users |
 | `/student` | adaptive dashboard with quest, STEAM radar, XP, streak, badges, and path preview |
 | `/student/path` | seven-node Scratch path with approved state and numeric unlock guidance |
+| `/student/content` | published lesson library with available/locked states and realtime refresh |
 | `/student/lessons/:skillNodeId` | checkpoint Lesson Player, Scratch block visualization, layered hints, and quiz |
 | `/student/classes` | join by class code, respond to invitations, and see active classes |
 | `/teacher` | teacher class workspace with live counts and class creation |
 | `/teacher/classes/:classId` | join code, roster, invitation, and request decisions |
+| `/teacher/content` | Skill Node content workspace, generation mode, draft/review/published versions |
+| `/teacher/content/:lessonId` | source-versus-draft editor, review, publish, revision, and archive controls |
 
 The interface is responsive from 390px mobile through desktop, has loading/error states, keyboard focus styles, and a working mobile navigation drawer. It calls only the Express API; no service key or OpenAI key is present in the browser bundle.
 
@@ -51,6 +54,8 @@ The same screen now includes a responsive AI Tutor drawer with persisted history
 `AuthProvider` owns the Supabase session and asks `GET /api/auth/me` for the trusted application account. Route guards handle onboarding, guardian-pending, inactive, unauthorized, and role-specific states. API and Socket.IO clients attach the short-lived access token; role and account status remain server decisions.
 
 Teacher and student class screens use real Express/Supabase data. Membership Socket.IO events refresh invitations, pending counts, and rosters without trusting the browser to decide membership. Post-login `returnTo` is accepted only when it stays inside the authenticated role workspace, preventing a previous student path from sending a teacher to `/unauthorized`.
+
+Content Studio keeps source and editable output in separate columns on desktop and stacked bands on mobile. Published lessons are read-only; teachers create a new version before editing. The student content library lists only nodes with at least one published lesson, keeps locked nodes visible with the explainable recovery reason, and routes only accessible nodes into the Lesson Player. `content.published` refreshes dashboard/path/content data in realtime.
 
 ## Commands
 
@@ -71,4 +76,5 @@ Vite pins React's automatic JSX runtime in `vite.config.js`. If the browser load
 - Frontend does not call AI providers directly.
 - Frontend does not store service role keys.
 - Guardian email verification/consent delivery is not implemented yet; under-16 accounts fail closed as `PENDING`.
-- Content Studio, teacher analytics, parent, and admin operational screens remain later slices; the teacher classroom workspace is implemented.
+- Teacher analytics, parent, admin, and class-scoped content assignment remain later slices; Content Studio and the organization-wide published student library are implemented.
+- The editor currently supports inline text sources. Storage-backed PDF/DOCX upload and extraction remain a later ingestion adapter.

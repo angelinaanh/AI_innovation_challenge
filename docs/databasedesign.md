@@ -398,3 +398,16 @@ RLS: subjects đọc trong org; classes do giáo viên sở hữu, học sinh đ
 Trạng thái live ngày 2026-07-18: migration `0003` đã được áp dụng và seed đủ 28 môn. Service layer còn kiểm tra `org_id`, `grade_band`, quyền sở hữu lớp và subject hợp lệ trước mọi write. E2E thật đã qua cả `invited -> active` và `requested -> active`; roster giáo viên và danh sách lớp học sinh đều đọc lại đúng thành viên.
 
 Để nối Content Studio với lớp, migration kế tiếp cần bảng `class_content_assignments(class_id, skill_node_id/lesson_id, assigned_by, available_from, due_at)`. Lesson vẫn bắt buộc `PUBLISHED`; assignment chỉ quyết định phạm vi lớp được phân phối.
+
+---
+
+## Phần 6 — Content Studio runtime (không cần migration mới)
+
+Slice 7 dùng đúng các bảng đã có: `source_documents`, `document_chunks`, `lessons`, `questions`, `content_jobs`, `audit_log`.
+
+- Một draft tạo source, job, lesson, question và checkpoint chunks; chunks chưa thể vào Tutor vì truy hồi luôn dựng allowlist từ lesson `PUBLISHED`.
+- Lưu chỉnh sửa cập nhật `human_minutes` và ước lượng `edit_rate` để đo K-1/K-4.
+- Revision tạo source/chunks riêng, không sửa dữ liệu đang phục vụ phiên bản published.
+- Publish cập nhật reviewer/time, question/job/audit, rồi archive phiên bản cũ cùng Skill Node và difficulty; basic và advanced có thể cùng tồn tại.
+
+Không đổi schema trong slice này. Trước pilot đa giáo viên, chuỗi write publish/archive phải chuyển thành một Postgres RPC transaction để không thể tồn tại trạng thái dở dang khi hai giáo viên publish đồng thời.

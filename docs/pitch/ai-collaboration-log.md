@@ -149,3 +149,22 @@ Decision:
 Reason:
 
 This turns the teacher role from a placeholder into an operational workflow and establishes the ownership boundary required before class-scoped publishing, learner analytics, and interventions.
+
+## 2026-07-18 — Slice 7 Content Studio → Student Content
+
+Prompt:
+
+> Build all teacher content features from the two primary documents; publishing must create a real student content page and feed the Tutor.
+
+Decision:
+
+- Built a Skill Node Content Studio and source-versus-draft editor for lesson metadata, objectives, checkpoints, quiz, review, publish, revision, and archive.
+- Routed teacher-authorized source text through the backend AI Gateway with strict JSON, budget/transfer checks, moderation, usage logs, and a labelled local fallback.
+- Enforced `DRAFT -> IN_REVIEW -> PUBLISHED`, wrote audit actions and production metrics, published questions/chunks, and archived the prior same-difficulty version.
+- Added organization-scoped `content.published` realtime refresh.
+- Added `/student/content`; it exposes only published nodes, preserves explainable STEAM/prerequisite locks, and opens the existing Lesson Player/Tutor on the current version.
+- Verified the full workflow against live Supabase and OpenAI, then checked desktop/mobile UI with no overflow or console errors.
+
+Reason:
+
+This closes the product loop promised by the proposal: AI accelerates teacher preparation, human review remains the authority, and one publish action has a visible, auditable effect on the student experience and grounded Tutor knowledge.

@@ -51,7 +51,7 @@ flowchart LR
 1. Nội dung theo lộ trình chung: học sinh thấy khi lesson thuộc Skill Node phù hợp với khối, prerequisite và ngưỡng STEAM.
 2. Nội dung theo lớp: cần thêm quan hệ `class_content_assignments` (hoặc `class_skill_nodes`) để giáo viên gán lesson/Skill Node cho một lớp; chỉ thành viên `active` của lớp được xem.
 
-Hiện tại lộ trình chung đã lọc `PUBLISHED`. Slice lớp học hiện tại mới hoàn thành lớp, môn và thành viên; màn hình/giao dịch gán nội dung cho lớp là bước tiếp theo của Content Studio.
+Hiện tại lộ trình chung và `/student/content` đã lọc `PUBLISHED`. Slice lớp học đã hoàn thành lớp, môn và thành viên; màn hình/giao dịch gán nội dung cho lớp vẫn là bước tiếp theo.
 
 ## 4. Luồng lớp học đã triển khai
 
@@ -83,4 +83,6 @@ Mỗi môn gắn một `grade_band`: `primary`, `secondary`, hoặc `high_school
 
 Đã có: teacher self-registration, danh mục môn, tạo lớp, mã lớp, mời học sinh, học sinh xin vào, duyệt/từ chối, nhận/từ chối lời mời, roster và cập nhật Socket.IO. Cả hai luồng thật đã được xác minh trên Supabase: `invited -> active` và `requested -> active`.
 
-Tiếp theo theo tài liệu: gán nội dung/Skill Node cho lớp, Content Studio review-publish, trang nội dung lớp phía học sinh, heatmap/risk queue và hồ sơ học sinh read-only.
+Content Studio cũng đã hoạt động thật: giáo viên chọn Skill Node, nhập nguồn, nhận AI/local draft, chỉnh sửa, gửi duyệt, xuất bản, tạo revision và archive. Hệ thống ghi `content_jobs`/`audit_log`, xuất bản câu hỏi, tạo checkpoint chunks cho Tutor và phát `content.published`. Học sinh có `/student/content`, nhìn thấy bài đã duyệt theo realtime và mở đúng phiên bản mới qua Lesson Player; node bị khóa vẫn giữ nguyên điều kiện STEAM/prerequisite.
+
+Tiếp theo theo tài liệu: gán lesson/Skill Node cho từng lớp, trang nội dung lớp phía học sinh, heatmap/risk queue và hồ sơ học sinh read-only.

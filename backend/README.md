@@ -47,6 +47,12 @@ Node.js + Express backend for application rules, realtime events, AI orchestrati
 | `POST /api/teacher/classes/:id/invite` | memberships | invite a same-org, same-grade student |
 | `POST /api/student/classes/join` | memberships | request membership using a join code |
 | `POST /api/student/memberships/:id/respond` | memberships | accept or decline a teacher invitation |
+| `GET /api/teacher/content` | Skill Nodes + lessons | Content Studio counts and node/version workspace |
+| `POST /api/teacher/content/drafts` | source/job/lesson/question/chunks | AI or local structured draft, always `DRAFT` |
+| `GET/PATCH /api/teacher/lessons/:id` | lesson/source/question/job | source-versus-draft editor and save |
+| `POST /api/teacher/lessons/:id/review` | lesson + audit | enforce `DRAFT -> IN_REVIEW` |
+| `POST /api/teacher/lessons/:id/publish` | lesson/question/job/audit | publish and archive prior same-difficulty version |
+| `POST /api/teacher/lessons/:id/versions` | copied source/draft/question/chunks | create an editable revision from published content |
 
 The path engine is deterministic and has no LLM dependency. A Skill Node is available only when its prerequisites, STEAM thresholds, and `PUBLISHED` lesson requirement are all satisfied.
 
@@ -95,6 +101,10 @@ Public registration can choose `student` or `teacher`. This intentionally overri
 
 Classroom boundaries are server-owned: a teacher can read/mutate only classes where `teacher_id` matches the JWT profile; invitations and join requests require the same organization and grade band; subject IDs must belong to that organization and class grade. `class.membership.updated` is emitted to `teacher:{teacherId}` and `user:{studentId}` after every state change.
 
+Content Studio uses the same server-owned boundary. Skill Nodes must belong to the teacher organization; working drafts are editable only when their source was uploaded by that teacher. AI generation is backend-only, uses `ai/prompts/content_studio_draft.md`, records `ai_usage`, validates structured JSON, and moderates generated output. The transfer gate off, provider failure, or exhausted AI budget produces an explicitly labelled local fallback rather than blocking teacher work.
+
+Publishing requires `IN_REVIEW`, sets `reviewed_by`/`published_at`, publishes the lesson question, updates `content_jobs`, writes `CONTENT_PUBLISHED` to `audit_log`, and emits `content.published` to `org:{orgId}`. Each edited checkpoint is mirrored into `document_chunks`; Tutor still resolves those chunks only through a `PUBLISHED` lesson allowlist. Revision source rows are copied so editing a new version cannot mutate chunks behind the currently published version.
+
 ## Limitations
 
 - Backend must never bypass published-only content rules for student APIs.
@@ -104,3 +114,4 @@ Classroom boundaries are server-owned: a teacher can read/mutate only classes wh
 - AI budget updates should move into a transactional Postgres RPC to avoid concurrent spend races.
 - Guardian verification delivery and the parent consent action are still pending; the current account gate is deliberately fail-closed.
 - Before a real school pilot, teacher self-registration needs organization/domain verification, invite rate limits, and audit records.
+- Publish/archive currently use ordered Supabase writes. Move lesson, question, job, old-version archive, and audit changes into one Postgres RPC transaction before a multi-teacher pilot.

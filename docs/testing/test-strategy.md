@@ -18,6 +18,8 @@ Test the workflows that carry the most product risk, AI risk, and demo risk.
 | Tutor refusal | out-of-scope question is refused |
 | Escalation | teacher receives realtime escalation |
 | Content publish | publish writes audit log |
+| Content lifecycle | only `DRAFT -> IN_REVIEW -> PUBLISHED`; revision archives prior same-difficulty version |
+| Content grounding | draft chunks are unreachable; published chunks become Tutor sources |
 | Cost circuit | AI Gateway blocks non-essential calls when tripped |
 | Parent privacy | parent cannot read raw Tutor messages |
 | Classroom scope | teacher owns the class; student/subject organization and grade must match |
@@ -142,3 +144,14 @@ Slice 6 classroom verification adds:
 - teacher roster refresh showing the accepted student;
 - subject/teacher metadata and Socket.IO connected state on both role workspaces;
 - backend test suite (28 passing), frontend test suite (3 passing), and production build.
+
+Slice 7 Content Studio verification adds:
+
+- pure lifecycle tests reject publish directly from `DRAFT` and reject illegal transitions;
+- local structured draft test validates title, objectives, checkpoints, MCQ options, answer index, and source-length boundaries;
+- live OpenAI Responses API draft returned valid structured JSON through the configured content model;
+- live teacher API completed create, save, `IN_REVIEW`, publish, revision, and second publish;
+- Supabase verification found the prior basic version `ARCHIVED`, current basic version `PUBLISHED`, question `PUBLISHED`, three source chunks, and all expected audit actions;
+- student API read the old lesson before publish and the new lesson ID/title after publish, while path status remained rule-derived;
+- browser QA covered teacher workspace/editor and student content/lesson at 1280px and 390x844, with no horizontal overflow and zero console warnings/errors;
+- backend suite: 31 passing; frontend suite: 3 passing; production Vite build passes.

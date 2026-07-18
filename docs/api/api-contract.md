@@ -126,14 +126,30 @@ Tutor response metadata:
 
 | Method | Path | Role | Purpose |
 |---|---|---|---|
-| GET | `/teacher/dashboard` | teacher | Heatmap and risk queue |
-| POST | `/teacher/content-jobs` | teacher | Upload source and start generation |
-| GET | `/teacher/content-jobs` | teacher | List jobs |
-| GET | `/teacher/content-jobs/:id` | teacher | Job detail and generated draft |
+| GET | `/teacher/content` | teacher | Implemented: Skill Nodes, counts, own working drafts, published variants, archived counts |
+| POST | `/teacher/content/drafts` | teacher | Implemented: create source/job and structured `DRAFT` lesson/question/chunks |
+| GET | `/teacher/lessons/:id` | teacher | Implemented: lesson, source, question, job, Skill Node, action permissions |
 | PATCH | `/teacher/lessons/:id` | teacher | Save edits |
 | POST | `/teacher/lessons/:id/review` | teacher | Move to `IN_REVIEW` |
 | POST | `/teacher/lessons/:id/publish` | teacher | Publish and write audit log |
 | POST | `/teacher/lessons/:id/archive` | teacher | Archive draft or old version |
+| POST | `/teacher/lessons/:id/versions` | teacher | Copy a published lesson/source/question into a new editable `DRAFT` |
+| GET | `/teacher/dashboard` | teacher | Planned: heatmap and risk queue |
+
+Create draft request:
+
+```json
+{
+  "skillNodeId": "uuid",
+  "title": "Biến số qua trò chơi bắt sao",
+  "difficulty": "basic",
+  "sourceText": "Teacher-authorized source text, 120-20000 characters"
+}
+```
+
+The response includes `{ id, status: "DRAFT", generationMode }`, where `generationMode` is `ai`, `local`, or `local-fallback`. AI output never skips review. `PATCH` accepts `{ content, question, humanMinutes }`; editing an `IN_REVIEW` lesson returns it to `DRAFT`. Publish accepts optional `{ humanMinutes }`, requires `IN_REVIEW`, publishes its questions, archives any prior `PUBLISHED` lesson at the same Skill Node/difficulty, and returns `archivedLessonIds`.
+
+Relevant errors: `CONTENT_NOT_FOUND` (404), `CONTENT_FORBIDDEN` (403), `CONTENT_INVALID_STATE` (409), `CONTENT_GENERATION_FAILED` (502), and `CONTENT_UNSAFE` (422).
 
 ## 6. Admin
 
@@ -161,6 +177,7 @@ The handshake requires `auth.accessToken`. Rooms are derived only from the verif
 | `tutor.answered` | `user:{studentId}` | `{ escalationId, answerPreview }` |
 | `riskQueue.updated` | `class:{classId}` | `{ count, highestRisk }` |
 | `class.membership.updated` | `teacher:{teacherId}`, `user:{studentId}` | `{ teacherId, studentId, classId, status }` |
+| `content.published` | `org:{orgId}` | `{ orgId, teacherId, lessonId, skillNodeId, publishedAt }` |
 | `costCircuit.tripped` | `admin:{orgId}` | `{ date, spentUsd, budgetUsd }` |
 
 SSE events for Tutor:

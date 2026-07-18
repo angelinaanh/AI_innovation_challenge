@@ -63,6 +63,24 @@ export async function apiPost(path, body, signal, accessToken) {
   return payload.data;
 }
 
+export async function apiPatch(path, body, signal, accessToken) {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "PATCH",
+    headers: await accessTokenHeaders(accessToken, {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(body),
+    signal,
+  });
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw apiError(response, payload, "Không thể cập nhật dữ liệu EduOne.");
+  }
+  return payload.data;
+}
+
 export async function streamPost(path, body, { onEvent, signal } = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
@@ -152,6 +170,37 @@ export const api = {
   decideClassRequest: (membershipId, decision, signal) => apiPost(
     `/teacher/memberships/${encodeURIComponent(membershipId)}/decision`,
     { decision },
+    signal,
+  ),
+  getTeacherContent: (signal) => apiGet("/teacher/content", signal),
+  createContentDraft: (payload, signal) => apiPost("/teacher/content/drafts", payload, signal),
+  getTeacherLesson: (lessonId, signal) => apiGet(
+    `/teacher/lessons/${encodeURIComponent(lessonId)}`,
+    signal,
+  ),
+  updateTeacherLesson: (lessonId, payload, signal) => apiPatch(
+    `/teacher/lessons/${encodeURIComponent(lessonId)}`,
+    payload,
+    signal,
+  ),
+  submitLessonReview: (lessonId, signal) => apiPost(
+    `/teacher/lessons/${encodeURIComponent(lessonId)}/review`,
+    {},
+    signal,
+  ),
+  publishTeacherLesson: (lessonId, humanMinutes, signal) => apiPost(
+    `/teacher/lessons/${encodeURIComponent(lessonId)}/publish`,
+    { humanMinutes },
+    signal,
+  ),
+  createLessonVersion: (lessonId, signal) => apiPost(
+    `/teacher/lessons/${encodeURIComponent(lessonId)}/versions`,
+    {},
+    signal,
+  ),
+  archiveTeacherLesson: (lessonId, signal) => apiPost(
+    `/teacher/lessons/${encodeURIComponent(lessonId)}/archive`,
+    {},
     signal,
   ),
   getStudentClasses: (signal) => apiGet("/student/classes", signal),

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  BookOpenCheck,
   ChevronDown,
   LogOut,
   Menu,
@@ -14,6 +15,7 @@ import { Brand } from "../ui/Brand.jsx";
 
 const navItems = [
   { to: "/teacher", label: "Lớp học", icon: School, end: true },
+  { to: "/teacher/content", label: "Nội dung", icon: BookOpenCheck },
 ];
 
 function Navigation({ onNavigate }) {
@@ -52,6 +54,9 @@ export function TeacherShell() {
     socket.on("class.membership.updated", (detail) => {
       window.dispatchEvent(new CustomEvent("eduone:class-membership-updated", { detail }));
     });
+    socket.on("content.published", (detail) => {
+      window.dispatchEvent(new CustomEvent("eduone:content-published", { detail }));
+    });
     return () => socket.close();
   }, [session?.access_token]);
 
@@ -85,7 +90,7 @@ export function TeacherShell() {
           <div className="lg:hidden"><Brand compact /></div>
           <div className="ml-4 hidden sm:block lg:ml-0">
             <p className="text-xs font-black uppercase text-emerald-700">EduOne Teacher</p>
-            <p className="mt-1 text-sm font-bold text-slate-500">Quản lý lớp phụ trách</p>
+            <p className="mt-1 text-sm font-bold text-slate-500">Lớp học và nội dung</p>
           </div>
 
           <div className={`ml-auto hidden items-center gap-2 text-xs font-bold md:flex ${realtimeStatus === "connected" ? "text-emerald-700" : "text-slate-400"}`}>

@@ -134,5 +134,11 @@ Implemented:
 3. Learning path with explainable reasons.
 4. Lesson Player and Tutor drawer.
 5. Teacher class workspace and student membership/invitation screen with realtime refresh.
+6. Teacher Content Studio workspace and source-versus-draft editor with review/publish/version actions.
+7. Student published-content library with personal lock reasons and organization realtime refresh.
 
-Next role-facing slices are content assignment/Teacher Studio, teacher analytics, parent summary/linking, and Admin cost/user controls.
+Teacher routes `/teacher/content` and `/teacher/content/:lessonId` are operational and deliberately denser than the student app. Student route `/student/content` renders one card per published Skill Node and sends only accessible nodes to the existing Lesson Player. `content.published` is translated into a local refresh event; the browser always refetches authoritative API state instead of trusting the Socket.IO payload.
+
+Browser QA covers 1280px desktop and 390x844 mobile for Content Studio, editor, student library, and the newly published Lesson Player. Checks include no horizontal overflow, route-local scroll reset, correct source/draft visibility, correct published title, and zero console warnings/errors.
+
+Next role-facing slices are class-scoped content assignment, teacher analytics, parent summary/linking, and Admin cost/user controls.

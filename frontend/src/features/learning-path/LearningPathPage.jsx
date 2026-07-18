@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -62,13 +62,25 @@ export function LearningPathPage() {
   const [path, setPath] = useState(null);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    api.getPath(controller.signal).then(setPath).catch((loadError) => {
+  const load = useCallback((signal) => {
+    setError(null);
+    return api.getPath(signal).then(setPath).catch((loadError) => {
       if (loadError.name !== "AbortError") setError(loadError.message);
     });
-    return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    load(controller.signal);
+    const refresh = () => load();
+    window.addEventListener("eduone:content-published", refresh);
+    return () => {
+      controller.abort();
+      window.removeEventListener("eduone:content-published", refresh);
+    };
+  }, [load]);
 
   if (error) {
     return (

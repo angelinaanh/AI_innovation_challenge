@@ -47,6 +47,7 @@ io.use(async (socket, next) => {
 io.on("connection", (socket) => {
   const { profile } = socket.data.auth;
   socket.join(`user:${profile.id}`);
+  socket.join(`org:${profile.org_id}`);
   if (profile.role === "teacher") socket.join(`teacher:${profile.id}`);
   if (profile.role === "admin") socket.join(`admin:${profile.org_id}`);
   socket.emit("system.ready", {

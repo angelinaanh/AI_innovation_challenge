@@ -128,3 +128,16 @@ Slice 3 seeds one approved Loops source document and three deterministic `docume
 The backend keeps `AI_ALLOW_APPROVED_CONTENT_EXPORT=false` by default. With the gate off, chunks and student questions remain local, grounded generation is refused, and teacher escalation stays available.
 
 Tutor retrieval first selects `PUBLISHED` lessons for the requested Skill Node, collects only their non-null `source_document_id` values, and then queries chunks within that allowlist. The service role never performs an unrestricted chunk similarity search.
+
+## 10. Content Studio Runtime Use
+
+Slice 7 requires no schema migration. It uses the existing tables as designed:
+
+- `source_documents`: inline teacher source and ownership;
+- `content_jobs`: generation status, human minutes, edit-rate estimate, publish time, cost placeholder;
+- `lessons`: lifecycle, model provenance, reviewer, publish time, and version rows;
+- `questions`: server-only answer key and independent publish status;
+- `document_chunks`: checkpoint-grounded Tutor material;
+- `audit_log`: draft/update/review/publish/version/archive actions.
+
+A revision receives a copied `source_documents` row and copied chunks. Publishing archives only prior `PUBLISHED` rows with the same Skill Node and difficulty, so a basic and advanced variant can coexist. The current backend performs these writes in order; before concurrent school use they must become one security-definer Postgres RPC transaction with equivalent organization/teacher checks.

@@ -45,8 +45,12 @@ export function StudentDataProvider({ children }) {
     socket.on("class.membership.updated", (detail) => {
       window.dispatchEvent(new CustomEvent("eduone:class-membership-updated", { detail }));
     });
+    socket.on("content.published", (detail) => {
+      loadDashboard();
+      window.dispatchEvent(new CustomEvent("eduone:content-published", { detail }));
+    });
     return () => socket.close();
-  }, [session?.access_token]);
+  }, [loadDashboard, session?.access_token]);
 
   const value = useMemo(
     () => ({

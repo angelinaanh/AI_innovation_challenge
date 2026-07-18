@@ -201,3 +201,19 @@ The teacher workspace is deliberately denser and calmer than the student dashboa
 The student screen reuses the existing Student Shell and adds `Lớp học` navigation. It separates the three natural jobs: join by code, respond to teacher invitations, and inspect active classes. Subject, STEAM axis, grade, and teacher remain visible without introducing rankings or social pressure.
 
 Both screens use backend-mediated Socket.IO membership updates. The UI refreshes after local actions and on cross-role events; it never promotes a membership locally before the server accepts the state transition.
+
+## 14. Content Studio & Student Library (Slice 7)
+
+The teacher Content Studio follows the operational design direction rather than the playful student dashboard:
+
+- compact metrics for draft, review, and published volume;
+- Skill Node cards group working and published versions without turning page bands into nested decoration;
+- the creation modal uses native Skill Node/difficulty controls and a large source field with character count;
+- the editor uses source-left/draft-right on desktop and stacked full-width bands on mobile;
+- status chips make `DRAFT`, `IN_REVIEW`, `PUBLISHED`, and `ARCHIVED` visible in text, not color alone;
+- published content is read-only; `Tạo phiên bản mới` preserves history before editing;
+- publish is a deliberate icon+text action and success feedback names the student realtime impact.
+
+The student library is lighter and action-oriented: approved count, available count, personal progress, then lesson cards. A locked published lesson remains visible but shows the exact recovery reason instead of an action link. This separates content availability from personal eligibility and makes the teacher-to-student impact legible.
+
+Desktop and 390x844 mobile QA found no horizontal overflow. Long Vietnamese headings wrap, source text remains readable, cards keep stable dimensions, and route-local scroll reset prevents detail pages from opening midway down the content.
