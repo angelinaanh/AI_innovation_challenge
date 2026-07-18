@@ -32,7 +32,7 @@ function cosineSimilarity(left, right) {
   return dot / (Math.sqrt(leftMagnitude) * Math.sqrt(rightMagnitude));
 }
 
-async function loadApprovedChunkRows(skillNodeId) {
+export async function loadApprovedChunkRows(skillNodeId) {
   const lessonsResult = await supabase
     .from("lessons")
     .select("id,source_document_id,content")

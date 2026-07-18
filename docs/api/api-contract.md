@@ -31,11 +31,11 @@ Authorization: Bearer <supabase_access_token>
 | Method | Path | Role | Purpose |
 |---|---|---|---|
 | GET | `/auth/me` | authenticated profile | Current account, role, grade, status, learning access |
-| POST | `/auth/bootstrap` | authenticated user without profile | Create student profile and zero-value projections |
+| POST | `/auth/bootstrap` | authenticated user without profile | Create selected student/teacher profile; initialize student projections |
 | PATCH | `/me` | all | Planned: update allowed own profile fields |
 | POST | `/guardian-consent` | student/parent | Planned: verify and record guardian consent |
 
-Supabase Auth handles email/password, email confirmation, Google OAuth, refresh, sign-out, and password recovery. The browser never sends role or account status as trusted data. The backend hardcodes self-registration to `student`, stores status/date-of-birth/guardian email in service-written Auth app metadata, and enriches the session with `profiles`.
+Supabase Auth handles email/password, email confirmation, Google OAuth, refresh, sign-out, and password recovery. The selected onboarding role may be `student` or `teacher`; teacher self-registration becomes `ACTIVE` immediately by an explicit product decision that differs from Functional Spec `F-103`. Account status remains service-written app metadata, and Admin is never available through public bootstrap.
 
 Relevant auth errors include `AUTH_REQUIRED` (401), `AUTH_INVALID` (401), `AUTH_FORBIDDEN` (403), `PROFILE_ONBOARDING_REQUIRED` (409), `GUARDIAN_CONSENT_REQUIRED` (403), and `ACCOUNT_INACTIVE` (403).
 
@@ -126,14 +126,30 @@ Tutor response metadata:
 
 | Method | Path | Role | Purpose |
 |---|---|---|---|
-| GET | `/teacher/dashboard` | teacher | Heatmap and risk queue |
-| POST | `/teacher/content-jobs` | teacher | Upload source and start generation |
-| GET | `/teacher/content-jobs` | teacher | List jobs |
-| GET | `/teacher/content-jobs/:id` | teacher | Job detail and generated draft |
+| GET | `/teacher/content` | teacher | Implemented: Skill Nodes, counts, own working drafts, published variants, archived counts |
+| POST | `/teacher/content/drafts` | teacher | Implemented: create source/job and structured `DRAFT` lesson/question/chunks |
+| GET | `/teacher/lessons/:id` | teacher | Implemented: lesson, source, question, job, Skill Node, action permissions |
 | PATCH | `/teacher/lessons/:id` | teacher | Save edits |
 | POST | `/teacher/lessons/:id/review` | teacher | Move to `IN_REVIEW` |
 | POST | `/teacher/lessons/:id/publish` | teacher | Publish and write audit log |
 | POST | `/teacher/lessons/:id/archive` | teacher | Archive draft or old version |
+| POST | `/teacher/lessons/:id/versions` | teacher | Copy a published lesson/source/question into a new editable `DRAFT` |
+| GET | `/teacher/dashboard` | teacher | Planned: heatmap and risk queue |
+
+Create draft request:
+
+```json
+{
+  "skillNodeId": "uuid",
+  "title": "Biến số qua trò chơi bắt sao",
+  "difficulty": "basic",
+  "sourceText": "Teacher-authorized source text, 120-20000 characters"
+}
+```
+
+The response includes `{ id, status: "DRAFT", generationMode }`, where `generationMode` is `ai`, `local`, or `local-fallback`. AI output never skips review. `PATCH` accepts `{ content, question, humanMinutes }`; editing an `IN_REVIEW` lesson returns it to `DRAFT`. Publish accepts optional `{ humanMinutes }`, requires `IN_REVIEW`, publishes its questions, archives any prior `PUBLISHED` lesson at the same Skill Node/difficulty, and returns `archivedLessonIds`.
+
+Relevant errors: `CONTENT_NOT_FOUND` (404), `CONTENT_FORBIDDEN` (403), `CONTENT_INVALID_STATE` (409), `CONTENT_GENERATION_FAILED` (502), and `CONTENT_UNSAFE` (422).
 
 ## 6. Admin
 
@@ -160,6 +176,8 @@ The handshake requires `auth.accessToken`. Rooms are derived only from the verif
 | `tutor.escalated` | `teacher:{teacherId}` | `{ escalationId, studentId, skillNodeId }` |
 | `tutor.answered` | `user:{studentId}` | `{ escalationId, answerPreview }` |
 | `riskQueue.updated` | `class:{classId}` | `{ count, highestRisk }` |
+| `class.membership.updated` | `teacher:{teacherId}`, `user:{studentId}` | `{ teacherId, studentId, classId, status }` |
+| `content.published` | `org:{orgId}` | `{ orgId, teacherId, lessonId, skillNodeId, publishedAt }` |
 | `costCircuit.tripped` | `admin:{orgId}` | `{ date, spentUsd, budgetUsd }` |
 
 SSE events for Tutor:
@@ -169,3 +187,59 @@ SSE events for Tutor:
 - `refusal`: `{ "content", "mode", "studentMessageId", "escalationRecommended" }`
 - `done`: `{ "messageId", "studentMessageId", "mode", "confidence", "cached" }`
 - `error`: safe code/message/request ID with no provider detail
+
+## 8. Tutor Interactive Exercises
+
+All under the authenticated student Tutor scope. Answer keys never leave the server.
+
+| Method | Path | Role | Purpose |
+|---|---|---|---|
+| POST | `/tutor/exercises` | student | Generate one grounded practice exercise for a session `{ sessionId, type }` |
+| POST | `/tutor/exercises/:exerciseId/submit` | student | Grade a response, award effort EXP, return solution `{ response }` |
+| POST | `/tutor/exercises/:exerciseId/promote` | student | Send a correct item to the teacher review queue |
+| GET | `/teacher/exercise-proposals` | teacher | List promoted practice items awaiting review |
+| POST | `/teacher/exercise-proposals/:exerciseId/review` | teacher | `{ decision: "approve" | "reject" }`; approving an MCQ seeds a `DRAFT` question |
+
+`type` is one of `mcq | matching | ordering | cloze`. The generate response returns the render payload only (no answer key):
+
+```json
+POST /tutor/exercises  { "sessionId": "uuid", "type": "matching" }
+-> { "id": "uuid", "type": "matching", "prompt": "...",
+     "left": [{ "id": "l1", "label": "move" }],
+     "right": [{ "id": "r2", "label": "di chuyển" }], "formative": true }
+```
+
+Response shapes for submit (`response` field): mcq `{ selectedIndex }`, matching `{ pairs: { leftId: rightId } }`, ordering `{ order: [id,...] }`, cloze `{ answers: { blankId: value } }`. Submit returns `{ isCorrect, score, solution, explanation, award, canPromote }`. These exercises are formative: they write `tutor_exercises` / `tutor_exercise_attempts` and `exp_events`, never `score_events`.
+
+## 9. Classes & subjects
+
+Authenticated; role-gated by the mount (`/teacher` = teacher, `/student` = student).
+
+Subjects catalog (STEAM classification, GDPT 2018), available to both roles:
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/student/subjects` · `/teacher/subjects` | List subjects; optional `?gradeBand=primary|secondary|high_school` |
+
+Teacher:
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/teacher/classes` | Create `{ name, gradeBand, subjectId?, description? }` (auto join code, max description 500) |
+| GET | `/teacher/classes` | List own classes with subject metadata and member/pending counts |
+| GET | `/teacher/classes/:classId/members` | Class/subject metadata, active roster, invited/requested rows |
+| POST | `/teacher/classes/:classId/invite` | Invite a student `{ studentEmail }` |
+| POST | `/teacher/memberships/:membershipId/decision` | Approve/reject a join request `{ decision: "approve"|"reject" }` |
+
+Student:
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/student/classes` | My active classes |
+| GET | `/student/invitations` | Pending invitations from teachers |
+| POST | `/student/classes/join` | Request to join by code `{ joinCode }` |
+| POST | `/student/memberships/:membershipId/respond` | Accept/decline an invitation `{ response: "accept"|"decline" }` |
+
+Membership states: `invited` (teacher invited) / `requested` (student asked) → `active` (accepted/approved) / `rejected`. An invite and a request for the same class/student converge to `active`.
+
+Server invariants: the class owner must match the teacher JWT; class/subject/actor must share `org_id`; the subject and student must match `grade_band`. Relevant errors are `SUBJECT_INVALID` (400) and `GRADE_BAND_MISMATCH` (409).

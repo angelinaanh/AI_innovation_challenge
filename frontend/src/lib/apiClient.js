@@ -63,6 +63,24 @@ export async function apiPost(path, body, signal, accessToken) {
   return payload.data;
 }
 
+export async function apiPatch(path, body, signal, accessToken) {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "PATCH",
+    headers: await accessTokenHeaders(accessToken, {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(body),
+    signal,
+  });
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw apiError(response, payload, "Không thể cập nhật dữ liệu EduOne.");
+  }
+  return payload.data;
+}
+
 export async function streamPost(path, body, { onEvent, signal } = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
@@ -132,6 +150,69 @@ export const api = {
   escalateTutorMessage: (messageId, signal) => apiPost(
     `/tutor/messages/${encodeURIComponent(messageId)}/escalate`,
     {},
+    signal,
+  ),
+  getTeacherSubjects: (gradeBand, signal) => apiGet(
+    `/teacher/subjects${gradeBand ? `?gradeBand=${encodeURIComponent(gradeBand)}` : ""}`,
+    signal,
+  ),
+  getTeacherClasses: (signal) => apiGet("/teacher/classes", signal),
+  createTeacherClass: (payload, signal) => apiPost("/teacher/classes", payload, signal),
+  getTeacherClassMembers: (classId, signal) => apiGet(
+    `/teacher/classes/${encodeURIComponent(classId)}/members`,
+    signal,
+  ),
+  inviteStudentToClass: (classId, studentEmail, signal) => apiPost(
+    `/teacher/classes/${encodeURIComponent(classId)}/invite`,
+    { studentEmail },
+    signal,
+  ),
+  decideClassRequest: (membershipId, decision, signal) => apiPost(
+    `/teacher/memberships/${encodeURIComponent(membershipId)}/decision`,
+    { decision },
+    signal,
+  ),
+  getTeacherContent: (signal) => apiGet("/teacher/content", signal),
+  createContentDraft: (payload, signal) => apiPost("/teacher/content/drafts", payload, signal),
+  getTeacherLesson: (lessonId, signal) => apiGet(
+    `/teacher/lessons/${encodeURIComponent(lessonId)}`,
+    signal,
+  ),
+  updateTeacherLesson: (lessonId, payload, signal) => apiPatch(
+    `/teacher/lessons/${encodeURIComponent(lessonId)}`,
+    payload,
+    signal,
+  ),
+  submitLessonReview: (lessonId, signal) => apiPost(
+    `/teacher/lessons/${encodeURIComponent(lessonId)}/review`,
+    {},
+    signal,
+  ),
+  publishTeacherLesson: (lessonId, humanMinutes, signal) => apiPost(
+    `/teacher/lessons/${encodeURIComponent(lessonId)}/publish`,
+    { humanMinutes },
+    signal,
+  ),
+  createLessonVersion: (lessonId, signal) => apiPost(
+    `/teacher/lessons/${encodeURIComponent(lessonId)}/versions`,
+    {},
+    signal,
+  ),
+  archiveTeacherLesson: (lessonId, signal) => apiPost(
+    `/teacher/lessons/${encodeURIComponent(lessonId)}/archive`,
+    {},
+    signal,
+  ),
+  getStudentClasses: (signal) => apiGet("/student/classes", signal),
+  getStudentInvitations: (signal) => apiGet("/student/invitations", signal),
+  requestClassJoin: (joinCode, signal) => apiPost(
+    "/student/classes/join",
+    { joinCode },
+    signal,
+  ),
+  respondToClassInvite: (membershipId, response, signal) => apiPost(
+    `/student/memberships/${encodeURIComponent(membershipId)}/respond`,
+    { response },
     signal,
   ),
 };

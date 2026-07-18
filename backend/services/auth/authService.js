@@ -4,6 +4,8 @@ import {
   isLearningAccountActive,
   normalizeAccountStatus,
   normalizeStudentOnboarding,
+  normalizeTeacherOnboarding,
+  onboardingRole,
 } from "./authRules.js";
 
 const PROFILE_FIELDS = "id,org_id,email,full_name,role,grade_band,guardian_consent_at,created_at";
@@ -75,9 +77,39 @@ async function initializeStudentProjections(userId) {
   }
 }
 
-export async function bootstrapStudentAccount(auth, payload) {
+export async function bootstrapAccount(auth, payload = {}) {
   if (auth.profile) return auth.account;
+  const role = onboardingRole(auth.user, payload);
+  return role === "teacher"
+    ? bootstrapTeacherAccount(auth, payload)
+    : bootstrapStudentAccount(auth, payload);
+}
 
+async function bootstrapTeacherAccount(auth, payload) {
+  const onboarding = normalizeTeacherOnboarding(auth.user, payload);
+  const updateResult = await supabase.auth.admin.updateUserById(auth.user.id, {
+    app_metadata: { ...(auth.user.app_metadata || {}), account_status: "ACTIVE", onboarding_version: 1 },
+    user_metadata: { ...(auth.user.user_metadata || {}), full_name: onboarding.fullName, role: "teacher" },
+  });
+  if (updateResult.error) {
+    throw appError("AUTH_PROVIDER_ERROR", "Không thể hoàn tất hồ sơ xác thực lúc này.", updateResult.error);
+  }
+  const insertResult = await supabase
+    .from("profiles")
+    .insert({ id: auth.user.id, email: auth.user.email, full_name: onboarding.fullName, role: "teacher", grade_band: null })
+    .select(PROFILE_FIELDS)
+    .single();
+  let profile = insertResult.data;
+  if (insertResult.error?.code === "23505") {
+    profile = await loadProfile(auth.user.id);
+  } else {
+    throwDatabaseError(insertResult.error, "create teacher profile");
+  }
+  if (!profile) throw appError("PROFILE_REQUIRED", "Không thể khởi tạo hồ sơ giảng viên.");
+  return accountFromIdentity(updateResult.data.user, profile);
+}
+
+async function bootstrapStudentAccount(auth, payload) {
   const onboarding = normalizeStudentOnboarding(auth.user, payload);
   const appMetadata = {
     ...(auth.user.app_metadata || {}),

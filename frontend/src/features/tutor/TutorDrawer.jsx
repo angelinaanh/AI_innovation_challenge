@@ -10,7 +10,16 @@ import {
 } from "lucide-react";
 
 import { api } from "../../lib/apiClient.js";
+import { exerciseApi } from "../../lib/exerciseApi.js";
+import { ExerciseCard } from "./exercises/ExerciseCard.jsx";
 import { TutorMessage } from "./TutorMessage.jsx";
+
+const EXERCISE_TYPES = [
+  { type: "mcq", label: "Trắc nghiệm" },
+  { type: "matching", label: "Nối cột" },
+  { type: "ordering", label: "Sắp thứ tự" },
+  { type: "cloze", label: "Điền khuyết" },
+];
 
 const SUGGESTIONS = [
   "Repeat khác forever thế nào?",
@@ -38,6 +47,7 @@ export function TutorDrawer({ skillNodeId, skillNodeName }) {
   const [loading, setLoading] = useState(false);
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState(null);
+  const [genType, setGenType] = useState(null);
   const endRef = useRef(null);
 
   useEffect(() => {
@@ -126,6 +136,9 @@ export function TutorDrawer({ skillNodeId, skillNodeName }) {
               streaming: false,
             }));
           }
+          if (event === "exercise_offer") {
+            updateAssistant(assistantTempId, (message) => ({ ...message, offer: data }));
+          }
           if (event === "error") {
             setError(data.message);
             updateAssistant(assistantTempId, (message) => ({
@@ -163,6 +176,23 @@ export function TutorDrawer({ skillNodeId, skillNodeName }) {
     } catch (escalateError) {
       setError(escalateError.message);
       updateAssistant(message.id, (current) => ({ ...current, escalating: false }));
+    }
+  }
+
+  async function generateExercise(type) {
+    if (!session || genType || streaming) return;
+    setGenType(type);
+    setError(null);
+    try {
+      const exercise = await exerciseApi.generate(session.id, type);
+      setMessages((current) => [
+        ...current,
+        { id: `exercise-${exercise.id}`, kind: "exercise", exercise },
+      ]);
+    } catch (genError) {
+      setError(genError.message);
+    } finally {
+      setGenType(null);
     }
   }
 
@@ -224,12 +254,30 @@ export function TutorDrawer({ skillNodeId, skillNodeName }) {
                 </div>
               )}
               {messages.map((message) => (
-                <TutorMessage key={message.id} message={message} onEscalate={escalate} />
+                message.kind === "exercise"
+                  ? <ExerciseCard key={message.id} exercise={message.exercise} onAskTutor={sendMessage} />
+                  : <TutorMessage key={message.id} message={message} onEscalate={escalate} onPractice={generateExercise} />
               ))}
               <div ref={endRef} />
             </div>
 
             {error && <p className="tutor-error" role="alert">{error}</p>}
+
+            <div className="tutor-practice-bar" aria-label="Tạo bài luyện tương tác">
+              <span className="tutor-practice-label"><Sparkles size={13} /> Luyện tập</span>
+              {EXERCISE_TYPES.map(({ type, label }) => (
+                <button
+                  key={type}
+                  type="button"
+                  className="tutor-practice-chip"
+                  onClick={() => generateExercise(type)}
+                  disabled={!session || Boolean(genType) || streaming}
+                >
+                  {genType === type ? <LoaderCircle className="animate-spin" size={13} /> : null}
+                  {label}
+                </button>
+              ))}
+            </div>
 
             <form className="tutor-composer" onSubmit={submit}>
               <label htmlFor="tutor-question" className="sr-only">Câu hỏi cho AI Tutor</label>

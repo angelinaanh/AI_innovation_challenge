@@ -6,6 +6,7 @@ import {
   isLearningAccountActive,
   normalizeAccountStatus,
   normalizeStudentOnboarding,
+  onboardingRole,
 } from "../services/auth/authRules.js";
 
 const TODAY = new Date("2026-07-18T12:00:00.000Z");
@@ -53,4 +54,11 @@ test("normalizes account statuses and learning access", () => {
   assert.equal(isLearningAccountActive("ACTIVE"), true);
   assert.equal(isLearningAccountActive("AT_RISK"), true);
   assert.equal(isLearningAccountActive("PENDING"), false);
+});
+
+test("self-registration can activate the selected teacher role", () => {
+  assert.equal(onboardingRole({ user_metadata: { role: "teacher" } }), "teacher");
+  assert.equal(onboardingRole({}, { role: "teacher" }), "teacher");
+  assert.equal(onboardingRole({ app_metadata: { provisioned_role: "teacher" } }), "teacher");
+  assert.equal(onboardingRole({ app_metadata: { provisioned_role: "admin" } }), "student");
 });

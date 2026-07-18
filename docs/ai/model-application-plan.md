@@ -284,3 +284,7 @@ Before demo:
 - OpenAI moderation guide: https://developers.openai.com/api/docs/guides/moderation
 - OpenAI Realtime/audio guide: https://developers.openai.com/api/docs/guides/realtime
 - OpenAI guardrails and human review guide: https://developers.openai.com/api/docs/guides/agents/guardrails-approvals
+
+## 11. Addendum — Tutor interactive exercises (Slice 5)
+
+Extends M6. The Tutor generates interactive practice (mcq | matching | ordering | cloze) with `CONTENT_FAST_MODEL` in structured JSON mode, grounded on the current Skill Node's approved chunks, moderated, and logged to `ai_usage` as feature `tutor_exercise` (tier 2). Generation is one small call per exercise and reuses the same fail-closed export gate and daily budget/limit as the Tutor answer. Grading and effort-EXP are deterministic (no model). This is where AI intervenes beyond chat — but stays formative and never edits the STEAM profile.

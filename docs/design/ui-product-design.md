@@ -174,3 +174,46 @@ The Tutor is an unframed right-side workspace on desktop and a full-screen layer
 - no horizontal overflow or button-label overflow at 390x844.
 
 The drawer overlays rather than resizing the lesson, preserving checkpoint context underneath. It does not show hidden prompts, model names, confidence numbers, or token/cost data to students.
+
+## 12. Tutor Interactive Exercises (Slice 5)
+
+The Tutor drawer gains a "Luyện tập" bar with four chips (Trắc nghiệm, Nối cột, Sắp thứ tự, Điền khuyết). A generated exercise renders as a card inline in the conversation, tagged "Bài luyện · không tính điểm" so a student never confuses practice with graded assessment.
+
+| Type | Interaction | Accessibility |
+|---|---|---|
+| MCQ | tap an option | radio semantics, keyboard focus |
+| Matching | drag a right-column chip into a left slot | click-to-select fallback; slots are keyboard-activatable |
+| Ordering | drag to reorder | up/down buttons as the reliable path |
+| Cloze | choose/type into each blank | native `select`/`input` per blank |
+
+After "Kiểm tra": the card shows correct/partial result, the explanation, correct-answer highlighting, and a small `+EXP` chip. A correct item offers "Gửi giáo viên duyệt thành câu hỏi thật". States reuse the calm success/wrong palette; no shame copy, consistent with "safe to fail".
+
+## 13. Teacher & Student Classes (Slice 6)
+
+The teacher workspace is deliberately denser and calmer than the student dashboard:
+
+- fixed teacher shell with class navigation, identity, sign-out, and realtime status;
+- compact class/student/pending metrics followed by a scannable class grid;
+- class creation modal uses native grade and subject controls from the GDPT 2018 catalog;
+- class detail keeps join code, roster, invite form, and pending decisions in one operational view;
+- approval/rejection uses explicit actions and stable pending/loading states.
+
+The student screen reuses the existing Student Shell and adds `Lớp học` navigation. It separates the three natural jobs: join by code, respond to teacher invitations, and inspect active classes. Subject, STEAM axis, grade, and teacher remain visible without introducing rankings or social pressure.
+
+Both screens use backend-mediated Socket.IO membership updates. The UI refreshes after local actions and on cross-role events; it never promotes a membership locally before the server accepts the state transition.
+
+## 14. Content Studio & Student Library (Slice 7)
+
+The teacher Content Studio follows the operational design direction rather than the playful student dashboard:
+
+- compact metrics for draft, review, and published volume;
+- Skill Node cards group working and published versions without turning page bands into nested decoration;
+- the creation modal uses native Skill Node/difficulty controls and a large source field with character count;
+- the editor uses source-left/draft-right on desktop and stacked full-width bands on mobile;
+- status chips make `DRAFT`, `IN_REVIEW`, `PUBLISHED`, and `ARCHIVED` visible in text, not color alone;
+- published content is read-only; `Tạo phiên bản mới` preserves history before editing;
+- publish is a deliberate icon+text action and success feedback names the student realtime impact.
+
+The student library is lighter and action-oriented: approved count, available count, personal progress, then lesson cards. A locked published lesson remains visible but shows the exact recovery reason instead of an action link. This separates content availability from personal eligibility and makes the teacher-to-student impact legible.
+
+Desktop and 390x844 mobile QA found no horizontal overflow. Long Vietnamese headings wrap, source text remains readable, cards keep stable dimensions, and route-local scroll reset prevents detail pages from opening midway down the content.

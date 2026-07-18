@@ -24,6 +24,8 @@ export function LessonPlayerPage() {
 
   useEffect(() => {
     const controller = new AbortController();
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
     setData(null);
     setError(null);
     api.getLesson(skillNodeId, controller.signal).then(setData).catch((loadError) => {

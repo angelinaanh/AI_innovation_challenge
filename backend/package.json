@@ -8,6 +8,8 @@
     "start": "node server.js",
     "seed:demo": "node scripts/seedDemo.js",
     "seed:tutor": "node scripts/embedTutorKnowledge.js",
+    "seed:sources": "node scripts/seedTutorSources.js",
+    "seed:subjects": "node scripts/seedSubjects.js",
     "reset:demo": "node scripts/seedDemo.js --reset-progress",
     "test": "node --test tests/**/*.test.js"
   },

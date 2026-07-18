@@ -372,3 +372,42 @@ Ba policy này là đại diện, không phải toàn bộ — mỗi bảng còn
 ### Kết luận đánh giá
 
 Phương hướng "event-sourcing + RLS-as-enforcement + JSONB có chọn lọc" khớp với đúng những gì đề xuất đã tự đặt ra ở mục 9.3 và 5.2 (HITL là ràng buộc dữ liệu, không phải tính năng cộng thêm) — nghĩa là schema không chỉ lưu trữ đúng, mà **tự thực thi** một phần các cam kết an toàn của đề bài thay vì phó thác hoàn toàn cho tầng ứng dụng. Hai lỗ hổng cần vá trước khi dùng cho pilot thật: (1) RAG chưa lọc theo trạng thái publish ở tầng chunk, (2) cầu dao chi phí chưa có cơ chế tự động trip. Cả hai đều sửa được bằng cách bổ sung một policy và một scheduled function, không cần đổi cấu trúc bảng.
+---
+
+## Phần 4 — Bổ sung: Bài luyện tương tác của Tutor (migration 0002)
+
+Tính năng "AI Tutor sinh bài luyện tương tác" thêm hai bảng (SQL đầy đủ ở `database/migrations/0002_tutor_interactive_exercises.sql`):
+
+- `tutor_exercises` — một bài luyện grounded (mcq | matching | ordering | cloze) gắn với một `tutor_sessions`. `payload` (jsonb) là dữ liệu render KHÔNG chứa đáp án; `answer_key` (jsonb) chỉ server đọc; `source_chunk_ids` lưu provenance; `status` theo vòng đời `active -> promoted_pending -> promoted_approved | rejected` cho luồng HITL đẩy item tốt thành `questions` DRAFT.
+- `tutor_exercise_attempts` — lượt làm của học sinh, có `is_correct` và `score` (0..1 cho chấm một phần).
+
+Nguyên tắc giữ nguyên bất biến hệ thống: đây là **luyện tập (formative)** — chỉ ghi `exp_events` (EXP nỗ lực), **không** ghi `score_events`, **không** đổi `steam_profiles`, **không** mở khoá (khớp mục 6.2 / FR6.6 / NFR-10). RLS theo khuôn sở hữu phiên; answer_key vẫn phải che ở tầng API.
+
+---
+
+## Phần 5 — Bổ sung: Môn học & Lớp học (migration 0003)
+
+SQL đầy đủ ở `database/migrations/0003_classes_and_subjects.sql`. Ba bảng:
+
+- `subjects` — danh mục môn theo **tag STEAM × khối lớp** bám Chương trình GDPT 2018 (mỗi dòng: `name`, `steam_axis` S/T/E/A/M, `grade_band`). Seed bằng `npm run seed:subjects`.
+- `classes` — lớp do giáo viên tạo (`teacher_id`, `grade_band`, `subject_id`, `join_code` duy nhất).
+- `class_memberships` — thành viên lớp, vòng đời `invited | requested → active | rejected`. `unique(class_id, student_id)`. Giáo viên **mời** (invited) hoặc học sinh **xin vào** bằng mã (requested); một lời mời và một yêu cầu cho cùng cặp lớp–học sinh sẽ hội tụ về `active`.
+
+RLS: subjects đọc trong org; classes do giáo viên sở hữu, học sinh đọc lớp mình là thành viên active; memberships học sinh thấy dòng của mình, giáo viên thấy dòng của lớp mình.
+
+Trạng thái live ngày 2026-07-18: migration `0003` đã được áp dụng và seed đủ 28 môn. Service layer còn kiểm tra `org_id`, `grade_band`, quyền sở hữu lớp và subject hợp lệ trước mọi write. E2E thật đã qua cả `invited -> active` và `requested -> active`; roster giáo viên và danh sách lớp học sinh đều đọc lại đúng thành viên.
+
+Để nối Content Studio với lớp, migration kế tiếp cần bảng `class_content_assignments(class_id, skill_node_id/lesson_id, assigned_by, available_from, due_at)`. Lesson vẫn bắt buộc `PUBLISHED`; assignment chỉ quyết định phạm vi lớp được phân phối.
+
+---
+
+## Phần 6 — Content Studio runtime (không cần migration mới)
+
+Slice 7 dùng đúng các bảng đã có: `source_documents`, `document_chunks`, `lessons`, `questions`, `content_jobs`, `audit_log`.
+
+- Một draft tạo source, job, lesson, question và checkpoint chunks; chunks chưa thể vào Tutor vì truy hồi luôn dựng allowlist từ lesson `PUBLISHED`.
+- Lưu chỉnh sửa cập nhật `human_minutes` và ước lượng `edit_rate` để đo K-1/K-4.
+- Revision tạo source/chunks riêng, không sửa dữ liệu đang phục vụ phiên bản published.
+- Publish cập nhật reviewer/time, question/job/audit, rồi archive phiên bản cũ cùng Skill Node và difficulty; basic và advanced có thể cùng tồn tại.
+
+Không đổi schema trong slice này. Trước pilot đa giáo viên, chuỗi write publish/archive phải chuyển thành một Postgres RPC transaction để không thể tồn tại trạng thái dở dang khi hai giáo viên publish đồng thời.

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   Bell,
+  BookOpenCheck,
   ChevronDown,
   Flame,
   LayoutDashboard,
@@ -8,6 +9,7 @@ import {
   Map,
   Menu,
   Radio,
+  School,
   X,
 } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
@@ -19,6 +21,8 @@ import { Brand } from "../ui/Brand.jsx";
 const navItems = [
   { to: "/student", label: "Tổng quan", icon: LayoutDashboard, end: true },
   { to: "/student/path", label: "Lộ trình học", icon: Map },
+  { to: "/student/content", label: "Nội dung", icon: BookOpenCheck },
+  { to: "/student/classes", label: "Lớp học", icon: School },
 ];
 
 const gradeBandLabels = {

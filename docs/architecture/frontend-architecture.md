@@ -26,6 +26,8 @@ frontend/
       learning-path/
       lesson-player/
       tutor/
+      teacher/
+      student-classes/
       teacher-studio/
       admin-console/
     lib/
@@ -43,17 +45,19 @@ frontend/
 | Route | Role | Screen |
 |---|---|---|
 | `/login` | public | Email/password and Google login |
-| `/register` | public | Student registration only |
+| `/register` | public | Student or teacher registration |
 | `/forgot-password` | public | Password recovery request |
 | `/reset-password` | recovery session | New password |
 | `/auth/callback` | public callback | Email/OAuth completion |
 | `/auth-error` | authenticated | Recoverable account-service error |
-| `/onboarding` | authenticated, no profile | Student profile bootstrap |
+| `/onboarding` | authenticated, no profile | Role-aware student/teacher profile bootstrap |
 | `/account-pending` | authenticated | Guardian consent pending |
 | `/student` | student | Dashboard |
 | `/student/path` | student | Learning Path |
 | `/student/lessons/:skillNodeId` | student | Lesson Player |
-| `/teacher` | teacher | Class Dashboard |
+| `/student/classes` | student | Classes, invitations, join-by-code |
+| `/teacher` | teacher | Class workspace |
+| `/teacher/classes/:classId` | teacher | Roster, invitations, join requests |
 | `/teacher/studio` | teacher | Content Studio Jobs |
 | `/teacher/studio/:jobId` | teacher | Review Workspace |
 | `/teacher/escalations` | teacher | Tutor Escalations |
@@ -91,6 +95,7 @@ Use two channels:
   - teacher response posted;
   - cost circuit breaker tripped;
   - class risk queue updated.
+  - class membership updated.
 
 Supabase Realtime can be used later for direct DB subscription, but backend-mediated Socket.IO is easier to secure and demo.
 
@@ -115,7 +120,7 @@ Frontend must not:
 
 - The browser may hold only the Supabase publishable key and short-lived user session.
 - API and Socket.IO clients attach the access token automatically.
-- Public registration never exposes a role selector and always bootstraps `student` on the backend.
+- Public registration exposes only `student` and `teacher`; selected teachers activate immediately by explicit product decision. Admin remains unavailable.
 - A missing profile routes to onboarding; `PENDING` and inactive statuses route to blocking account-state screens.
 - Local sign-out clears the browser session and protected routes immediately return to login.
 - Frontend role guards are navigation UX only; Express repeats every role/status decision.
@@ -128,5 +133,12 @@ Implemented:
 2. Student dashboard backed by authenticated Supabase data.
 3. Learning path with explainable reasons.
 4. Lesson Player and Tutor drawer.
+5. Teacher class workspace and student membership/invitation screen with realtime refresh.
+6. Teacher Content Studio workspace and source-versus-draft editor with review/publish/version actions.
+7. Student published-content library with personal lock reasons and organization realtime refresh.
 
-Next role-facing slices are Teacher Studio, parent summary/linking, and Admin cost/user controls.
+Teacher routes `/teacher/content` and `/teacher/content/:lessonId` are operational and deliberately denser than the student app. Student route `/student/content` renders one card per published Skill Node and sends only accessible nodes to the existing Lesson Player. `content.published` is translated into a local refresh event; the browser always refetches authoritative API state instead of trusting the Socket.IO payload.
+
+Browser QA covers 1280px desktop and 390x844 mobile for Content Studio, editor, student library, and the newly published Lesson Player. Checks include no horizontal overflow, route-local scroll reset, correct source/draft visibility, correct published title, and zero console warnings/errors.
+
+Next role-facing slices are class-scoped content assignment, teacher analytics, parent summary/linking, and Admin cost/user controls.

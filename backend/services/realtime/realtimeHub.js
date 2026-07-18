@@ -10,3 +10,20 @@ export function emitTutorEscalated(payload) {
     realtimeServer.to(`teacher:${payload.assignedTeacherId}`).emit("tutor.escalated", payload);
   }
 }
+
+export function emitClassMembershipUpdated(payload) {
+  if (!realtimeServer) return;
+  if (payload.teacherId) {
+    realtimeServer.to(`teacher:${payload.teacherId}`).emit("class.membership.updated", payload);
+  }
+  if (payload.studentId) {
+    realtimeServer.to(`user:${payload.studentId}`).emit("class.membership.updated", payload);
+  }
+}
+
+export function emitContentPublished(payload) {
+  if (!realtimeServer) return;
+  if (payload.orgId) {
+    realtimeServer.to(`org:${payload.orgId}`).emit("content.published", payload);
+  }
+}

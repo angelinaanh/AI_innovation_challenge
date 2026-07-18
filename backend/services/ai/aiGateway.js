@@ -85,6 +85,17 @@ export async function assertTutorAllowance({ orgId, userId }) {
   return budget;
 }
 
+export async function assertAiBudgetAllowance({ orgId }) {
+  const budget = await loadOrCreateBudget(orgId);
+  if (budget.circuit_tripped || Number(budget.spent_usd) >= Number(budget.budget_usd)) {
+    throw appError(
+      "AI_BUDGET_EXCEEDED",
+      "Ngân sách AI hôm nay đã đạt giới hạn. Bạn vẫn có thể tạo bản nháp cục bộ.",
+    );
+  }
+  return budget;
+}
+
 export async function recordAiUsage({
   orgId,
   userId,
@@ -174,6 +185,86 @@ export async function createEmbeddings({ texts, orgId, userId }) {
     throw appError(
       "AI_PROVIDER_ERROR",
       "Không thể truy hồi nguồn bài học lúc này.",
+      error,
+    );
+  }
+}
+
+export async function generateStructuredExercise({ instructions, input, orgId, userId }) {
+  try {
+    const model = env.openAiModels.contentFast;
+    const response = await getOpenAiClient().responses.create({
+      model,
+      instructions,
+      input,
+      reasoning: { effort: "low" },
+      max_output_tokens: 700,
+      text: { format: { type: "json_object" } },
+      store: false,
+    });
+    const tokensIn = Number(response.usage?.input_tokens || 0);
+    const tokensOut = Number(response.usage?.output_tokens || 0);
+    await recordAiUsage({
+      orgId,
+      userId,
+      feature: "tutor_exercise",
+      model,
+      tier: 2,
+      tokensIn,
+      tokensOut,
+    });
+    let item = null;
+    try {
+      item = JSON.parse(response.output_text || "{}");
+    } catch {
+      item = null;
+    }
+    return { item, model, tokensIn, tokensOut };
+  } catch (error) {
+    if (["AI_UNAVAILABLE", "DATABASE_ERROR"].includes(error.code)) throw error;
+    throw appError(
+      "AI_PROVIDER_ERROR",
+      "Không thể sinh bài luyện lúc này. Bạn có thể tiếp tục hỏi Tutor.",
+      error,
+    );
+  }
+}
+
+export async function generateStructuredLesson({ instructions, input, orgId, userId }) {
+  try {
+    const model = env.openAiModels.contentFast;
+    const response = await getOpenAiClient().responses.create({
+      model,
+      instructions,
+      input,
+      reasoning: { effort: "low" },
+      max_output_tokens: 2200,
+      text: { format: { type: "json_object" } },
+      store: false,
+    });
+    const tokensIn = Number(response.usage?.input_tokens || 0);
+    const tokensOut = Number(response.usage?.output_tokens || 0);
+    await recordAiUsage({
+      orgId,
+      userId,
+      feature: "content_studio_draft",
+      model,
+      tier: 2,
+      tokensIn,
+      tokensOut,
+    });
+    let draft = null;
+    try {
+      draft = JSON.parse(response.output_text || "{}");
+    } catch {
+      draft = null;
+    }
+    return { draft, model, tokensIn, tokensOut };
+  } catch (error) {
+    if (["AI_UNAVAILABLE", "DATABASE_ERROR", "AI_BUDGET_EXCEEDED"].includes(error.code)) throw error;
+    throw appError(
+      "AI_PROVIDER_ERROR",
+      "AI chưa tạo được bản nháp bài học lúc này.",
       error,
     );
   }

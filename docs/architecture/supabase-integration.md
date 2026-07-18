@@ -73,13 +73,13 @@ Current implementation verifies:
 - user is `ACTIVE`;
 - if under 16, `guardian_consent_at is not null`.
 
-Age, guardian email, and initial `account_status` are written to trusted Auth app metadata by the service-role backend, not accepted as authorization claims from browser metadata. Under-16 bootstrap sets `PENDING`; REST and Socket.IO fail closed until consent is recorded. Guardian email delivery and consent-token verification remain required before pilot, then RLS should repeat the same rule.
+Age, guardian email, and initial `account_status` are written to trusted Auth app metadata by the service-role backend. Under-16 student bootstrap sets `PENDING`; REST and Socket.IO fail closed until consent is recorded. A selected teacher role activates immediately by explicit product decision; Admin is never accepted from public onboarding. Guardian email delivery and consent-token verification remain required before pilot, then RLS should repeat the same rule.
 
 ## 5. Auth/Profile Flow
 
 1. Supabase Auth creates or authenticates the user and issues a short-lived access token plus refresh token.
 2. The frontend calls `GET /api/auth/me`; a missing profile returns `PROFILE_ONBOARDING_REQUIRED`.
-3. `POST /api/auth/bootstrap` validates name, grade, and date of birth, hardcodes role `student`, and creates `profiles`, `steam_profiles`, `exp_totals`, and `streaks` rows.
+3. `POST /api/auth/bootstrap` validates the selected student/teacher branch. Students create `profiles`, `steam_profiles`, `exp_totals`, and `streaks`; teachers create only an `ACTIVE` teacher profile.
 4. Express derives each protected request identity from `supabase.auth.getUser(accessToken)` and then checks profile role/status.
 5. Socket.IO validates the same token before joining any user/teacher/admin room.
 
@@ -94,7 +94,13 @@ The existing live schema is sufficient for this slice: `guardian_consent_at` rem
 | Parent | linked child summary only, no raw Tutor chat |
 | Admin | org-wide configuration, cost, audit, users |
 
-## 7. Migration Rule
+## 7. Classes & Subjects
+
+Migration `0003_classes_and_subjects.sql` is applied in the configured project and the 28-row GDPT 2018 catalog is seeded. `subjects` is organization- and grade-scoped, `classes.teacher_id` owns the class, and `class_memberships` records the `invited/requested/active/rejected` lifecycle.
+
+Although the backend uses a service role for application data, it repeats the intended RLS boundary before each write: teacher ownership, same `org_id`, subject/class grade match, and student/class grade match. Realtime membership updates flow through Socket.IO rather than exposing direct database subscriptions in the browser.
+
+## 8. Migration Rule
 
 Every schema change must include:
 
@@ -103,7 +109,7 @@ Every schema change must include:
 3. Update to this file if RLS/API behavior changes.
 4. Seed or sample data if it affects demo flows.
 
-## 8. Seeded QA Content
+## 9. Seeded QA Content
 
 Run `npm run seed:demo` inside `backend/`. The idempotent script uses existing tables only; it does not create or alter schema objects. It seeds QA accounts and course content, but runtime APIs still require a valid JWT and never fall back to those identities. It seeds:
 
@@ -122,3 +128,16 @@ Slice 3 seeds one approved Loops source document and three deterministic `docume
 The backend keeps `AI_ALLOW_APPROVED_CONTENT_EXPORT=false` by default. With the gate off, chunks and student questions remain local, grounded generation is refused, and teacher escalation stays available.
 
 Tutor retrieval first selects `PUBLISHED` lessons for the requested Skill Node, collects only their non-null `source_document_id` values, and then queries chunks within that allowlist. The service role never performs an unrestricted chunk similarity search.
+
+## 10. Content Studio Runtime Use
+
+Slice 7 requires no schema migration. It uses the existing tables as designed:
+
+- `source_documents`: inline teacher source and ownership;
+- `content_jobs`: generation status, human minutes, edit-rate estimate, publish time, cost placeholder;
+- `lessons`: lifecycle, model provenance, reviewer, publish time, and version rows;
+- `questions`: server-only answer key and independent publish status;
+- `document_chunks`: checkpoint-grounded Tutor material;
+- `audit_log`: draft/update/review/publish/version/archive actions.
+
+A revision receives a copied `source_documents` row and copied chunks. Publishing archives only prior `PUBLISHED` rows with the same Skill Node and difficulty, so a basic and advanced variant can coexist. The current backend performs these writes in order; before concurrent school use they must become one security-definer Postgres RPC transaction with equivalent organization/teacher checks.

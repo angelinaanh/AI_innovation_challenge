@@ -199,3 +199,62 @@ button:focus-visible, a:focus-visible { outline: 3px solid #38bdf8; outline-offs
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
+
+.tutor-practice-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; border-top: 1px solid #e2e8f0; background: #f0fdfa; padding: 9px 14px; }
+.tutor-practice-label { display: inline-flex; align-items: center; gap: 5px; color: #0f766e; font-size: 11px; font-weight: 950; }
+.tutor-practice-chip { display: inline-flex; align-items: center; gap: 5px; min-height: 30px; border: 1px solid #99f6e4; border-radius: 999px; background: white; padding: 4px 11px; color: #115e59; font-size: 12px; font-weight: 850; transition: 150ms ease; }
+.tutor-practice-chip:hover:not(:disabled) { background: #0f766e; color: white; border-color: #0f766e; }
+.tutor-practice-chip:disabled { cursor: not-allowed; opacity: 0.55; }
+
+.ex-card { border: 1px solid #e2e8f0; border-radius: 12px; background: white; padding: 13px; margin-bottom: 18px; box-shadow: 0 2px 0 rgba(203,213,225,0.6); }
+.ex-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 9px; }
+.ex-card-kind { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 950; color: #0f172a; }
+.ex-card-tag { border-radius: 999px; background: #f1f5f9; padding: 2px 8px; font-size: 10px; font-weight: 900; color: #64748b; }
+.ex-card-prompt { margin: 0 0 11px; font-size: 14px; font-weight: 800; line-height: 1.5; color: #0f172a; }
+.ex-card-error { margin: 9px 0 0; color: #be123c; font-size: 12px; font-weight: 800; }
+
+.ex-options { display: flex; flex-direction: column; gap: 8px; }
+.ex-option { display: flex; align-items: center; gap: 10px; min-height: 46px; border: 2px solid #e2e8f0; border-radius: 8px; padding: 8px 11px; background: white; text-align: left; color: #334155; font-size: 13px; font-weight: 800; transition: 130ms ease; }
+.ex-option:hover:not(:disabled) { border-color: #99f6e4; background: #f0fdfa; }
+.ex-option-selected { border-color: #0f766e; background: #f0fdfa; color: #115e59; }
+.ex-option-correct { border-color: #34d399; background: #ecfdf5; color: #047857; }
+.ex-option-wrong { border-color: #fda4af; background: #fff1f2; color: #9f1239; }
+.ex-option-letter { display: grid; width: 26px; height: 26px; flex: 0 0 auto; place-items: center; border-radius: 7px; background: #f1f5f9; color: #475569; font-size: 11px; font-weight: 950; }
+
+.ex-match { display: flex; flex-direction: column; gap: 10px; }
+.ex-match-col { display: flex; flex-direction: column; gap: 8px; }
+.ex-match-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: center; }
+.ex-match-left { border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; padding: 8px 10px; font-size: 13px; font-weight: 800; color: #0f172a; }
+.ex-slot { display: flex; align-items: center; min-height: 40px; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 5px 8px; background: white; cursor: pointer; }
+.ex-slot-filled { border-style: solid; border-color: #99f6e4; }
+.ex-slot-correct { border-color: #34d399 !important; background: #ecfdf5 !important; }
+.ex-slot-wrong { border-color: #fda4af !important; background: #fff1f2 !important; }
+.ex-slot-hint { color: #94a3b8; font-size: 12px; font-weight: 700; }
+.ex-chip-placed { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 850; color: #115e59; }
+.ex-chip-placed button { display: grid; place-items: center; color: #64748b; }
+.ex-chip-pool { display: flex; flex-wrap: wrap; gap: 7px; border-top: 1px dashed #e2e8f0; padding-top: 9px; }
+.ex-chip { display: inline-flex; align-items: center; gap: 5px; min-height: 32px; border: 1px solid #cbd5e1; border-radius: 8px; background: white; padding: 5px 10px; color: #334155; font-size: 13px; font-weight: 800; cursor: grab; transition: 130ms ease; }
+.ex-chip:hover { border-color: #0f766e; background: #f0fdfa; }
+.ex-chip-picked { border-color: #0f766e; background: #ccfbf1; color: #115e59; }
+
+.ex-order { display: flex; flex-direction: column; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.ex-order-item { display: flex; align-items: center; gap: 9px; border: 1px solid #e2e8f0; border-radius: 8px; background: white; padding: 8px 10px; font-size: 13px; font-weight: 800; color: #0f172a; cursor: grab; }
+.ex-order-index { display: grid; width: 22px; height: 22px; flex: 0 0 auto; place-items: center; border-radius: 50%; background: #ccfbf1; color: #0f766e; font-size: 12px; font-weight: 950; }
+.ex-order-move { display: inline-flex; gap: 3px; }
+.ex-order-move button { display: grid; width: 24px; height: 24px; place-items: center; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8fafc; color: #475569; font-weight: 950; }
+.ex-order-move button:disabled { opacity: 0.4; }
+
+.ex-cloze { font-size: 14px; line-height: 2.1; font-weight: 700; color: #0f172a; }
+.ex-cloze-select, .ex-cloze-input { min-width: 96px; border: 1px solid #99f6e4; border-radius: 7px; background: #f0fdfa; padding: 3px 8px; color: #115e59; font-size: 13px; font-weight: 850; }
+.ex-cloze-input { width: 110px; }
+
+.ex-result { margin-top: 13px; border-radius: 8px; padding: 11px 12px; font-size: 13px; }
+.ex-result-correct { background: #f0fdf4; color: #166534; }
+.ex-result-wrong { background: #fff1f2; color: #9f1239; }
+.ex-exp-chip { display: inline-flex; align-items: center; gap: 3px; margin-left: auto; border-radius: 999px; background: white; padding: 2px 8px; font-size: 11px; font-weight: 950; color: #b45309; }
+
+.tutor-code { border-radius: 5px; background: #f1f5f9; padding: 1px 6px; color: #7c3aed; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; font-weight: 800; }
+.tutor-citation-snippet { margin: 5px 0 2px 6px; border-left: 2px solid #a7f3d0; padding: 4px 0 4px 9px; color: #475569; font-size: 12px; font-weight: 600; line-height: 1.5; }
+.tutor-offer { display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 12px; border: 1px solid #ddd6fe; border-radius: 8px; background: #f5f3ff; padding: 9px 11px; color: #5b21b6; font-size: 12px; font-weight: 850; line-height: 1.4; transition: 150ms ease; }
+.tutor-offer:hover { border-color: #8b5cf6; background: #ede9fe; }
+.tutor-offer-tag { flex: 0 0 auto; border-radius: 999px; background: #8b5cf6; padding: 3px 9px; color: white; font-size: 10px; font-weight: 950; }

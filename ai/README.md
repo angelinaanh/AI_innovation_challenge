@@ -39,3 +39,10 @@ Stores AI prompts, workflows, agents, tools, knowledge assets, and evaluation se
 - Hybrid retrieval: deterministic lexical scope gate plus optional cosine ranking over approved chunk embeddings.
 
 The model never receives profile names, email addresses, STEAM scores, EXP, or parent data. Student questions and approved lesson excerpts are sent externally only after organization approval and while the transfer gate is enabled.
+
+## Implemented Content Studio Asset
+
+- `prompts/content_studio_draft.md`: strict Vietnamese lesson/checkpoint/MCQ JSON grounded in teacher source text.
+- Backend validates the object, moderates AI output, records budget/usage, and saves only a `DRAFT`.
+- With external transfer disabled, or when provider/budget is unavailable, the workflow creates an explicitly labelled local structured draft so teacher production can continue without silently publishing anything.
+- Teacher source text is never sent from the browser directly to OpenAI; all provider access stays behind Express and the AI Gateway.

@@ -62,6 +62,7 @@ Socket rooms:
 
 - `user:{userId}` for personal notifications.
 - `teacher:{teacherId}` for escalations and job status.
+- `org:{orgId}` for approved content changes visible to all active roles in one organization.
 - `class:{classId}` for class dashboard updates.
 - `admin:{orgId}` for cost and audit events.
 
@@ -70,6 +71,7 @@ Socket rooms:
 | Service | Responsibility |
 |---|---|
 | `auth` | Verify Supabase JWT, load profile, enforce role |
+| `classroom` | Subject catalog, teacher-owned classes, membership state transitions |
 | `path-engine` | Rule-based Skill Node unlock and next recommendation |
 | `learning` | Attempts, progress, score events, EXP events |
 | `content-studio` | Source upload, job lifecycle, draft, review, publish |
@@ -133,14 +135,39 @@ Implemented:
 - Teacher-scoped `tutor.escalated` Socket.IO event without raw conversation content.
 - Supabase access-token verification for REST and Socket.IO.
 - Server-side profile, role, and active-account middleware on every protected route.
-- Student-only profile bootstrap with initial STEAM/EXP/streak projections.
+- Role-aware profile bootstrap: public student or teacher; student-only learning projections.
+- Subject validation and same-organization/same-grade classroom membership enforcement.
+- Teacher-owned class CRUD slice, join codes, invitations, requests, decisions, and roster reads.
+- `class.membership.updated` fan-out to the affected teacher and student rooms.
+- Content Studio AI/local draft generation, schema validation, source/job/lesson/question/chunk persistence, and edit-rate/human-minute metrics.
+- Enforced `DRAFT -> IN_REVIEW -> PUBLISHED` lifecycle with append-only audit actions and same-difficulty version archive.
+- `content.published` organization-room fan-out; student dashboard, path, and content library refresh from the server event.
 - Guardian-pending and inactive account gates shared by REST and realtime.
 - Removal of all first-student and client-supplied identity fallbacks.
 
 Pending before pilot scale:
 
 - production structured logger and rate limiting;
-- transactional Postgres RPC for attempt + score + EXP writes before pilot scale.
-- transactional Postgres RPC for AI usage + daily budget projection updates.
+- transactional Postgres RPC for attempt + score + EXP writes before pilot scale;
+- transactional Postgres RPC for AI usage + daily budget projection updates;
 - guardian consent delivery/verification and parent-link workflow;
-- administrator service for teacher/admin account provisioning.
+- teacher organization/domain verification, registration audit, and invitation rate limiting before pilot;
+- administrator service for admin account provisioning.
+- transactional Content Studio publish RPC; the current ordered writes are correct for the demo but are not atomic across concurrent publishers.
+
+## 10. Content Studio Runtime Flow
+
+```mermaid
+flowchart LR
+  Source["Teacher source"] --> Gate["Transfer gate"]
+  Gate -->|enabled| AI["AI Gateway + JSON validation + moderation"]
+  Gate -->|disabled or provider unavailable| Local["Local structured fallback"]
+  AI --> Draft["DRAFT lesson + question + chunks"]
+  Local --> Draft
+  Draft --> Review["IN_REVIEW"]
+  Review --> Publish["PUBLISHED + audit"]
+  Publish --> Archive["Archive prior same node/difficulty version"]
+  Publish --> Event["content.published to org room"]
+```
+
+The source document is copied when a teacher starts a revision. That ownership boundary prevents draft edits from changing the chunk rows still referenced by the published lesson. Tutor retrieval independently rebuilds a source allowlist from `PUBLISHED` lessons, so pre-publication chunks cannot be retrieved by a student.

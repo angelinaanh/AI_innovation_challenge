@@ -181,6 +181,5 @@ One strong demo workflow is better than many thin screens:
 
 - Add a database-safe retrieval path so `document_chunks` cannot leak DRAFT source material.
 - Add a scheduled budget function to set `daily_cost_budgets.circuit_tripped`.
-- Define exact teacher-to-class ownership tables before R2 scoped reads are implemented.
+- Add class-to-content assignments and pilot-grade audit/rate limits on top of the implemented teacher/class ownership tables.
 - Decide Basic/Advanced threshold after pilot data, but keep it configurable from day one.
-
