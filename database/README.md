@@ -44,4 +44,6 @@ The next content distribution migration should add `class_content_assignments` (
 
 Migration `0005_class_capacity_and_multi_subject.sql` adds `classes.max_members` (nullable, 1-100) and a `class_subjects` junction table, then drops legacy `classes.subject_id`. The junction carries `grade_level` and has composite foreign keys to both `classes(id, grade_level)` and `subjects(id, grade_level)`, so a class can hold multiple subjects but only for its exact grade. Capacity is enforced in the service layer: `assertCapacity()` runs on every membership transition that would become `active` and throws `CLASS_FULL` past `max_members`.
 
+Migrations `0004` and `0005` are intentionally rerunnable after a failed/partial manual SQL attempt. They check whether legacy `classes.subject_id` still exists before reading it, and they realign existing `class_subjects` rows to the canonical grade-specific subject rows before adding composite constraints.
+
 Migration `0006_class_exact_grade.sql` is now a reconciliation migration. It preserves canonical `classes.grade_level`, backfills it from an older `classes.grade` column if that column exists, drops the obsolete column, and reasserts grade/band checks. This keeps the merged schema on one source of truth: `grade_level`.

@@ -7,6 +7,13 @@ alter table public.subjects add column if not exists grade_level smallint;
 alter table public.classes add column if not exists grade_level smallint;
 
 alter table public.classes drop constraint if exists classes_subject_grade_level_fkey;
+do $$
+begin
+  if to_regclass('public.class_subjects') is not null then
+    alter table public.class_subjects drop constraint if exists class_subjects_class_grade_level_fkey;
+    alter table public.class_subjects drop constraint if exists class_subjects_subject_grade_level_fkey;
+  end if;
+end $$;
 alter table public.subjects drop constraint if exists subjects_id_grade_level_key;
 alter table public.subjects drop constraint if exists subjects_org_name_grade_level_key;
 alter table public.subjects drop constraint if exists subjects_org_id_name_grade_band_steam_axis_key;
@@ -42,11 +49,26 @@ where grade_level is null and grade_band is not null;
 update public.classes set grade_level = case grade_band
   when 'primary' then 1 when 'secondary' then 6 when 'high_school' then 10 end
 where grade_level is null;
-update public.classes c set grade_level = s.grade_level, grade_band = s.grade_band
-from public.subjects s where c.subject_id = s.id and s.grade_level is not null;
-update public.classes set subject_id = null where subject_id in
-  (select id from public.subjects where grade_level is null);
-delete from public.subjects where grade_level is null;
+
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'classes' and column_name = 'subject_id'
+  ) then
+    update public.classes c
+    set grade_level = s.grade_level, grade_band = s.grade_band
+    from public.subjects s
+    where c.subject_id = s.id and s.grade_level is not null;
+
+    update public.classes set subject_id = null where subject_id in
+      (select id from public.subjects where grade_level is null);
+  end if;
+end $$;
+
+update public.subjects set grade_level = case grade_band
+  when 'primary' then 1 when 'secondary' then 6 when 'high_school' then 10 end
+where grade_level is null;
 
 create unique index if not exists subjects_org_name_grade_level_uidx
   on public.subjects(org_id, name, grade_level);
@@ -77,6 +99,30 @@ from public.organizations o cross join catalog c
 on conflict (org_id,name,grade_level) do update
 set steam_axis=excluded.steam_axis, grade_band=excluded.grade_band;
 
+do $$
+begin
+  if to_regclass('public.class_subjects') is not null then
+    alter table public.class_subjects add column if not exists grade_level smallint;
+
+    update public.class_subjects cs
+    set grade_level = c.grade_level
+    from public.classes c
+    where cs.class_id = c.id and cs.grade_level is null;
+
+    update public.class_subjects cs
+    set subject_id = replacement.id, grade_level = c.grade_level
+    from public.classes c
+    join public.subjects current_subject on current_subject.id = cs.subject_id
+    join public.subjects replacement
+      on replacement.org_id = current_subject.org_id
+      and replacement.name = current_subject.name
+      and replacement.grade_level = c.grade_level
+    where cs.class_id = c.id
+      and c.grade_level is not null
+      and current_subject.grade_level is distinct from c.grade_level;
+  end if;
+end $$;
+
 alter table public.subjects alter column grade_level set not null;
 alter table public.classes alter column grade_level set not null;
 alter table public.profiles add constraint profiles_grade_level_check
@@ -96,8 +142,16 @@ alter table public.classes add constraint classes_grade_band_consistency check (
     when grade_level <= 9 then 'secondary' else 'high_school' end);
 
 create unique index if not exists subjects_id_grade_level_uidx on public.subjects(id,grade_level);
-alter table public.classes add constraint classes_subject_grade_level_fkey
-  foreign key(subject_id,grade_level) references public.subjects(id,grade_level);
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'classes' and column_name = 'subject_id'
+  ) then
+    alter table public.classes add constraint classes_subject_grade_level_fkey
+      foreign key(subject_id,grade_level) references public.subjects(id,grade_level);
+  end if;
+end $$;
 create index if not exists idx_subjects_grade_level on public.subjects(org_id,grade_level,steam_axis);
 create index if not exists idx_classes_grade_level on public.classes(org_id,grade_level);
 

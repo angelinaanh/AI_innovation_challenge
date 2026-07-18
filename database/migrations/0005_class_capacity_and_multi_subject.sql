@@ -18,17 +18,37 @@ create table if not exists public.class_subjects (
 alter table public.class_subjects
   add column if not exists grade_level smallint;
 
-insert into public.class_subjects (class_id, subject_id, grade_level)
-select id, subject_id, grade_level
-from public.classes
-where subject_id is not null
-on conflict (class_id, subject_id) do update
-set grade_level = excluded.grade_level;
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'classes' and column_name = 'subject_id'
+  ) then
+    insert into public.class_subjects (class_id, subject_id, grade_level)
+    select id, subject_id, grade_level
+    from public.classes
+    where subject_id is not null
+    on conflict (class_id, subject_id) do update
+    set grade_level = excluded.grade_level;
+  end if;
+end $$;
 
 update public.class_subjects cs
 set grade_level = c.grade_level
 from public.classes c
 where cs.class_id = c.id and cs.grade_level is null;
+
+update public.class_subjects cs
+set subject_id = replacement.id, grade_level = c.grade_level
+from public.classes c
+join public.subjects current_subject on current_subject.id = cs.subject_id
+join public.subjects replacement
+  on replacement.org_id = current_subject.org_id
+  and replacement.name = current_subject.name
+  and replacement.grade_level = c.grade_level
+where cs.class_id = c.id
+  and c.grade_level is not null
+  and current_subject.grade_level is distinct from c.grade_level;
 
 alter table public.class_subjects alter column grade_level set not null;
 
