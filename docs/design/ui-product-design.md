@@ -187,3 +187,17 @@ The Tutor drawer gains a "Luyện tập" bar with four chips (Trắc nghiệm, N
 | Cloze | choose/type into each blank | native `select`/`input` per blank |
 
 After "Kiểm tra": the card shows correct/partial result, the explanation, correct-answer highlighting, and a small `+EXP` chip. A correct item offers "Gửi giáo viên duyệt thành câu hỏi thật". States reuse the calm success/wrong palette; no shame copy, consistent with "safe to fail".
+
+## 13. Teacher & Student Classes (Slice 6)
+
+The teacher workspace is deliberately denser and calmer than the student dashboard:
+
+- fixed teacher shell with class navigation, identity, sign-out, and realtime status;
+- compact class/student/pending metrics followed by a scannable class grid;
+- class creation modal uses native grade and subject controls from the GDPT 2018 catalog;
+- class detail keeps join code, roster, invite form, and pending decisions in one operational view;
+- approval/rejection uses explicit actions and stable pending/loading states.
+
+The student screen reuses the existing Student Shell and adds `Lớp học` navigation. It separates the three natural jobs: join by code, respond to teacher invitations, and inspect active classes. Subject, STEAM axis, grade, and teacher remain visible without introducing rankings or social pressure.
+
+Both screens use backend-mediated Socket.IO membership updates. The UI refreshes after local actions and on cross-role events; it never promotes a membership locally before the server accepts the state transition.

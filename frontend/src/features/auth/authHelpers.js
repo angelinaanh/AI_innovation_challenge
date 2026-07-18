@@ -35,3 +35,13 @@ export function safeReturnPath(value) {
     ? value
     : "/";
 }
+
+export function returnPathForRole(value, role) {
+  const path = safeReturnPath(value);
+  const roleRoot = ["student", "teacher", "parent", "admin"].includes(role)
+    ? `/${role}`
+    : null;
+  return roleRoot && (path === roleRoot || path.startsWith(`${roleRoot}/`))
+    ? path
+    : "/";
+}

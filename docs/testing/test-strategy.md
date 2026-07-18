@@ -9,7 +9,7 @@ Test the workflows that carry the most product risk, AI risk, and demo risk.
 | Area | Test |
 |---|---|
 | Auth/RBAC | student cannot access teacher/admin endpoints |
-| Account bootstrap | self-registration can create only `student` and initializes projections |
+| Account bootstrap | self-registration creates selected student/teacher; only students receive learning projections |
 | Guardian gate | under-16 account remains `PENDING` until consent |
 | Published-only content | student cannot fetch DRAFT lessons |
 | Score events | normal learning cannot lower STEAM score |
@@ -20,6 +20,8 @@ Test the workflows that carry the most product risk, AI risk, and demo risk.
 | Content publish | publish writes audit log |
 | Cost circuit | AI Gateway blocks non-essential calls when tripped |
 | Parent privacy | parent cannot read raw Tutor messages |
+| Classroom scope | teacher owns the class; student/subject organization and grade must match |
+| Membership workflow | invite/request transitions converge correctly and update both roles realtime |
 
 ## 3. Frontend Tests
 
@@ -33,7 +35,7 @@ Use focused component tests for:
 
 Browser smoke tests must load `http://localhost:5173/` from a clean signed-out navigation, verify it reaches `/login`, confirm `#root` has rendered children, and assert that the console has no error. After dependency or Vite config changes, `/src/main.jsx` must use `react/jsx-dev-runtime`; a stale classic transform that references an undefined global `React` is a white-screen regression.
 
-Authentication browser smoke tests start signed out at `/login`, verify `/register` has no role selector, confirm an under-16 date reveals required guardian email, sign in with the controlled QA account, wait for authenticated dashboard data/realtime, and sign out back to login. Do not create arbitrary live users during automated QA.
+Authentication browser smoke tests start signed out at `/login`, verify `/register` offers student/teacher only, confirm an under-16 student reveals required guardian email, sign in with controlled QA accounts, wait for authenticated data/realtime, and sign out back to login. Do not create arbitrary live users during automated QA.
 
 ## 4. Backend Tests
 
@@ -128,3 +130,15 @@ Slice 4 authentication verification adds:
 - desktop and 390x844 login/register layout checks with no horizontal overflow or console error;
 - under-16 registration reveals guardian email and recovery URL without a session cannot update a password;
 - production frontend build and staged-secret scan.
+
+Slice 6 classroom verification adds:
+
+- pure membership-state and join-code unit tests;
+- role-aware return-path tests so a teacher cannot be redirected into a remembered student URL;
+- live Supabase subject catalog with 28 GDPT 2018 rows;
+- real teacher create-class and invite flow;
+- real student invitation display and acceptance;
+- real student join-code request and teacher approval flow;
+- teacher roster refresh showing the accepted student;
+- subject/teacher metadata and Socket.IO connected state on both role workspaces;
+- backend test suite (28 passing), frontend test suite (3 passing), and production build.

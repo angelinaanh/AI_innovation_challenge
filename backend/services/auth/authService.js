@@ -5,6 +5,7 @@ import {
   normalizeAccountStatus,
   normalizeStudentOnboarding,
   normalizeTeacherOnboarding,
+  onboardingRole,
 } from "./authRules.js";
 
 const PROFILE_FIELDS = "id,org_id,email,full_name,role,grade_band,guardian_consent_at,created_at";
@@ -78,9 +79,7 @@ async function initializeStudentProjections(userId) {
 
 export async function bootstrapAccount(auth, payload = {}) {
   if (auth.profile) return auth.account;
-  const role = payload.role === "teacher" || auth.user?.user_metadata?.role === "teacher"
-    ? "teacher"
-    : "student";
+  const role = onboardingRole(auth.user, payload);
   return role === "teacher"
     ? bootstrapTeacherAccount(auth, payload)
     : bootstrapStudentAccount(auth, payload);

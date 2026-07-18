@@ -134,4 +134,36 @@ export const api = {
     {},
     signal,
   ),
+  getTeacherSubjects: (gradeBand, signal) => apiGet(
+    `/teacher/subjects${gradeBand ? `?gradeBand=${encodeURIComponent(gradeBand)}` : ""}`,
+    signal,
+  ),
+  getTeacherClasses: (signal) => apiGet("/teacher/classes", signal),
+  createTeacherClass: (payload, signal) => apiPost("/teacher/classes", payload, signal),
+  getTeacherClassMembers: (classId, signal) => apiGet(
+    `/teacher/classes/${encodeURIComponent(classId)}/members`,
+    signal,
+  ),
+  inviteStudentToClass: (classId, studentEmail, signal) => apiPost(
+    `/teacher/classes/${encodeURIComponent(classId)}/invite`,
+    { studentEmail },
+    signal,
+  ),
+  decideClassRequest: (membershipId, decision, signal) => apiPost(
+    `/teacher/memberships/${encodeURIComponent(membershipId)}/decision`,
+    { decision },
+    signal,
+  ),
+  getStudentClasses: (signal) => apiGet("/student/classes", signal),
+  getStudentInvitations: (signal) => apiGet("/student/invitations", signal),
+  requestClassJoin: (joinCode, signal) => apiPost(
+    "/student/classes/join",
+    { joinCode },
+    signal,
+  ),
+  respondToClassInvite: (membershipId, response, signal) => apiPost(
+    `/student/memberships/${encodeURIComponent(membershipId)}/respond`,
+    { response },
+    signal,
+  ),
 };

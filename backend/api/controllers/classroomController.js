@@ -26,6 +26,7 @@ export async function postClass(request, response, next) {
       name: request.body?.name,
       gradeBand: request.body?.gradeBand,
       subjectId: request.body?.subjectId,
+      description: request.body?.description,
     });
     response.status(201).json({ data });
   } catch (error) { next(error); }

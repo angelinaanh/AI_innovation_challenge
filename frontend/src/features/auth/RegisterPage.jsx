@@ -110,14 +110,17 @@ export function RegisterPage() {
 
   async function continueWithGoogle() {
     setServerError(null);
+    window.sessionStorage.setItem("eduone.pendingRole", form.role);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
-        data: { role: form.role },
       },
     });
-    if (error) setServerError(friendlyAuthError(error));
+    if (error) {
+      window.sessionStorage.removeItem("eduone.pendingRole");
+      setServerError(friendlyAuthError(error));
+    }
   }
 
   if (confirmationEmail) {
@@ -133,7 +136,7 @@ export function RegisterPage() {
   }
 
   return (
-    <AuthLayout eyebrow="Tạo tài khoản" title="Bắt đầu với EduOne" description="Chọn vai trò rồi tạo tài khoản. Tài khoản quản trị viên do Admin cấp.">
+    <AuthLayout eyebrow="Tạo tài khoản" title="Bắt đầu với EduOne" description="Chọn vai trò phù hợp. Tài khoản quản trị viên vẫn do Admin cấp.">
       <FormAlert>{serverError}</FormAlert>
 
       <div className="mt-4 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Vai trò">

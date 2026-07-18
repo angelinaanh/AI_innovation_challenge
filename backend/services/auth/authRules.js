@@ -93,6 +93,14 @@ export function normalizeTeacherOnboarding(user, payload = {}) {
   return { fullName, accountStatus: "ACTIVE" };
 }
 
+export function onboardingRole(user, payload = {}) {
+  return payload.role === "teacher"
+    || user?.user_metadata?.role === "teacher"
+    || user?.app_metadata?.provisioned_role === "teacher"
+    ? "teacher"
+    : "student";
+}
+
 export function normalizeAccountStatus(value, fallback = "ACTIVE") {
   const normalized = String(value || "").toUpperCase();
   return ACCOUNT_STATUSES.has(normalized) ? normalized : fallback;

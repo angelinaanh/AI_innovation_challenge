@@ -130,3 +130,22 @@ Decision:
 Reason:
 
 This converts the existing learning workflow from a shared seeded identity into a user-owned session with enforceable server boundaries, while preserving the database and approved-content safety rules.
+
+## 2026-07-18 — Slice 6 Teacher Classes & Student Membership
+
+Prompt:
+
+> Let teachers self-register, then build real teacher classes with subjects, invitations/approval, and student join/accept flows based on the two primary documents.
+
+Decision:
+
+- Recorded teacher self-registration as an intentional override of `F-103`; teachers become `ACTIVE` immediately while Admin remains separately provisioned.
+- Seeded the 28-row GDPT 2018 subject catalog across S/T/E/A/M and three grade bands.
+- Built real teacher class creation, join code, invitation, request decision, roster, and student class/invitation screens.
+- Enforced teacher ownership, organization scope, grade matching, and subject validity in Express before Supabase service-role writes.
+- Added `class.membership.updated` Socket.IO fan-out and role-safe post-login redirects.
+- Verified both real Supabase workflows: invite/accept for “Scratch sáng tạo 6A” and join-code request/teacher approval for “Công nghệ sáng tạo 6B”.
+
+Reason:
+
+This turns the teacher role from a placeholder into an operational workflow and establishes the ownership boundary required before class-scoped publishing, learner analytics, and interventions.

@@ -10,7 +10,10 @@ import { ageFromDate, friendlyAuthError } from "./authHelpers.js";
 export function OnboardingPage() {
   const { user, completeOnboarding } = useAuth();
   const metadata = user?.user_metadata || {};
-  const isTeacher = metadata.role === "teacher";
+  const requestedRole = metadata.role
+    || window.sessionStorage.getItem("eduone.pendingRole")
+    || user?.app_metadata?.provisioned_role;
+  const isTeacher = requestedRole === "teacher";
   const [form, setForm] = useState({
     fullName: metadata.full_name || metadata.name || "",
     gradeBand: metadata.grade_band || "secondary",
@@ -33,6 +36,7 @@ export function OnboardingPage() {
           ? { role: "teacher", fullName: form.fullName }
           : { role: "student", ...form, guardianEmail: guardianRequired ? form.guardianEmail : null },
       );
+      window.sessionStorage.removeItem("eduone.pendingRole");
       navigate("/", { replace: true });
     } catch (submitError) {
       setError(friendlyAuthError(submitError));

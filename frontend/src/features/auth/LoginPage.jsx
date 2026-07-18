@@ -2,10 +2,11 @@ import { Chrome, Mail } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
+import { api } from "../../lib/apiClient.js";
 import { supabase } from "../../lib/supabaseClient.js";
 import { AuthLayout } from "./AuthLayout.jsx";
 import { FormAlert, FormField, PasswordField } from "./AuthFormControls.jsx";
-import { friendlyAuthError, safeReturnPath } from "./authHelpers.js";
+import { friendlyAuthError, returnPathForRole, safeReturnPath } from "./authHelpers.js";
 
 export function LoginPage() {
   const [email, setEmail] = useState("");
@@ -29,7 +30,13 @@ export function LoginPage() {
       setSubmitting(false);
       return;
     }
-    navigate(returnTo, { replace: true });
+    try {
+      const account = await api.getMe(undefined, result.data.session?.access_token);
+      navigate(returnPathForRole(returnTo, account.role), { replace: true });
+    } catch (accountError) {
+      setError(friendlyAuthError(accountError));
+      setSubmitting(false);
+    }
   }
 
   async function continueWithGoogle() {
@@ -92,7 +99,7 @@ export function LoginPage() {
       </form>
 
       <p className="mt-7 text-center text-sm font-semibold text-slate-600">
-        Chưa có tài khoản học sinh?{" "}
+        Chưa có tài khoản?{" "}
         <Link to="/register" className="font-black text-emerald-700 hover:text-emerald-900">Đăng ký</Link>
       </p>
     </AuthLayout>

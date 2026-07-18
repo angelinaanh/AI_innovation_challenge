@@ -42,6 +42,9 @@ export function StudentDataProvider({ children }) {
     socket.on("connect", () => setRealtimeStatus("connected"));
     socket.on("disconnect", () => setRealtimeStatus("offline"));
     socket.on("connect_error", () => setRealtimeStatus("offline"));
+    socket.on("class.membership.updated", (detail) => {
+      window.dispatchEvent(new CustomEvent("eduone:class-membership-updated", { detail }));
+    });
     return () => socket.close();
   }, [session?.access_token]);
 

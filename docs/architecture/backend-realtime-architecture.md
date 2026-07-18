@@ -70,6 +70,7 @@ Socket rooms:
 | Service | Responsibility |
 |---|---|
 | `auth` | Verify Supabase JWT, load profile, enforce role |
+| `classroom` | Subject catalog, teacher-owned classes, membership state transitions |
 | `path-engine` | Rule-based Skill Node unlock and next recommendation |
 | `learning` | Attempts, progress, score events, EXP events |
 | `content-studio` | Source upload, job lifecycle, draft, review, publish |
@@ -133,14 +134,18 @@ Implemented:
 - Teacher-scoped `tutor.escalated` Socket.IO event without raw conversation content.
 - Supabase access-token verification for REST and Socket.IO.
 - Server-side profile, role, and active-account middleware on every protected route.
-- Student-only profile bootstrap with initial STEAM/EXP/streak projections.
+- Role-aware profile bootstrap: public student or teacher; student-only learning projections.
+- Subject validation and same-organization/same-grade classroom membership enforcement.
+- Teacher-owned class CRUD slice, join codes, invitations, requests, decisions, and roster reads.
+- `class.membership.updated` fan-out to the affected teacher and student rooms.
 - Guardian-pending and inactive account gates shared by REST and realtime.
 - Removal of all first-student and client-supplied identity fallbacks.
 
 Pending before pilot scale:
 
 - production structured logger and rate limiting;
-- transactional Postgres RPC for attempt + score + EXP writes before pilot scale.
-- transactional Postgres RPC for AI usage + daily budget projection updates.
+- transactional Postgres RPC for attempt + score + EXP writes before pilot scale;
+- transactional Postgres RPC for AI usage + daily budget projection updates;
 - guardian consent delivery/verification and parent-link workflow;
-- administrator service for teacher/admin account provisioning.
+- teacher organization/domain verification, registration audit, and invitation rate limiting before pilot;
+- administrator service for admin account provisioning.

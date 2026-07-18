@@ -40,7 +40,7 @@ VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_FViOIxMjuN6Eu91INSN5zA_oLkjMTcI
 
 ## Current Implementation
 
-Slices 1 and 2 are working against the existing Supabase project. Slice 1 provides:
+The implemented slices run against the existing Supabase project. Slice 1 provides:
 
 - responsive Student Dashboard at `/student`;
 - explainable Learning Path at `/student/path`;
@@ -70,9 +70,9 @@ Slice 3 is implemented as a safety-first AI Tutor workflow:
 Slice 4 replaces the demo identity fallback with real authentication:
 
 - email/password and Google sign-in through Supabase Auth;
-- student registration, email confirmation, forgot/reset password, and OAuth onboarding;
+- student/teacher registration, email confirmation, forgot/reset password, and OAuth onboarding;
 - backend-verified Supabase JWT on every student, Tutor, teacher, and Socket.IO request;
-- server-side profile bootstrap with role fixed to `student`, plus initial STEAM/EXP/streak projections;
+- server-side profile bootstrap for the selected student/teacher role; student profiles also receive initial STEAM/EXP/streak projections;
 - role-aware protected routes and real local sign-out;
 - under-16 registration requires a guardian email and remains `PENDING` until consent is recorded.
 
@@ -94,6 +94,17 @@ The AI Tutor chat itself is deeper than one-shot Q&A:
 - **richer rendering** — inline `code`/**bold** (e.g. Scratch block names) and expandable source snippets on each citation.
 
 Live exercise generation requires `OPENAI_API_KEY` and `AI_ALLOW_APPROVED_CONTENT_EXPORT=true`; with the gate off it fails closed like the rest of the Tutor. Apply migration `0002` to the Supabase project before use.
+
+Slice 6 makes the first teacher/student class workflow operational:
+
+- teachers self-register as `ACTIVE`, then create subject-bound classes from the GDPT 2018 STEAM catalog;
+- teachers own their classes, invite same-organization/same-grade students, and approve or reject join requests;
+- students have `/student/classes` to join by code, accept/decline invitations, and see active classes;
+- teachers have `/teacher` and `/teacher/classes/:classId` for class creation, join code, pending requests, and roster;
+- Socket.IO pushes membership changes to both teacher and student workspaces;
+- migration `0003` is applied, the 28-row subject catalog is seeded, and a real create-invite-accept-roster flow was verified against Supabase.
+
+Teacher self-registration is an intentional product override of Functional Spec `F-103`. See `docs/problem/teacher-student-role-impact.md` for the requirement trace, safety boundaries, and the next content-assignment slice.
 
 ## Local Start
 
@@ -135,6 +146,7 @@ Open `http://127.0.0.1:5173/login`. Registration lets a user choose **Học sinh
 | UI and product design | `docs/design/ui-product-design.md` |
 | Implementation process | `docs/design/implementation-process.md` |
 | Feature blueprint | `docs/problem/feature-blueprint.md` |
+| Teacher/student role impact | `docs/problem/teacher-student-role-impact.md` |
 | API contract | `docs/api/api-contract.md` |
 | AI workflows | `docs/ai/ai-workflows.md` |
 | AI model application plan | `docs/ai/model-application-plan.md` |

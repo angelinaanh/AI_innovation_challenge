@@ -33,7 +33,7 @@ Node.js + Express backend for application rules, realtime events, AI orchestrati
 |---|---|---|
 | `GET /api/health` | process | API and realtime readiness |
 | `GET /api/auth/me` | Supabase Auth + `profiles` | verified account, role, grade, and learning-access state |
-| `POST /api/auth/bootstrap` | Supabase Auth + student projections | create a student profile after email/OAuth authentication |
+| `POST /api/auth/bootstrap` | Supabase Auth + profiles | create the selected student/teacher profile after email/OAuth authentication |
 | `GET /api/student/dashboard` | Supabase | profile, STEAM, EXP, streak, badges, activity, next quest |
 | `GET /api/student/path` | Supabase + path engine | completed/current/locked nodes and explainable reasons |
 | `GET /api/student/lessons/:skillNodeId` | `PUBLISHED` lessons/questions | checkpoint lesson with answer keys removed |
@@ -42,6 +42,11 @@ Node.js + Express backend for application rules, realtime events, AI orchestrati
 | `POST /api/tutor/sessions/:id/messages/stream` | moderation + grounded retrieval + Responses API | SSE token/citation/refusal/done events |
 | `POST /api/tutor/messages/:id/escalate` | Tutor escalation | send one unresolved question to the assigned teacher |
 | `GET /api/teacher/escalations` | Tutor escalation queue | teacher-scoped view without exposing unrelated chat history |
+| `GET/POST /api/teacher/classes` | classes + subjects | list/create teacher-owned classes |
+| `GET /api/teacher/classes/:id/members` | memberships + profiles | roster and pending requests for an owned class |
+| `POST /api/teacher/classes/:id/invite` | memberships | invite a same-org, same-grade student |
+| `POST /api/student/classes/join` | memberships | request membership using a join code |
+| `POST /api/student/memberships/:id/respond` | memberships | accept or decline a teacher invitation |
 
 The path engine is deterministic and has no LLM dependency. A Skill Node is available only when its prerequisites, STEAM thresholds, and `PUBLISHED` lesson requirement are all satisfied.
 
@@ -50,6 +55,7 @@ The path engine is deterministic and has no LLM dependency. A Skill Node is avai
 ```bash
 npm install
 npm run seed:demo
+npm run seed:subjects
 npm run seed:tutor
 npm run reset:demo
 npm test
@@ -57,6 +63,8 @@ npm start
 ```
 
 `npm run seed:demo` is idempotent. It creates two demo Auth users, one Scratch course with seven Skill Nodes, approved lessons, attempts, XP activity, streak, and badges.
+
+`npm run seed:subjects` idempotently loads the 28-row GDPT 2018 STEAM subject catalog required by class creation after migration `0003`.
 
 `npm run reset:demo` removes only the demo student's attempts and rewards for the seeded Loops quiz, then restores the scripted STEAM/XP/streak baseline. It does not affect other users or questions.
 
@@ -83,7 +91,9 @@ Quiz rules:
 
 Every protected REST request must carry `Authorization: Bearer <supabase_access_token>`. The backend validates that token with Supabase Auth, loads the matching `profiles` row, verifies role and account status, and derives the student ID from that verified identity. Socket.IO performs the same validation during its handshake. There is no first-student or `x-demo-student-id` fallback.
 
-Public registration cannot choose a role. `POST /api/auth/bootstrap` always creates `student`; teacher and admin profiles must be provisioned by trusted administrative code. Students under 16 are stored as `PENDING` in trusted Auth app metadata and cannot call learning APIs or connect realtime until `guardian_consent_at` activates them.
+Public registration can choose `student` or `teacher`. This intentionally overrides Functional Spec `F-103`: selected teachers become `ACTIVE` immediately; Admin remains provisioned separately. Students under 16 are stored as `PENDING` in trusted Auth app metadata and cannot call learning APIs or connect realtime until `guardian_consent_at` activates them.
+
+Classroom boundaries are server-owned: a teacher can read/mutate only classes where `teacher_id` matches the JWT profile; invitations and join requests require the same organization and grade band; subject IDs must belong to that organization and class grade. `class.membership.updated` is emitted to `teacher:{teacherId}` and `user:{studentId}` after every state change.
 
 ## Limitations
 
@@ -93,3 +103,4 @@ Public registration cannot choose a role. `POST /api/auth/bootstrap` always crea
 - Before pilot, attempt + score event + EXP projection writes should move into one Postgres RPC transaction.
 - AI budget updates should move into a transactional Postgres RPC to avoid concurrent spend races.
 - Guardian verification delivery and the parent consent action are still pending; the current account gate is deliberately fail-closed.
+- Before a real school pilot, teacher self-registration needs organization/domain verification, invite rate limits, and audit records.
