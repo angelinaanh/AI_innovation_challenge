@@ -258,6 +258,7 @@ export const api = {
   },
   getCommunityPost: (postId, signal) => apiGet(`/community/posts/${encodeURIComponent(postId)}`, signal),
   createCommunityPost: (payload, signal) => apiPost("/community/posts", payload, signal),
+  deleteCommunityPost: (id, signal) => apiDelete(`/community/posts/${id}`, signal),
   createCommunityReply: (postId, payload, signal) => apiPost(`/community/posts/${encodeURIComponent(postId)}/replies`, payload, signal),
   incrementCommunityPostView: (postId, signal) => apiPost(`/community/posts/${encodeURIComponent(postId)}/view`, {}, signal),
   voteCommunityPost: (postId, vote, type, signal) => apiPost(`/community/posts/${encodeURIComponent(postId)}/vote`, { vote, type }, signal),

@@ -265,3 +265,11 @@ export async function acceptReply(userId, replyId) {
   await supabase.from("community_replies").update({ is_accepted: true }).eq("id", replyId);
 }
 
+export async function deletePost(userId, postId) {
+  const { data: post } = await supabase.from("community_posts").select("author_id").eq("id", postId).single();
+  if (!post) throw appError("NOT_FOUND", "Không tìm thấy bài viết");
+  if (post.author_id !== userId) throw appError("FORBIDDEN", "Bạn không có quyền xoá bài viết này");
+  
+  const result = await supabase.from("community_posts").delete().eq("id", postId);
+  throwDatabaseError(result.error, "delete community post");
+}

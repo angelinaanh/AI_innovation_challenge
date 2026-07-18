@@ -8,7 +8,8 @@ import {
   voteReply,
   toggleBookmark,
   getBookmarkedPosts,
-  acceptReply
+  acceptReply,
+  deletePost
 } from "../../services/community/communityService.js";
 import { getCommunityStats } from "../../services/community/communityStats.js";
 
@@ -112,6 +113,16 @@ export async function getStats(request, response, next) {
   try {
     const stats = await getCommunityStats(orgId(request));
     response.status(200).json({ data: stats });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function deletePostHandler(request, response, next) {
+  try {
+    const { id } = request.params;
+    await deletePost(uid(request), id);
+    response.json({ success: true });
   } catch (error) {
     next(error);
   }

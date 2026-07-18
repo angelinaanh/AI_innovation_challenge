@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft, MessageCircle, Eye, Send, Bookmark, ThumbsUp, ThumbsDown, CheckCircle2 } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { api } from "../../lib/apiClient.js";
+import { useAuth } from "../../app/AuthProvider.jsx";
 import { TYPE_LABELS } from "./constants.js";
 import { MarkdownContent } from "../../components/ui/MarkdownContent.jsx";
 
@@ -162,9 +163,12 @@ function ReplyNode({ reply, level, onVote, onAccept, onReplySubmit, activeReplyI
 
 export function CommunityPostDetailPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { account } = useAuth();
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const [replyContent, setReplyContent] = useState("");
   const [replying, setReplying] = useState(false);
@@ -247,6 +251,18 @@ export function CommunityPostDetailPage() {
     }
   };
 
+  const handleDeletePost = async () => {
+    if (!window.confirm("Bạn có chắc chắn muốn xoá bài viết này không?")) return;
+    setIsDeleting(true);
+    try {
+      await api.deleteCommunityPost(id);
+      navigate(".."); // Go back to community hub
+    } catch (err) {
+      alert("Lỗi xoá bài viết: " + err.message);
+      setIsDeleting(false);
+    }
+  };
+
   if (loading) return <div className="p-10 text-center font-bold text-slate-500">Đang tải...</div>;
   if (error) return <div className="p-10 text-center font-bold text-red-600">{error}</div>;
   if (!post) return null;
@@ -282,12 +298,23 @@ export function CommunityPostDetailPage() {
 
         {/* Post Content */}
         <div className="flex-1 p-6 lg:p-8">
-          <div className="mb-4 flex items-center gap-2 text-xs font-bold text-slate-500">
-            <span className={`rounded-md px-2 py-1 ${typeInfo.color}`}>
-              {typeInfo.label}
-            </span>
-            {post.grade_level && <span>Lớp {post.grade_level}</span>}
-            {post.subject?.name && <span>• {post.subject.name}</span>}
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+              <span className={`rounded-md px-2 py-1 ${typeInfo.color}`}>
+                {typeInfo.label}
+              </span>
+              {post.grade_level && <span>Lớp {post.grade_level}</span>}
+              {post.subject?.name && <span>• {post.subject.name}</span>}
+            </div>
+            {account?.id === post.author?.id && (
+              <button 
+                onClick={handleDeletePost}
+                disabled={isDeleting}
+                className="text-xs font-bold text-rose-500 hover:text-rose-700 hover:underline disabled:opacity-50"
+              >
+                {isDeleting ? "Đang xoá..." : "Xoá bài viết"}
+              </button>
+            )}
           </div>
         <h1 className="mb-6 text-2xl font-extrabold text-slate-900">{post.title}</h1>
         
