@@ -11,7 +11,7 @@ import { WeekActivity } from "./WeekActivity.jsx";
 function DashboardLoading() {
   return (
     <div className="space-y-4" aria-label="Đang tải dashboard">
-      <div className="skeleton h-[248px] rounded-[22px]" />
+      <div className="skeleton h-[248px] rounded-[28px]" />
       <div className="grid gap-3 md:grid-cols-3">
         <div className="skeleton h-28" /><div className="skeleton h-28" /><div className="skeleton h-28" />
       </div>
