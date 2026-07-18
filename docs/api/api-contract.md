@@ -225,7 +225,7 @@ Teacher:
 
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `/teacher/classes` | Create `{ name, gradeBand, subjectId?, description? }` (auto join code, max description 500) |
+| POST | `/teacher/classes` | Create `{ name, gradeBand, grade, subjectIds: [id,...], description?, maxMembers? }` (auto join code, max description 500, `grade` 1-5/6-9/10-12 must match `gradeBand`, `subjectIds` requires ≥1 and each must fall inside the subject's `min_grade`-`max_grade`, `maxMembers` 1-100 or omitted for unlimited) |
 | GET | `/teacher/classes` | List own classes with subject metadata and member/pending counts |
 | GET | `/teacher/classes/:classId/members` | Class/subject metadata, active roster, invited/requested rows |
 | POST | `/teacher/classes/:classId/invite` | Invite a student `{ studentEmail }` |
@@ -242,4 +242,4 @@ Student:
 
 Membership states: `invited` (teacher invited) / `requested` (student asked) → `active` (accepted/approved) / `rejected`. An invite and a request for the same class/student converge to `active`.
 
-Server invariants: the class owner must match the teacher JWT; class/subject/actor must share `org_id`; the subject and student must match `grade_band`. Relevant errors are `SUBJECT_INVALID` (400) and `GRADE_BAND_MISMATCH` (409).
+Server invariants: the class owner must match the teacher JWT; class/subject/actor must share `org_id`; the subject and student must match `grade_band`; a class may hold multiple subjects via `class_subjects` (migration 0005). Relevant errors are `SUBJECT_INVALID` (400), `GRADE_BAND_MISMATCH` (409), and `CLASS_FULL` (409, when a membership would go `active` past `max_members`).

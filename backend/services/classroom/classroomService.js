@@ -4,6 +4,8 @@ import { emitClassMembershipUpdated } from "../realtime/realtimeHub.js";
 import {
   generateJoinCode,
   isGradeBand,
+  isGradeInBand,
+  isSubjectInGrade,
   nextMembershipStatus,
 } from "./classroomRules.js";
 
@@ -22,36 +24,60 @@ async function loadProfile(userId) {
 
 async function loadOwnedClass(teacherId, classId) {
   const result = await supabase.from("classes")
-    .select("id,teacher_id,org_id,name,grade_band,subject_id,description,join_code,created_at")
+    .select("id,teacher_id,org_id,name,grade_band,grade,max_members,description,join_code,created_at")
     .eq("id", classId).eq("teacher_id", teacherId).maybeSingle();
   throwDatabaseError(result.error, "load owned class");
   if (!result.data) throw appError("CLASS_NOT_FOUND", "Không tìm thấy lớp này.");
   return result.data;
 }
 
-async function loadSubjectsById(subjectIds) {
-  if (subjectIds.length === 0) return new Map();
-  const result = await supabase.from("subjects")
-    .select("id,name,steam_axis,grade_band,org_id")
-    .in("id", [...new Set(subjectIds)]);
+// Trả về Map<classId, Subject[]> qua bảng junction class_subjects.
+async function loadSubjectsForClasses(classIds) {
+  const ids = [...new Set(classIds.filter(Boolean))];
+  if (ids.length === 0) return new Map();
+  const result = await supabase.from("class_subjects")
+    .select("class_id,subjects(id,name,steam_axis,grade_band,org_id)")
+    .in("class_id", ids);
   throwDatabaseError(result.error, "load class subjects");
-  return new Map((result.data || []).map((subject) => [subject.id, subject]));
+  const byClass = new Map();
+  for (const row of result.data || []) {
+    const subject = Array.isArray(row.subjects) ? row.subjects[0] : row.subjects;
+    if (!subject) continue;
+    if (!byClass.has(row.class_id)) byClass.set(row.class_id, []);
+    byClass.get(row.class_id).push(subject);
+  }
+  return byClass;
 }
 
-async function validateClassSubject(profile, subjectId, gradeBand) {
-  if (!subjectId) return null;
+async function validateClassSubjects(profile, subjectIds, gradeBand, grade) {
+  const ids = [...new Set((subjectIds || []).filter(Boolean))];
+  if (ids.length === 0) throw appError("VALIDATION_ERROR", "Cần chọn ít nhất một môn học.");
   const result = await supabase.from("subjects")
-    .select("id,name,steam_axis,grade_band,org_id")
-    .eq("id", subjectId).maybeSingle();
-  throwDatabaseError(result.error, "validate class subject");
+    .select("id,name,steam_axis,grade_band,org_id,min_grade,max_grade")
+    .in("id", ids);
+  throwDatabaseError(result.error, "validate class subjects");
+  const found = result.data || [];
   if (
-    !result.data
-    || result.data.org_id !== profile.org_id
-    || result.data.grade_band !== gradeBand
+    found.length !== ids.length
+    || found.some((subject) => subject.org_id !== profile.org_id || !isSubjectInGrade(subject, gradeBand, grade))
   ) {
-    throw appError("SUBJECT_INVALID", "Môn học không thuộc khối lớp hoặc tổ chức này.");
+    throw appError("SUBJECT_INVALID", "Môn học không thuộc đúng lớp hoặc tổ chức này.");
   }
-  return result.data;
+  return found;
+}
+
+function assertCapacity(klass, activeCount) {
+  if (klass.max_members != null && activeCount >= klass.max_members) {
+    throw appError("CLASS_FULL", "Lớp đã đủ số lượng thành viên tối đa.");
+  }
+}
+
+async function countActiveMembers(classId) {
+  const result = await supabase.from("class_memberships")
+    .select("id", { count: "exact", head: true })
+    .eq("class_id", classId).eq("status", "active");
+  throwDatabaseError(result.error, "count active class members");
+  return result.count || 0;
 }
 
 // ---- Subjects catalog ------------------------------------------------------
@@ -61,7 +87,7 @@ export async function listSubjects(userId, gradeBand) {
   if (gradeBand && !isGradeBand(gradeBand)) {
     throw appError("VALIDATION_ERROR", "Khối lớp không hợp lệ.");
   }
-  let query = supabase.from("subjects").select("id,name,steam_axis,grade_band")
+  let query = supabase.from("subjects").select("id,name,steam_axis,grade_band,min_grade,max_grade")
     .eq("org_id", profile.org_id).order("grade_band").order("steam_axis");
   if (gradeBand) query = query.eq("grade_band", gradeBand);
   const result = await query;
@@ -71,16 +97,28 @@ export async function listSubjects(userId, gradeBand) {
 
 // ---- Teacher flow ----------------------------------------------------------
 
-export async function createClass(teacherId, { name, gradeBand, subjectId, description }) {
+function parseMaxMembers(value) {
+  if (value === undefined || value === null || value === "") return null;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 100) {
+    throw appError("VALIDATION_ERROR", "Số thành viên tối đa phải là số nguyên từ 1 đến 100.");
+  }
+  return parsed;
+}
+
+export async function createClass(teacherId, { name, gradeBand, grade, subjectIds, description, maxMembers }) {
   const cleanName = String(name || "").trim();
   const cleanDescription = String(description || "").trim();
   if (cleanName.length < 2) throw appError("VALIDATION_ERROR", "Tên lớp cần ít nhất 2 ký tự.");
   if (cleanName.length > 80) throw appError("VALIDATION_ERROR", "Tên lớp tối đa 80 ký tự.");
   if (cleanDescription.length > 500) throw appError("VALIDATION_ERROR", "Mô tả lớp tối đa 500 ký tự.");
   if (!isGradeBand(gradeBand)) throw appError("VALIDATION_ERROR", "Khối lớp không hợp lệ.");
+  const cleanGrade = Number(grade);
+  if (!isGradeInBand(cleanGrade, gradeBand)) throw appError("VALIDATION_ERROR", "Lớp không thuộc khối đã chọn.");
+  const cleanMaxMembers = parseMaxMembers(maxMembers);
   const teacher = await loadProfile(teacherId);
   if (teacher.role !== "teacher") throw appError("AUTH_FORBIDDEN", "Chỉ giáo viên được tạo lớp.");
-  const subject = await validateClassSubject(teacher, subjectId, gradeBand);
+  const subjects = await validateClassSubjects(teacher, subjectIds, gradeBand, cleanGrade);
 
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const result = await supabase.from("classes").insert({
@@ -88,24 +126,34 @@ export async function createClass(teacherId, { name, gradeBand, subjectId, descr
       teacher_id: teacherId,
       name: cleanName,
       grade_band: gradeBand,
-      subject_id: subjectId || null,
+      grade: cleanGrade,
+      max_members: cleanMaxMembers,
       description: cleanDescription || null,
       join_code: generateJoinCode(),
-    }).select("id,name,grade_band,subject_id,description,join_code,created_at").single();
-    if (!result.error) return { ...result.data, subject };
-    if (result.error.code !== "23505") throwDatabaseError(result.error, "create class");
+    }).select("id,name,grade_band,grade,max_members,description,join_code,created_at").single();
+    if (result.error) {
+      if (result.error.code === "23505") continue;
+      throwDatabaseError(result.error, "create class");
+    }
+    const subjectLinks = await supabase.from("class_subjects")
+      .insert(subjects.map((subject) => ({ class_id: result.data.id, subject_id: subject.id })));
+    if (subjectLinks.error) {
+      await supabase.from("classes").delete().eq("id", result.data.id);
+      throwDatabaseError(subjectLinks.error, "link class subjects");
+    }
+    return { ...result.data, subjects };
   }
   throw appError("CLASS_CODE_COLLISION", "Không tạo được mã lớp, hãy thử lại.");
 }
 
 export async function listTeacherClasses(teacherId) {
   const result = await supabase.from("classes")
-    .select("id,name,grade_band,subject_id,description,join_code,created_at")
+    .select("id,name,grade_band,grade,max_members,description,join_code,created_at")
     .eq("teacher_id", teacherId).order("created_at", { ascending: false });
   throwDatabaseError(result.error, "list teacher classes");
   const classes = result.data || [];
   if (classes.length === 0) return [];
-  const subjects = await loadSubjectsById(classes.map((item) => item.subject_id).filter(Boolean));
+  const subjectsByClass = await loadSubjectsForClasses(classes.map((item) => item.id));
 
   const membersResult = await supabase.from("class_memberships")
     .select("class_id,status").in("class_id", classes.map((c) => c.id));
@@ -118,7 +166,7 @@ export async function listTeacherClasses(teacherId) {
   }
   return classes.map((c) => ({
     ...c,
-    subject: subjects.get(c.subject_id) || null,
+    subjects: subjectsByClass.get(c.id) || [],
     memberCount: counts[c.id]?.active || 0,
     pendingCount: counts[c.id]?.pending || 0,
   }));
@@ -139,15 +187,17 @@ export async function getClassMembers(teacherId, classId) {
   throwDatabaseError(studentResult.error, "load class member profiles");
   const students = studentResult.data || [];
   const byId = new Map(students.map((s) => [s.id, s]));
-  const subjects = await loadSubjectsById(klass.subject_id ? [klass.subject_id] : []);
+  const subjectsByClass = await loadSubjectsForClasses([klass.id]);
   return {
     class: {
       id: klass.id,
       name: klass.name,
       gradeBand: klass.grade_band,
+      grade: klass.grade,
       description: klass.description,
       joinCode: klass.join_code,
-      subject: subjects.get(klass.subject_id) || null,
+      maxMembers: klass.max_members,
+      subjects: subjectsByClass.get(klass.id) || [],
     },
     active: rows.filter((r) => r.status === "active").map((r) => ({ ...r, student: byId.get(r.student_id) })),
     pending: rows.filter((r) => r.status !== "active").map((r) => ({ ...r, student: byId.get(r.student_id) })),
@@ -178,6 +228,7 @@ export async function inviteStudent(teacherId, classId, studentEmail) {
   if (current?.status === "active") throw appError("ALREADY_MEMBER", "Học sinh đã là thành viên lớp.");
   // A pending request + an invite converge into active membership.
   const nextStatus = current?.status === "requested" ? "active" : "invited";
+  if (nextStatus === "active") assertCapacity(klass, await countActiveMembers(classId));
 
   if (current) {
     const upd = await supabase.from("class_memberships")
@@ -200,7 +251,7 @@ export async function decideRequest(teacherId, membershipId, decision) {
   if (!action) throw appError("VALIDATION_ERROR", "Quyết định không hợp lệ.");
 
   const memResult = await supabase.from("class_memberships")
-    .select("id,status,class_id,student_id,classes!inner(teacher_id)")
+    .select("id,status,class_id,student_id,classes!inner(teacher_id,max_members)")
     .eq("id", membershipId).maybeSingle();
   throwDatabaseError(memResult.error, "load membership for decision");
   const membership = memResult.data;
@@ -208,6 +259,7 @@ export async function decideRequest(teacherId, membershipId, decision) {
   if (!membership || klass?.teacher_id !== teacherId) throw appError("MEMBERSHIP_NOT_FOUND", "Không tìm thấy yêu cầu.");
 
   const nextStatus = nextMembershipStatus(action, membership.status);
+  if (nextStatus === "active") assertCapacity(klass, await countActiveMembers(membership.class_id));
   const upd = await supabase.from("class_memberships")
     .update({ status: nextStatus, decided_at: new Date().toISOString() })
     .eq("id", membershipId).select("id,status").single();
@@ -225,12 +277,12 @@ export async function decideRequest(teacherId, membershipId, decision) {
 
 export async function listStudentClasses(studentId) {
   const result = await supabase.from("class_memberships")
-    .select("id,status,class_id,classes!inner(id,name,grade_band,subject_id,teacher_id)")
+    .select("id,status,class_id,classes!inner(id,name,grade_band,grade,teacher_id)")
     .eq("student_id", studentId).eq("status", "active");
   throwDatabaseError(result.error, "list student classes");
   const rows = result.data || [];
   const classRows = rows.map((m) => Array.isArray(m.classes) ? m.classes[0] : m.classes);
-  const subjects = await loadSubjectsById(classRows.map((c) => c.subject_id).filter(Boolean));
+  const subjectsByClass = await loadSubjectsForClasses(classRows.map((c) => c.id));
   const teacherIds = [...new Set(classRows.map((c) => c.teacher_id))];
   const teacherResult = teacherIds.length
     ? await supabase.from("profiles").select("id,full_name").in("id", teacherIds)
@@ -244,7 +296,8 @@ export async function listStudentClasses(studentId) {
       id: c.id,
       name: c.name,
       gradeBand: c.grade_band,
-      subject: subjects.get(c.subject_id) || null,
+      grade: c.grade,
+      subjects: subjectsByClass.get(c.id) || [],
       teacher: teachers.get(c.teacher_id) || null,
     };
   });
@@ -252,7 +305,7 @@ export async function listStudentClasses(studentId) {
 
 export async function listInvitations(studentId) {
   const result = await supabase.from("class_memberships")
-    .select("id,status,created_at,classes!inner(id,name,grade_band,subject_id,teacher_id)")
+    .select("id,status,created_at,classes!inner(id,name,grade_band,grade,teacher_id)")
     .eq("student_id", studentId).eq("status", "invited").order("created_at", { ascending: false });
   throwDatabaseError(result.error, "list invitations");
   const rows = result.data || [];
@@ -264,7 +317,7 @@ export async function listInvitations(studentId) {
   const teachers = teacherResult.data || [];
   const byId = new Map(teachers.map((t) => [t.id, t]));
   const classRows = rows.map((m) => Array.isArray(m.classes) ? m.classes[0] : m.classes);
-  const subjects = await loadSubjectsById(classRows.map((c) => c.subject_id).filter(Boolean));
+  const subjectsByClass = await loadSubjectsForClasses(classRows.map((c) => c.id));
   return rows.map((m) => {
     const c = Array.isArray(m.classes) ? m.classes[0] : m.classes;
     return {
@@ -272,7 +325,8 @@ export async function listInvitations(studentId) {
       classId: c.id,
       name: c.name,
       gradeBand: c.grade_band,
-      subject: subjects.get(c.subject_id) || null,
+      grade: c.grade,
+      subjects: subjectsByClass.get(c.id) || [],
       teacher: byId.get(c.teacher_id) || null,
     };
   });
@@ -282,7 +336,7 @@ export async function requestJoin(studentId, joinCode) {
   const code = String(joinCode || "").trim().toUpperCase();
   if (!code) throw appError("VALIDATION_ERROR", "Cần mã lớp.");
   const classResult = await supabase.from("classes")
-    .select("id,org_id,name,grade_band,teacher_id")
+    .select("id,org_id,name,grade_band,teacher_id,max_members")
     .eq("join_code", code).maybeSingle();
   throwDatabaseError(classResult.error, "find class by code");
   const klass = classResult.data;
@@ -301,6 +355,7 @@ export async function requestJoin(studentId, joinCode) {
   if (current?.status === "active") throw appError("ALREADY_MEMBER", "Bạn đã là thành viên lớp này.");
   // If already invited by the teacher, requesting converges to active.
   const nextStatus = current?.status === "invited" ? "active" : "requested";
+  if (nextStatus === "active") assertCapacity(klass, await countActiveMembers(klass.id));
 
   if (current) {
     const upd = await supabase.from("class_memberships")
@@ -332,12 +387,16 @@ export async function respondInvite(studentId, membershipId, response) {
   const action = response === "accept" ? "accept_invite" : response === "decline" ? "decline_invite" : null;
   if (!action) throw appError("VALIDATION_ERROR", "Phản hồi không hợp lệ.");
   const memResult = await supabase.from("class_memberships")
-    .select("id,status,student_id,class_id,classes!inner(teacher_id)")
+    .select("id,status,student_id,class_id,classes!inner(teacher_id,max_members)")
     .eq("id", membershipId).eq("student_id", studentId).maybeSingle();
   throwDatabaseError(memResult.error, "load invitation");
   if (!memResult.data) throw appError("MEMBERSHIP_NOT_FOUND", "Không tìm thấy lời mời.");
 
   const nextStatus = nextMembershipStatus(action, memResult.data.status);
+  if (nextStatus === "active") {
+    const klassForCap = Array.isArray(memResult.data.classes) ? memResult.data.classes[0] : memResult.data.classes;
+    assertCapacity(klassForCap, await countActiveMembers(memResult.data.class_id));
+  }
   const upd = await supabase.from("class_memberships")
     .update({ status: nextStatus, decided_at: new Date().toISOString() })
     .eq("id", membershipId).select("id,status").single();

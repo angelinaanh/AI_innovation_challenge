@@ -25,8 +25,10 @@ export async function postClass(request, response, next) {
     const data = await createClass(uid(request), {
       name: request.body?.name,
       gradeBand: request.body?.gradeBand,
-      subjectId: request.body?.subjectId,
+      grade: request.body?.grade,
+      subjectIds: request.body?.subjectIds,
       description: request.body?.description,
+      maxMembers: request.body?.maxMembers,
     });
     response.status(201).json({ data });
   } catch (error) { next(error); }
