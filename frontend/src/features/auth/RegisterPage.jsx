@@ -1,5 +1,5 @@
 import { CalendarDays, Chrome, GraduationCap, Mail, MailCheck, School, UserRound } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../../app/AuthProvider.jsx";
@@ -32,8 +32,35 @@ export function RegisterPage() {
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState(null);
   const [confirmationEmail, setConfirmationEmail] = useState(null);
+  const [cooldown, setCooldown] = useState(0);
+  const cooldownRef = useRef(null);
   const { completeOnboarding } = useAuth();
   const navigate = useNavigate();
+
+  // Restore cooldown from sessionStorage on mount (survives page refresh)
+  useEffect(() => {
+    const savedUntil = Number(sessionStorage.getItem("eduone.signupCooldownUntil") || 0);
+    const remaining = Math.ceil((savedUntil - Date.now()) / 1000);
+    if (remaining > 0) startCooldown(remaining);
+    return () => clearInterval(cooldownRef.current);
+  }, []);
+
+  const startCooldown = useCallback((seconds) => {
+    clearInterval(cooldownRef.current);
+    const until = Date.now() + seconds * 1000;
+    sessionStorage.setItem("eduone.signupCooldownUntil", String(until));
+    setCooldown(seconds);
+    cooldownRef.current = setInterval(() => {
+      const left = Math.ceil((until - Date.now()) / 1000);
+      if (left <= 0) {
+        clearInterval(cooldownRef.current);
+        setCooldown(0);
+        sessionStorage.removeItem("eduone.signupCooldownUntil");
+      } else {
+        setCooldown(left);
+      }
+    }, 1000);
+  }, []);
   const age = useMemo(() => ageFromDate(form.dateOfBirth), [form.dateOfBirth]);
   const isTeacher = form.role === "teacher";
   const guardianRequired = !isTeacher && age !== null && age < 16;
@@ -67,6 +94,10 @@ export function RegisterPage() {
 
   async function submit(event) {
     event.preventDefault();
+    if (cooldown > 0) {
+      setServerError(`Vui lòng chờ ${cooldown} giây trước khi thử lại.`);
+      return;
+    }
     if (!validate()) return;
     setSubmitting(true);
     setServerError(null);
@@ -94,6 +125,9 @@ export function RegisterPage() {
       options: { emailRedirectTo: `${window.location.origin}/auth/callback`, data: signUpData },
     });
     if (result.error) {
+      const is429 = result.error.status === 429
+        || /rate.?limit|too many requests|request limit/i.test(result.error.message || "");
+      if (is429) startCooldown(60);
       setServerError(friendlyAuthError(result.error));
       setSubmitting(false);
       return;
@@ -199,8 +233,12 @@ export function RegisterPage() {
           <span>Tôi đồng ý với điều khoản sử dụng và việc xử lý dữ liệu cần thiết để vận hành tài khoản.</span>
         </label>
         {errors.accepted && <p className="text-xs font-bold text-rose-600">{errors.accepted}</p>}
-        <button className="auth-primary-button" type="submit" disabled={submitting}>
-          {submitting ? "Đang tạo tài khoản..." : `Tạo tài khoản ${isTeacher ? "giáo viên" : "học sinh"}`}
+        <button className="auth-primary-button" type="submit" disabled={submitting || cooldown > 0}>
+          {submitting
+            ? "Đang tạo tài khoản..."
+            : cooldown > 0
+              ? `Thử lại sau ${cooldown}s`
+              : `Tạo tài khoản ${isTeacher ? "giáo viên" : "học sinh"}`}
         </button>
       </form>
       <p className="mt-7 text-center text-sm font-semibold text-slate-600">Đã có tài khoản? <Link to="/login" className="font-black text-emerald-700">Đăng nhập</Link></p>

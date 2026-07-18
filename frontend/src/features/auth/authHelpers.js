@@ -1,5 +1,6 @@
 export function friendlyAuthError(error) {
   const message = String(error?.message || "");
+  const status = error?.status || error?.statusCode;
   if (/invalid login credentials/i.test(message)) {
     return "Email hoặc mật khẩu chưa đúng.";
   }
@@ -12,8 +13,8 @@ export function friendlyAuthError(error) {
   if (/password should be/i.test(message)) {
     return "Mật khẩu chưa đáp ứng yêu cầu bảo mật.";
   }
-  if (/rate limit/i.test(message)) {
-    return "Bạn thao tác quá nhanh. Vui lòng thử lại sau ít phút.";
+  if (status === 429 || /rate.?limit|too many requests|request limit/i.test(message)) {
+    return "Bạn thao tác quá nhanh. Vui lòng thử lại sau 60 giây.";
   }
   return message || "Không thể hoàn tất yêu cầu lúc này.";
 }
