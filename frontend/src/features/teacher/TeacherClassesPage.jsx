@@ -56,10 +56,14 @@ export function TeacherClassesPage() {
   const [form, setForm] = useState(initialForm);
   const navigate = useNavigate();
 
-  const visibleSubjects = useMemo(
-    () => subjects.filter((subject) => subject.grade_level === Number(form.gradeLevel)),
-    [form.gradeLevel, subjects],
-  );
+  const gradeOptions = useMemo(() => {
+    const [from, to] = gradeRangeByBand[form.gradeBand] || [];
+    if (!from) return [];
+    return Array.from({ length: to - from + 1 }, (_, i) => from + i);
+  }, [form.gradeBand]);
+
+  // Giáo viên chọn môn học tự do, không giới hạn theo khối lớp/lớp đã chọn.
+  const visibleSubjects = subjects;
   const studentCount = classes.reduce((sum, item) => sum + item.memberCount, 0);
   const pendingCount = classes.reduce((sum, item) => sum + item.pendingCount, 0);
 
@@ -222,7 +226,7 @@ export function TeacherClassesPage() {
                 <FormField label="Số thành viên tối đa" type="number" min={1} max={100} value={form.maxMembers} onChange={(event) => update("maxMembers", event.target.value)} placeholder="Không giới hạn" />
               </div>
               <div className="block">
-                <span className="mb-2 block text-xs font-black text-slate-700">Môn học theo lớp ({form.subjectIds.length} đã chọn)</span>
+                <span className="mb-2 block text-xs font-black text-slate-700">Môn học ({form.subjectIds.length} đã chọn)</span>
                 {visibleSubjects.length === 0 ? (
                   <p className="text-xs font-bold text-slate-400">Chưa có môn học cho lớp này.</p>
                 ) : (

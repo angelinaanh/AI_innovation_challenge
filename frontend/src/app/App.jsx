@@ -29,6 +29,7 @@ import { StudentClassesPage } from "../features/student-classes/StudentClassesPa
 import { StudentContentPage } from "../features/student-content/StudentContentPage.jsx";
 import { TeacherContentEditorPage } from "../features/teacher-content/TeacherContentEditorPage.jsx";
 import { TeacherContentPage } from "../features/teacher-content/TeacherContentPage.jsx";
+import { TeacherLessonGeneratorPage } from "../features/teacher-content/TeacherLessonGeneratorPage.jsx";
 import { TeacherClassDetailPage } from "../features/teacher/TeacherClassDetailPage.jsx";
 import { TeacherClassesPage } from "../features/teacher/TeacherClassesPage.jsx";
 import { AuthProvider } from "./AuthProvider.jsx";
@@ -73,6 +74,7 @@ export function App() {
               <Route path="/teacher" element={<TeacherClassesPage />} />
               <Route path="/teacher/classes/:classId" element={<TeacherClassDetailPage />} />
               <Route path="/teacher/content" element={<TeacherContentPage />} />
+              <Route path="/teacher/ai-lessons" element={<TeacherLessonGeneratorPage />} />
               <Route path="/teacher/content/:lessonId" element={<TeacherContentEditorPage />} />
             </Route>
           </Route>

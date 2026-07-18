@@ -170,3 +170,13 @@ The grounded chat gains four upgrades that keep the same safety model:
 - **Personalisation** — the answer prompt includes a best-effort learning context (STEAM profile + the student's recent wrong attempts in the current node). It never blocks or leaks beyond the student's own data.
 - **Ask-why loop** — a wrong exercise sends a grounded "vì sao mình sai" question referencing the item prompt, answered by the normal cited Tutor path.
 - **Richer messages** — citations carry a `snippet` (expandable in the UI) and answers render inline `code`/**bold**. No new external calls; still moderated, cited, and refusable.
+
+## 11. Lesson Generator HITL (Python `ai-service`)
+
+A standalone FastAPI microservice (`ai-service/`) implements the two-step teacher lesson-generation flow, isolated from the Node backend:
+
+1. `POST /api/teacher/content/outline` — teacher uploads a PDF/TXT plus `(subject, grade, level, quiz_count)`. The service parses the file, splits it into 1000-token chunks (200 overlap, tiktoken), embeds them into a per-document ChromaDB collection (`document_id` namespace), and asks the LLM (Prompt 1) for a 4-7 item pedagogical outline as strict JSON.
+2. The teacher edits and approves the outline in the UI — the human-in-the-loop gate.
+3. `POST /api/teacher/content/generate` — for each approved outline item the service retrieves the top-4 most relevant chunks and asks the LLM (Prompt 2) for 250-500 words of Markdown plus `quiz_count` MCQs, then assembles the full lesson.
+
+Guardrails: JSON-mode output parsed and Pydantic-validated; a quiz whose `correct_answer` does not exactly match one of its `options` is dropped server-side; everything produced is a teacher-facing draft with no direct publish path to students. Prompts documented in `ai/prompts/lesson_generator_hitl.md`; runtime source `ai-service/app/prompts.py`.

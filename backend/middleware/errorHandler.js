@@ -63,6 +63,9 @@ export function errorHandler(error, request, response, _next) {
     requestId,
     code: error.code || "INTERNAL_ERROR",
     message: error.message,
+    cause: error.cause
+      ? { message: error.cause.message, code: error.cause.code, details: error.cause.details, hint: error.cause.hint }
+      : undefined,
   }));
 
   response.status(status).json({

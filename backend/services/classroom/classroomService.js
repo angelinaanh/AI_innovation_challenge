@@ -3,9 +3,8 @@ import { throwDatabaseError } from "../student/studentContext.js";
 import { emitClassMembershipUpdated } from "../realtime/realtimeHub.js";
 import {
   generateJoinCode,
-  gradeBandForLevel,
-  isSubjectInGrade,
-  normalizeGradeLevel,
+  isGradeBand,
+  isGradeInBand,
   nextMembershipStatus,
 } from "./classroomRules.js";
 
@@ -142,7 +141,7 @@ export async function createClass(teacherId, {
   const cleanMaxMembers = parseMaxMembers(maxMembers);
   const teacher = await loadProfile(teacherId);
   if (teacher.role !== "teacher") throw appError("AUTH_FORBIDDEN", "Chỉ giáo viên được tạo lớp.");
-  const subjects = await validateClassSubjects(teacher, subjectIds, gradeLevel);
+  const subjects = await validateClassSubjects(teacher, subjectIds);
 
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const result = await supabase.from("classes").insert({
