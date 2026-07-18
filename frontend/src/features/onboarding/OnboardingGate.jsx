@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bot, Loader2, Send, Sparkles, X } from "lucide-react";
+import { Bot, Loader2, Send, Sparkles, X, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 
 import { api } from "../../lib/apiClient.js";
 import { RadarProfile } from "../student-dashboard/RadarProfile.jsx";
@@ -321,7 +321,7 @@ function ResultPhase({ result, onFinish }) {
       </div>
       {result.feedbacks && result.feedbacks.length > 0 && (
         <div className="mt-4 space-y-3">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Nhận xét từ Giáo viên AI</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Nhận xét tổng quan từ Giáo viên AI</p>
           {result.feedbacks.map((fb, idx) => (
             <div key={idx} className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-sm leading-6 text-slate-700 shadow-sm">
               <Sparkles size={14} className="mb-1 inline-block text-amber-500" /> {fb}
@@ -329,7 +329,68 @@ function ResultPhase({ result, onFinish }) {
           ))}
         </div>
       )}
-      <button className="auth-primary-button mt-5" type="button" onClick={onFinish}>
+
+      {result.questionDetails && result.questionDetails.length > 0 && (
+        <div className="mt-8">
+          <h3 className="mb-4 text-[15px] font-black text-slate-800">Chi tiết Bài kiểm tra</h3>
+          <div className="space-y-4">
+            {result.questionDetails.map((q, idx) => (
+              <div key={q.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 shrink-0">
+                    {q.isCorrect ? (
+                      <CheckCircle2 className="text-emerald-500" size={22} />
+                    ) : (
+                      <XCircle className="text-rose-500" size={22} />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-bold text-slate-800 text-sm leading-relaxed">
+                      <span className="text-slate-500 mr-1">Câu {idx + 1}:</span> {q.body}
+                    </p>
+                    
+                    <div className="mt-2.5 text-sm">
+                      <span className="font-semibold text-slate-600">Đã trả lời: </span>
+                      {q.type === "mcq" || !q.type ? (
+                        q.options?.[q.selectedIndex] ? (
+                          <span className={q.isCorrect ? "text-emerald-700 font-medium" : "text-rose-600 font-medium"}>
+                            {q.options[q.selectedIndex]}
+                          </span>
+                        ) : (
+                          <span className="italic text-slate-400">Không chọn</span>
+                        )
+                      ) : (
+                        q.textAnswer ? (
+                          <span className="text-slate-700 font-medium">"{q.textAnswer}"</span>
+                        ) : (
+                          <span className="italic text-slate-400">Bỏ trống</span>
+                        )
+                      )}
+                    </div>
+
+                    {(q.explanation || q.formativeFeedback) && (
+                      <div className="mt-3.5 rounded-xl bg-[#f8fafc] border border-slate-100 p-3.5 text-sm leading-relaxed text-slate-700">
+                        <div className="flex items-center gap-1.5 font-bold text-indigo-600 mb-1.5">
+                          <AlertCircle size={16} />
+                          Giải thích
+                        </div>
+                        {q.formativeFeedback ? (
+                          <div className="mb-2"><span className="font-semibold text-slate-600">Giáo viên AI: </span>{q.formativeFeedback}</div>
+                        ) : null}
+                        {q.explanation && (
+                          <div>{q.explanation}</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <button className="auth-primary-button mt-8" type="button" onClick={onFinish}>
         Bắt đầu hành trình học của mình 🚀
       </button>
     </div>
