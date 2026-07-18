@@ -412,3 +412,38 @@ Slice 7 dùng đúng các bảng đã có: `source_documents`, `document_chunks`
 - Publish cập nhật reviewer/time, question/job/audit, rồi archive phiên bản cũ cùng Skill Node và difficulty; basic và advanced có thể cùng tồn tại.
 
 Không đổi schema trong slice này. Trước pilot đa giáo viên, chuỗi write publish/archive phải chuyển thành một Postgres RPC transaction để không thể tồn tại trạng thái dở dang khi hai giáo viên publish đồng thời.
+
+---
+
+## Phần 7 — Bổ sung: Lớp 1-12 và phạm vi lớp chính xác theo môn (migration 0004)
+
+SQL đầy đủ ở `database/migrations/0004_grade_levels.sql`. Vấn đề gốc: `subjects.grade_band` (migration 0003) chỉ có 3 mức nên hai môn cùng band nhưng dạy ở lớp khác nhau (VD "Tự nhiên & Xã hội" lớp 1-3 và "Khoa học" lớp 4-5, cùng `primary`) không phân biệt được — học sinh lớp 1 có thể thấy nhầm môn Khoa học.
+
+- `grades` — bảng tra cứu tĩnh, `grade_number` 1-12, mỗi lớp gắn đúng 1 `grade_band`. Dùng cho dropdown chọn lớp và ràng buộc khoá ngoại từ `subjects`.
+- `subjects.min_grade` / `subjects.max_grade` — phạm vi lớp chính xác của từng môn, thêm cạnh `grade_band` (giữ nguyên `grade_band` vì `profiles`, `classes`, `skill_nodes` vẫn đang dùng band thô). Có `check` đảm bảo `min_grade <= max_grade` và cả hai nằm trong đúng band.
+- Backfill 28 dòng đã seed theo danh mục chính thức:
+
+| Cấp học | Môn | Trục STEAM | Lớp |
+|---|---|---|---|
+| Tiểu học | Tự nhiên & Xã hội | S | 1-3 |
+| Tiểu học | Khoa học | S | 4-5 |
+| Tiểu học | Tin học | T | 3-5 |
+| Tiểu học | Công nghệ | E | 3-5 |
+| Tiểu học | Tiếng Việt, Mỹ thuật, Âm nhạc, Đạo đức | A | 1-5 |
+| Tiểu học | Toán | M | 1-5 |
+| THCS | Khoa học tự nhiên | S | 6-9 |
+| THCS | Tin học | T | 6-9 |
+| THCS | Công nghệ | E | 6-9 |
+| THCS | Ngữ văn, Mỹ thuật, Âm nhạc, Lịch sử & Địa lý | A | 6-9 |
+| THCS | Toán | M | 6-9 |
+| THPT | Vật lý, Hóa học, Sinh học | S | 10-12 |
+| THPT | Tin học | T | 10-12 |
+| THPT | Công nghệ | E | 10-12 |
+| THPT | Ngữ văn, Mỹ thuật, Âm nhạc, Lịch sử, Địa lý | A | 10-12 |
+| THPT | Toán | M | 10-12 |
+
+`npm run seed:subjects` đã được sửa để upsert với `ignoreDuplicates:false`, nghĩa là 28 dòng đã seed từ trước (trạng thái live ngày 2026-07-18) sẽ được backfill đúng `min_grade`/`max_grade` thay vì bị bỏ qua.
+
+RLS: `grades` cho phép mọi user đã đăng nhập đọc (`auth.role() = 'authenticated'`), không cần lọc theo `org_id` vì đây là danh mục lớp học phổ thông dùng chung.
+
+Việc còn thiếu để nối sang thiết kế Course Studio (Phần đề xuất ở buổi trước, chưa có migration): khi tạo bảng `courses`, nên dùng `grade smallint references public.grades(grade_number)` thay vì `grade_band`, và validate `grade between subjects.min_grade and subjects.max_grade` ở tầng service trước khi cho giáo viên sinh dàn ý — nếu không, giáo viên vẫn có thể chọn "Khoa học" cho lớp 1 dù dữ liệu catalog đã đúng.
