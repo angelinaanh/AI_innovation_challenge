@@ -29,9 +29,22 @@ const axisStyles = {
 const initialForm = {
   name: "",
   gradeLevel: "6",
-  subjectId: "",
+  subjectIds: [],
   description: "",
+  maxMembers: "",
 };
+
+function classSubjects(item) {
+  return item.subjects?.length ? item.subjects : item.subject ? [item.subject] : [];
+}
+
+function classMaxMembers(item) {
+  return item.maxMembers ?? item.max_members ?? null;
+}
+
+function classGradeLevel(item) {
+  return item.gradeLevel ?? item.grade_level;
+}
 
 export function TeacherClassesPage() {
   const [classes, setClasses] = useState([]);
@@ -77,7 +90,16 @@ export function TeacherClassesPage() {
     setForm((current) => ({
       ...current,
       [field]: value,
-      ...(field === "gradeLevel" ? { subjectId: "" } : {}),
+      ...(field === "gradeLevel" ? { subjectIds: [] } : {}),
+    }));
+  }
+
+  function toggleSubject(subjectId) {
+    setForm((current) => ({
+      ...current,
+      subjectIds: current.subjectIds.includes(subjectId)
+        ? current.subjectIds.filter((id) => id !== subjectId)
+        : [...current.subjectIds, subjectId],
     }));
   }
 
@@ -89,7 +111,7 @@ export function TeacherClassesPage() {
       const created = await api.createTeacherClass({
         ...form,
         gradeLevel: Number(form.gradeLevel),
-        subjectId: form.subjectId || null,
+        maxMembers: form.maxMembers ? Number(form.maxMembers) : null,
       });
       setCreateOpen(false);
       setForm(initialForm);
@@ -144,21 +166,35 @@ export function TeacherClassesPage() {
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {classes.map((item) => (
-              <Link key={item.id} to={`/teacher/classes/${item.id}`} className="surface group block min-h-52 p-5 transition hover:-translate-y-0.5 hover:border-emerald-300">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="grid h-11 w-11 place-items-center rounded-lg bg-emerald-700 text-white"><BookOpenCheck size={21} /></div>
-                  <span title={STEAM_AXIS_LABELS[item.subject?.steam_axis]} className={`rounded-md px-2 py-1 text-xs font-black ${axisStyles[item.subject?.steam_axis] || "bg-slate-100 text-slate-600"}`}>{item.subject?.steam_axis || "STEAM"}</span>
-                </div>
-                <h3 className="mt-5 truncate text-lg font-black text-slate-950">{item.name}</h3>
-                <p className="mt-1 text-sm font-bold text-slate-500">{item.subject?.name || "Chưa chọn môn"} · {gradeLabel(item.grade_level)}</p>
-                <div className="mt-5 flex items-center gap-4 border-t border-slate-100 pt-4 text-xs font-bold text-slate-500">
-                  <span>{item.memberCount} học sinh</span>
-                  <span>{item.pendingCount} chờ duyệt</span>
-                  <ArrowRight className="ml-auto text-emerald-700 transition group-hover:translate-x-1" size={18} />
-                </div>
-              </Link>
-            ))}
+            {classes.map((item) => {
+              const subjectsForClass = classSubjects(item);
+              const maxMembers = classMaxMembers(item);
+              return (
+                <Link key={item.id} to={`/teacher/classes/${item.id}`} className="surface group block min-h-52 p-5 transition hover:-translate-y-0.5 hover:border-emerald-300">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="grid h-11 w-11 place-items-center rounded-lg bg-emerald-700 text-white"><BookOpenCheck size={21} /></div>
+                    <div className="flex flex-wrap justify-end gap-1">
+                      {(subjectsForClass.length ? subjectsForClass : [null]).map((subject, index) => (
+                        <span
+                          key={subject?.id || index}
+                          title={STEAM_AXIS_LABELS[subject?.steam_axis] || "STEAM"}
+                          className={`rounded-md px-2 py-1 text-xs font-black ${axisStyles[subject?.steam_axis] || "bg-slate-100 text-slate-600"}`}
+                        >
+                          {subject?.steam_axis || "STEAM"}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <h3 className="mt-5 truncate text-lg font-black text-slate-950">{item.name}</h3>
+                  <p className="mt-1 truncate text-sm font-bold text-slate-500">{subjectsForClass.length ? subjectsForClass.map((s) => s.name).join(", ") : "Chưa chọn môn"} · {gradeLabel(classGradeLevel(item))}</p>
+                  <div className="mt-5 flex items-center gap-4 border-t border-slate-100 pt-4 text-xs font-bold text-slate-500">
+                    <span>{item.memberCount}{maxMembers ? `/${maxMembers}` : ""} học sinh</span>
+                    <span>{item.pendingCount} chờ duyệt</span>
+                    <ArrowRight className="ml-auto text-emerald-700 transition group-hover:translate-x-1" size={18} />
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         )}
       </section>
@@ -183,18 +219,34 @@ export function TeacherClassesPage() {
                     ))}
                   </select>
                 </label>
-                <label className="block">
-                  <span className="mb-2 block text-xs font-black text-slate-700">Môn học theo lớp</span>
-                  <select className="auth-input px-3.5" value={form.subjectId} onChange={(event) => update("subjectId", event.target.value)} required>
-                    <option value="">Chọn môn của lớp {form.gradeLevel}</option>
-                    {visibleSubjects.map((subject) => <option key={subject.id} value={subject.id}>[{subject.steam_axis}] {subject.name}</option>)}
-                  </select>
-                </label>
+                <FormField label="Số thành viên tối đa" type="number" min={1} max={100} value={form.maxMembers} onChange={(event) => update("maxMembers", event.target.value)} placeholder="Không giới hạn" />
+              </div>
+              <div className="block">
+                <span className="mb-2 block text-xs font-black text-slate-700">Môn học theo lớp ({form.subjectIds.length} đã chọn)</span>
+                {visibleSubjects.length === 0 ? (
+                  <p className="text-xs font-bold text-slate-400">Chưa có môn học cho lớp này.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {visibleSubjects.map((subject) => {
+                      const active = form.subjectIds.includes(subject.id);
+                      return (
+                        <button
+                          key={subject.id}
+                          type="button"
+                          onClick={() => toggleSubject(subject.id)}
+                          className={`rounded-md border px-3 py-1.5 text-xs font-black transition ${active ? "border-emerald-600 bg-emerald-600 text-white" : "border-slate-200 bg-white text-slate-600 hover:border-emerald-300"}`}
+                        >
+                          [{subject.steam_axis}] {subject.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
               <label className="block"><span className="mb-2 block text-xs font-black text-slate-700">Mô tả</span><textarea className="auth-input min-h-24 resize-y px-3.5 py-3" maxLength={500} value={form.description} onChange={(event) => update("description", event.target.value)} placeholder="Mục tiêu hoặc lịch học của lớp" /></label>
               <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                 <button type="button" className="secondary-button" onClick={() => setCreateOpen(false)}>Hủy</button>
-                <button type="submit" className="primary-button" disabled={creating || !form.name || !form.subjectId}>{creating ? "Đang tạo..." : "Tạo lớp"}</button>
+                <button type="submit" className="primary-button" disabled={creating || !form.name || form.subjectIds.length === 0}>{creating ? "Đang tạo..." : "Tạo lớp"}</button>
               </div>
             </form>
           </div>

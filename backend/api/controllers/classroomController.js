@@ -22,11 +22,15 @@ export async function getSubjects(request, response, next) {
 // -- Teacher --
 export async function postClass(request, response, next) {
   try {
+    const rawSubjectIds = Array.isArray(request.body?.subjectIds)
+      ? request.body.subjectIds
+      : request.body?.subjectId ? [request.body.subjectId] : [];
     const data = await createClass(uid(request), {
       name: request.body?.name,
       gradeLevel: request.body?.gradeLevel,
-      subjectId: request.body?.subjectId,
+      subjectIds: rawSubjectIds,
       description: request.body?.description,
+      maxMembers: request.body?.maxMembers,
     });
     response.status(201).json({ data });
   } catch (error) { next(error); }
