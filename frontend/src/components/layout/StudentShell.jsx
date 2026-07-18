@@ -16,6 +16,7 @@ import { NavLink, Outlet } from "react-router-dom";
 
 import { useAuth } from "../../app/AuthProvider.jsx";
 import { useStudentData } from "../../app/StudentDataProvider.jsx";
+import { gradeLabel } from "../../lib/academicCatalog.js";
 import { Brand } from "../ui/Brand.jsx";
 
 const navItems = [
@@ -24,12 +25,6 @@ const navItems = [
   { to: "/student/content", label: "Nội dung", icon: BookOpenCheck },
   { to: "/student/classes", label: "Lớp học", icon: School },
 ];
-
-const gradeBandLabels = {
-  primary: "Tiểu học",
-  secondary: "THCS",
-  high_school: "THPT",
-};
 
 function Navigation({ onNavigate }) {
   return (
@@ -185,7 +180,7 @@ export function StudentShell() {
                   <p className="text-xs font-black uppercase text-slate-400">Hồ sơ học tập</p>
                   <p className="mt-3 text-sm font-extrabold text-slate-900">{student?.fullName || account?.fullName || "Học sinh EduOne"}</p>
                   <p className="mt-1 truncate text-xs text-slate-500">{account?.email}</p>
-                  <p className="mt-1 text-xs font-bold text-emerald-700">{gradeBandLabels[account?.gradeBand] || "Hồ sơ học sinh"}</p>
+                  <p className="mt-1 text-xs font-bold text-emerald-700">{gradeLabel(account?.gradeLevel)}</p>
                   <button
                     type="button"
                     className="mt-4 flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-slate-200 text-xs font-black text-slate-700 hover:bg-slate-50"

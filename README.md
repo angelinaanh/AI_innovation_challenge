@@ -97,12 +97,13 @@ Live exercise generation requires `OPENAI_API_KEY` and `AI_ALLOW_APPROVED_CONTEN
 
 Slice 6 makes the first teacher/student class workflow operational:
 
-- teachers self-register as `ACTIVE`, then create subject-bound classes from the GDPT 2018 STEAM catalog;
-- teachers own their classes, invite same-organization/same-grade students, and approve or reject join requests;
+- teachers self-register as `ACTIVE`, then create subject-bound classes for an exact grade from 1 to 12;
+- the GDPT 2018 STEAM catalog contains 101 grade-specific rows and constrains the subject option after the grade changes;
+- teachers own their classes, invite same-organization/same-exact-grade students, and approve or reject join requests;
 - students have `/student/classes` to join by code, accept/decline invitations, and see active classes;
 - teachers have `/teacher` and `/teacher/classes/:classId` for class creation, join code, pending requests, and roster;
 - Socket.IO pushes membership changes to both teacher and student workspaces;
-- migration `0003` is applied, the 28-row subject catalog is seeded, and a real create-invite-accept-roster flow was verified against Supabase.
+- migration `0003` supplies the classroom tables; migration `0004` adds exact grade columns, database consistency constraints, and the 101-row catalog.
 
 Teacher self-registration is an intentional product override of Functional Spec `F-103`. See `docs/problem/teacher-student-role-impact.md` for the requirement trace, safety boundaries, and the next content-assignment slice.
 
@@ -129,7 +130,7 @@ npm run seed:subjects
 npm start
 ```
 
-`npm run seed:subjects` loads the STEAM subject catalog (GDPT 2018 classification) used by the classes feature. Apply migrations `0002` and `0003` to the Supabase project before running the source/subject seeds.
+`npm run seed:subjects` reconciles the 101 grade-specific STEAM subject rows for every organization. Apply migrations `0002`, `0003`, and `0004` before running the source/subject seeds.
 
 `npm run seed:sources` backfills approved grounding chunks from each published lesson's own checkpoint content, so the grounded Tutor chat and interactive exercises work on **every** Skill Node, not only the seeded Loops lesson. It is idempotent and preserves the hand-authored Loops source. Without it, only the Loops node has approved material and the Tutor correctly refuses / cannot build exercises elsewhere.
 
@@ -145,7 +146,7 @@ npm install
 npm run dev
 ```
 
-Open `http://127.0.0.1:5173/login`. Registration lets a user choose **Học sinh** or **Giáo viên**; a teacher account activates immediately (no grade band or guardian consent), a student under 16 stays `PENDING` until guardian consent. Admin accounts are still provisioned by an administrator.
+Open `http://127.0.0.1:5173/login`. Registration lets a user choose **Học sinh** or **Giáo viên**; a teacher account activates immediately (no grade or guardian consent), while a student chooses the exact current grade (1-12) and stays `PENDING` when under 16 until guardian consent. Admin accounts are still provisioned by an administrator.
 
 ## Documentation Map
 

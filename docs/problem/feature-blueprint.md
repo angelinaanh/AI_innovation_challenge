@@ -61,7 +61,7 @@ Nguồn: `FR0`, `F-101 -> F-107`, `P-01`, `R1-R4`.
 
 | Feature | MVP | UI | Backend | Database | Acceptance criteria |
 |---|---:|---|---|---|---|
-| Student/teacher login + register | Must | Login/register/recovery/onboarding | `GET /auth/me`, `POST /auth/bootstrap` | Supabase Auth + `profiles` | JWT thật; student có grade_band, teacher ACTIVE ngay |
+| Student/teacher login + register | Must | Login/register/recovery/onboarding | `GET /auth/me`, `POST /auth/bootstrap` | Supabase Auth + `profiles` | JWT thật; student có grade_level 1-12, teacher ACTIVE ngay |
 | RBAC server-side | Must | Route guard chỉ để UX | `requireAuth`, `requireRole` | RLS + profiles.role | Student không gọi được teacher/admin API |
 | Guardian consent | Must gate / workflow next | Consent state screen | active-account middleware | `guardian_consent_at` + trusted app metadata | Dưới 16 tuổi ở `PENDING`, không vào REST/realtime học tập |
 | Parent link | P2 | Invite code | parent endpoints | `parent_student_links` | Hoãn khỏi MVP demo nếu core chưa xong |
@@ -363,10 +363,10 @@ Nguồn: phạm vi R2 “assigned classes”, `S-201`, `S-206`, kết hợp yêu
 
 | Feature | UI | Backend | Database | Acceptance |
 |---|---|---|---|---|
-| Danh mục môn GDPT 2018 | select theo khối/tag STEAM | `GET /teacher/subjects` | `subjects` | Môn đúng org và grade |
-| Giáo viên tạo lớp | `/teacher` | `POST /teacher/classes` | `classes` | Có subject, join code, owner |
+| Danh mục môn GDPT 2018 | chọn lớp 1-12, subject option phụ thuộc lớp, hiện tag | `GET /teacher/subjects?gradeLevel=` | `subjects` | 101 dòng, môn đúng org và lớp |
+| Giáo viên tạo lớp | `/teacher` | `POST /teacher/classes` | `classes` | Có exact grade, subject, join code, owner |
 | Giáo viên mời/duyệt | class detail | invite/decision endpoints | `class_memberships` | Chỉ lớp mình sở hữu |
-| Học sinh xin vào/nhận lời mời | `/student/classes` | join/respond endpoints | membership state machine | Cùng org và cùng khối |
+| Học sinh xin vào/nhận lời mời | `/student/classes` | join/respond endpoints | membership state machine | Cùng org và cùng lớp chính xác |
 | Đồng bộ hai vai trò | realtime status + auto refresh | Socket.IO | không write trực tiếp | roster/pending cập nhật sau transition |
 
 Nội dung `PUBLISHED` đã khả dụng cho lộ trình chung. Phân phối nội dung riêng theo lớp cần Slice 7 với `class_content_assignments`; không dùng trạng thái membership như một cách thay thế cho publish audit.

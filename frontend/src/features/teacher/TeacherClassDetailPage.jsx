@@ -11,14 +11,13 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
+import { gradeLabel } from "../../lib/academicCatalog.js";
 import { api } from "../../lib/apiClient.js";
 import { FormAlert, FormField } from "../auth/AuthFormControls.jsx";
 
-const gradeLabels = {
-  primary: "Tiểu học",
-  secondary: "THCS",
-  high_school: "THPT",
-};
+function classSubjects(item) {
+  return item?.subjects?.length ? item.subjects : item?.subject ? [item.subject] : [];
+}
 
 export function TeacherClassDetailPage() {
   const { classId } = useParams();
@@ -85,6 +84,9 @@ export function TeacherClassDetailPage() {
     window.setTimeout(() => setCopied(false), 1600);
   }
 
+  const subjects = classSubjects(data?.class);
+  const isFull = Boolean(data?.class.maxMembers) && data.active.length >= data.class.maxMembers;
+
   if (loading && !data) {
     return <div className="space-y-4"><div className="skeleton h-36" /><div className="skeleton h-72" /></div>;
   }
@@ -99,9 +101,10 @@ export function TeacherClassDetailPage() {
           <header className="surface p-5 md:p-6">
             <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
               <div className="min-w-0">
-                <p className="eyebrow">{data.class.subject?.steam_axis || "STEAM"} · {gradeLabels[data.class.gradeBand]}</p>
+                <p className="eyebrow">{subjects.map((s) => s.steam_axis).join(" · ") || "STEAM"} · {gradeLabel(data.class.gradeLevel)}</p>
                 <h1 className="mt-2 truncate text-2xl font-black md:text-3xl">{data.class.name}</h1>
-                <p className="mt-2 text-sm font-bold text-slate-500">{data.class.subject?.name || "Chưa chọn môn học"}</p>
+                <p className="mt-2 text-sm font-bold text-slate-500">{subjects.length ? subjects.map((s) => s.name).join(", ") : "Chưa chọn môn học"}</p>
+                <p className="mt-1 text-xs font-bold text-slate-400">{data.active.length}{data.class.maxMembers ? `/${data.class.maxMembers}` : ""} thành viên</p>
                 {data.class.description && <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">{data.class.description}</p>}
               </div>
               <div className="shrink-0 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
@@ -139,10 +142,14 @@ export function TeacherClassDetailPage() {
               <section className="surface p-5">
                 <p className="eyebrow">Mời học sinh</p>
                 <h2 className="mt-1 text-lg font-black">Gửi lời mời</h2>
-                <form className="mt-5 space-y-4" onSubmit={invite}>
-                  <FormField label="Email học sinh" type="email" value={studentEmail} onChange={(event) => setStudentEmail(event.target.value)} placeholder="hocsinh@example.com" required />
-                  <button type="submit" className="primary-button w-full" disabled={submitting || !studentEmail}><MailPlus size={17} />{submitting ? "Đang gửi..." : "Gửi lời mời"}</button>
-                </form>
+                {isFull ? (
+                  <p className="mt-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">Lớp đã đủ {data.class.maxMembers} thành viên tối đa.</p>
+                ) : (
+                  <form className="mt-5 space-y-4" onSubmit={invite}>
+                    <FormField label="Email học sinh" type="email" value={studentEmail} onChange={(event) => setStudentEmail(event.target.value)} placeholder="hocsinh@example.com" required />
+                    <button type="submit" className="primary-button w-full" disabled={submitting || !studentEmail}><MailPlus size={17} />{submitting ? "Đang gửi..." : "Gửi lời mời"}</button>
+                  </form>
+                )}
               </section>
 
               <section className="surface overflow-hidden">

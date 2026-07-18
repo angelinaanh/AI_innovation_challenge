@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../../app/AuthProvider.jsx";
+import { GRADE_GROUPS } from "../../lib/academicCatalog.js";
 import { supabase } from "../../lib/supabaseClient.js";
 import { AuthLayout } from "./AuthLayout.jsx";
 import { FormAlert, FormField, PasswordField } from "./AuthFormControls.jsx";
@@ -13,7 +14,7 @@ const initialForm = {
   fullName: "",
   email: "",
   dateOfBirth: "",
-  gradeBand: "secondary",
+  gradeLevel: "6",
   guardianEmail: "",
   password: "",
   confirmPassword: "",
@@ -48,6 +49,9 @@ export function RegisterPage() {
     if (!/^\S+@\S+\.\S+$/.test(form.email)) nextErrors.email = "Email không hợp lệ.";
     if (!isTeacher) {
       if (age === null || age < 5 || age > 100) nextErrors.dateOfBirth = "Ngày sinh không hợp lệ.";
+      if (!Number.isInteger(Number(form.gradeLevel)) || Number(form.gradeLevel) < 1 || Number(form.gradeLevel) > 12) {
+        nextErrors.gradeLevel = "Vui lòng chọn lớp từ 1 đến 12.";
+      }
       if (guardianRequired && !/^\S+@\S+\.\S+$/.test(form.guardianEmail)) {
         nextErrors.guardianEmail = "Cần email người giám hộ cho học sinh dưới 16 tuổi.";
       }
@@ -71,7 +75,7 @@ export function RegisterPage() {
       : {
           role: "student",
           fullName: form.fullName.trim(),
-          gradeBand: form.gradeBand,
+          gradeLevel: Number(form.gradeLevel),
           dateOfBirth: form.dateOfBirth,
           guardianEmail: guardianRequired ? form.guardianEmail.trim().toLowerCase() : null,
         };
@@ -79,7 +83,7 @@ export function RegisterPage() {
       ? { full_name: profile.fullName, role: "teacher" }
       : {
           full_name: profile.fullName,
-          grade_band: profile.gradeBand,
+          grade_level: profile.gradeLevel,
           date_of_birth: profile.dateOfBirth,
           guardian_email: profile.guardianEmail,
           role: "student",
@@ -172,12 +176,15 @@ export function RegisterPage() {
             <div className="grid gap-5 sm:grid-cols-2">
               <FormField label="Ngày sinh" icon={CalendarDays} type="date" value={form.dateOfBirth} onInput={(event) => update("dateOfBirth", event.currentTarget.value)} error={errors.dateOfBirth} required />
               <label className="block">
-                <span className="mb-2 block text-xs font-black text-slate-700">Khối lớp</span>
-                <select className="auth-input px-3.5" value={form.gradeBand} onChange={(event) => update("gradeBand", event.target.value)}>
-                  <option value="primary">Tiểu học</option>
-                  <option value="secondary">THCS</option>
-                  <option value="high_school">THPT</option>
+                <span className="mb-2 block text-xs font-black text-slate-700">Lớp hiện tại</span>
+                <select className="auth-input px-3.5" value={form.gradeLevel} onChange={(event) => update("gradeLevel", event.target.value)} aria-invalid={Boolean(errors.gradeLevel)}>
+                  {GRADE_GROUPS.map((group) => (
+                    <optgroup key={group.label} label={group.label}>
+                      {group.grades.map((gradeLevel) => <option key={gradeLevel} value={gradeLevel}>Lớp {gradeLevel}</option>)}
+                    </optgroup>
+                  ))}
                 </select>
+                {errors.gradeLevel && <span className="mt-1.5 block text-xs font-bold text-rose-600">{errors.gradeLevel}</span>}
               </label>
             </div>
             {guardianRequired && (

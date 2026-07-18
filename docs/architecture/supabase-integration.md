@@ -96,9 +96,9 @@ The existing live schema is sufficient for this slice: `guardian_consent_at` rem
 
 ## 7. Classes & Subjects
 
-Migration `0003_classes_and_subjects.sql` is applied in the configured project and the 28-row GDPT 2018 catalog is seeded. `subjects` is organization- and grade-scoped, `classes.teacher_id` owns the class, and `class_memberships` records the `invited/requested/active/rejected` lifecycle.
+Migration `0003_classes_and_subjects.sql` creates the classroom model. Migration `0004_grade_level_subject_catalog.sql` adds exact grade 1-12 fields, backfills existing data, loads 101 organization-scoped catalog rows, and constrains class subjects through `(subject_id, grade_level)`. `classes.teacher_id` owns the class and `class_memberships` records the `invited/requested/active/rejected` lifecycle.
 
-Although the backend uses a service role for application data, it repeats the intended RLS boundary before each write: teacher ownership, same `org_id`, subject/class grade match, and student/class grade match. Realtime membership updates flow through Socket.IO rather than exposing direct database subscriptions in the browser.
+Although the backend uses a service role for application data, it repeats the intended RLS boundary before each write: teacher ownership, same `org_id`, exact subject/class grade match, and exact student/class grade match. `grade_band` is derived from exact grade for legacy adaptive-content queries. Realtime membership updates flow through Socket.IO rather than exposing direct database subscriptions in the browser.
 
 ## 8. Migration Rule
 

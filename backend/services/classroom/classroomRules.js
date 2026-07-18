@@ -1,11 +1,33 @@
 // Pure, testable logic for the classroom (classes + memberships) feature.
 import crypto from "node:crypto";
+import {
+  GRADE_LEVELS,
+  STEAM_AXES,
+  gradeBandForLevel,
+  isGradeLevel,
+  normalizeGradeLevel,
+} from "../academic/academicCatalog.js";
 
 export const GRADE_BANDS = ["primary", "secondary", "high_school"];
-export const STEAM_AXES = ["S", "T", "E", "A", "M"];
+export { GRADE_LEVELS, STEAM_AXES, gradeBandForLevel, isGradeLevel, normalizeGradeLevel };
 
 export function isGradeBand(value) {
   return GRADE_BANDS.includes(value);
+}
+
+export function isGradeInBand(gradeLevelInput, gradeBand) {
+  const gradeLevel = normalizeGradeLevel(gradeLevelInput);
+  return Boolean(gradeLevel) && gradeBandForLevel(gradeLevel) === gradeBand;
+}
+
+export function isSubjectInGrade(subject, gradeLevelInput) {
+  const gradeLevel = normalizeGradeLevel(gradeLevelInput);
+  if (!gradeLevel || !subject) return false;
+  if (subject.grade_level != null) return subject.grade_level === gradeLevel;
+  if (subject.min_grade != null && subject.max_grade != null) {
+    return gradeLevel >= subject.min_grade && gradeLevel <= subject.max_grade;
+  }
+  return subject.grade_band === gradeBandForLevel(gradeLevel);
 }
 
 // Human-friendly join code, ambiguous characters removed.

@@ -42,6 +42,7 @@ create table public.profiles (
   email text not null,
   full_name text,
   role text not null check (role in ('student','teacher','parent','admin')),
+  grade_level smallint check (grade_level between 1 and 12),
   grade_band text check (grade_band in ('primary','secondary','high_school')),
   guardian_consent_at timestamptz,          -- FR0.6
   created_at timestamptz not null default now()
@@ -385,17 +386,17 @@ Nguyên tắc giữ nguyên bất biến hệ thống: đây là **luyện tập
 
 ---
 
-## Phần 5 — Bổ sung: Môn học & Lớp học (migration 0003)
+## Phần 5 — Bổ sung: Môn học & Lớp học (migrations 0003-0004)
 
 SQL đầy đủ ở `database/migrations/0003_classes_and_subjects.sql`. Ba bảng:
 
-- `subjects` — danh mục môn theo **tag STEAM × khối lớp** bám Chương trình GDPT 2018 (mỗi dòng: `name`, `steam_axis` S/T/E/A/M, `grade_band`). Seed bằng `npm run seed:subjects`.
-- `classes` — lớp do giáo viên tạo (`teacher_id`, `grade_band`, `subject_id`, `join_code` duy nhất).
+- `subjects` — danh mục môn theo **tag STEAM × lớp cụ thể** bám Chương trình GDPT 2018 (mỗi dòng: `name`, `steam_axis` S/T/E/A/M, `grade_level` 1-12, `grade_band` dẫn xuất). Catalog có 101 dòng cho mỗi tổ chức.
+- `classes` — lớp do giáo viên tạo (`teacher_id`, `grade_level`, `grade_band`, `max_members`, `join_code` duy nhất).
 - `class_memberships` — thành viên lớp, vòng đời `invited | requested → active | rejected`. `unique(class_id, student_id)`. Giáo viên **mời** (invited) hoặc học sinh **xin vào** bằng mã (requested); một lời mời và một yêu cầu cho cùng cặp lớp–học sinh sẽ hội tụ về `active`.
 
 RLS: subjects đọc trong org; classes do giáo viên sở hữu, học sinh đọc lớp mình là thành viên active; memberships học sinh thấy dòng của mình, giáo viên thấy dòng của lớp mình.
 
-Trạng thái live ngày 2026-07-18: migration `0003` đã được áp dụng và seed đủ 28 môn. Service layer còn kiểm tra `org_id`, `grade_band`, quyền sở hữu lớp và subject hợp lệ trước mọi write. E2E thật đã qua cả `invited -> active` và `requested -> active`; roster giáo viên và danh sách lớp học sinh đều đọc lại đúng thành viên.
+Migration `0004_grade_level_subject_catalog.sql` nâng dữ liệu band cũ lên `grade_level`, chuẩn hóa hai tên có dấu `&`, seed danh mục chính xác và thêm CHECK cho quan hệ grade/band. Service layer kiểm tra `org_id`, lớp chính xác, quyền sở hữu và subject hợp lệ trước mọi write; `grade_band` vẫn được giữ để Skill Node/AI content tương thích.
 
 Để nối Content Studio với lớp, migration kế tiếp cần bảng `class_content_assignments(class_id, skill_node_id/lesson_id, assigned_by, available_from, due_at)`. Lesson vẫn bắt buộc `PUBLISHED`; assignment chỉ quyết định phạm vi lớp được phân phối.
 
@@ -411,3 +412,65 @@ Slice 7 dùng đúng các bảng đã có: `source_documents`, `document_chunks`
 - Publish cập nhật reviewer/time, question/job/audit, rồi archive phiên bản cũ cùng Skill Node và difficulty; basic và advanced có thể cùng tồn tại.
 
 Không đổi schema trong slice này. Trước pilot đa giáo viên, chuỗi write publish/archive phải chuyển thành một Postgres RPC transaction để không thể tồn tại trạng thái dở dang khi hai giáo viên publish đồng thời.
+
+---
+
+## Phần 7 — Bổ sung: Lớp 1-12 và catalog môn học chính xác (migration 0004)
+
+SQL đầy đủ ở `database/migrations/0004_grade_level_subject_catalog.sql`. Vấn đề gốc: `subjects.grade_band` (migration 0003) chỉ có 3 mức nên hai môn cùng band nhưng dạy ở lớp khác nhau (VD "Tự nhiên và Xã hội" lớp 1-3 và "Khoa học" lớp 4-5, cùng `primary`) không phân biệt được — học sinh lớp 1 có thể thấy nhầm môn Khoa học.
+
+- `profiles.grade_level` — lớp hiện tại của học sinh, 1-12; `grade_band` được dẫn xuất để tương thích các luồng học thích ứng.
+- `subjects.grade_level` — mỗi bản ghi là một môn ở một lớp cụ thể, có đúng một tag STEAM. Catalog có 101 dòng cho mỗi tổ chức.
+- `classes.grade_level` — lớp cụ thể của lớp học giáo viên tạo; `grade_band` được dẫn xuất và kiểm lại bằng CHECK.
+
+| Cấp học | Môn | Trục STEAM | Lớp |
+|---|---|---|---|
+| Tiểu học | Tự nhiên và Xã hội | S | 1-3 |
+| Tiểu học | Khoa học | S | 4-5 |
+| Tiểu học | Tin học | T | 3-5 |
+| Tiểu học | Công nghệ | E | 3-5 |
+| Tiểu học | Tiếng Việt, Mỹ thuật, Âm nhạc, Đạo đức | A | 1-5 |
+| Tiểu học | Toán | M | 1-5 |
+| THCS | Khoa học tự nhiên | S | 6-9 |
+| THCS | Tin học | T | 6-9 |
+| THCS | Công nghệ | E | 6-9 |
+| THCS | Ngữ văn, Mỹ thuật, Âm nhạc, Lịch sử và Địa lý | A | 6-9 |
+| THCS | Toán | M | 6-9 |
+| THPT | Vật lý, Hóa học, Sinh học | S | 10-12 |
+| THPT | Tin học | T | 10-12 |
+| THPT | Công nghệ | E | 10-12 |
+| THPT | Ngữ văn, Mỹ thuật, Âm nhạc, Lịch sử, Địa lý | A | 10-12 |
+| THPT | Toán | M | 10-12 |
+
+`npm run seed:subjects` upsert lại đúng 101 dòng `name + steam_axis + grade_level + grade_band` cho từng tổ chức, nên frontend có thể lọc môn bằng `grade_level` trực tiếp, không cần bảng phạm vi `min_grade/max_grade`.
+
+Việc còn thiếu để nối sang thiết kế Course Studio: các bảng khóa học/nội dung nên dùng `grade_level` và subject row cụ thể thay vì chỉ `grade_band`, để giáo viên không thể gán nội dung lớp 1 cho môn lớp 4-5.
+
+---
+
+## Phần 8 — Bổ sung: Sĩ số tối đa và lớp nhiều môn (migration 0005)
+
+SQL đầy đủ ở `database/migrations/0005_class_capacity_and_multi_subject.sql`. Hai thay đổi cho luồng "giáo viên tạo lớp":
+
+- `classes.max_members` — smallint, nullable (null = không giới hạn), CHECK 1-100.
+- `class_subjects(class_id, subject_id, grade_level)` — bảng junction thay cho `classes.subject_id` (1 lớp chỉ 1 môn trước đây), theo đúng khuôn P2 (junction table thay vì mảng ID) đã dùng cho `skill_node_prerequisites`. Sau khi backfill dữ liệu cũ, `classes.subject_id` bị **drop hẳn** — không giữ hai nguồn sự thật.
+
+`class_subjects.grade_level` được backfill từ `classes.grade_level` và có khóa ngoại ghép tới cả `classes(id, grade_level)` lẫn `subjects(id, grade_level)`. Vì vậy một lớp có thể chọn nhiều môn, nhưng mọi môn đều phải thuộc đúng lớp 1-12 của chính lớp học đó.
+
+Sĩ số tối đa **không** ép bằng CHECK/trigger ở tầng CSDL mà ép ở tầng service (`assertCapacity()` trong `classroomService.js`), vì điều kiện phụ thuộc đếm `class_memberships.status = 'active'` tại thời điểm ghi — kiểm tra ở 4 điểm chuyển trạng thái sang `active`: giáo viên mời học sinh đã có yêu cầu chờ (hội tụ active), giáo viên duyệt yêu cầu, học sinh xin vào lớp đã được mời (hội tụ active), học sinh chấp nhận lời mời. Vượt quá `max_members` ném lỗi `CLASS_FULL` (409).
+
+RLS cho `class_subjects` đi theo đúng khuôn của `classes`: giáo viên sở hữu lớp toàn quyền, học sinh là thành viên active của lớp chỉ đọc.
+
+Trước pilot đa giáo viên: các đường ghi `class_memberships` hiện đếm rồi mới insert/update (không transaction) — hai request đồng thời khi lớp còn đúng 1 chỗ trống có thể cùng vượt `max_members`. Nên chuyển `assertCapacity` + write thành một Postgres RPC (transaction), giống khuyến nghị đã ghi ở Phần 6 cho publish/archive lesson.
+
+---
+
+## Phần 9 — Bổ sung: Hòa giải schema lớp cụ thể (migration 0006)
+
+SQL đầy đủ ở `database/migrations/0006_class_exact_grade.sql`. Sau khi merge nhánh `9342bac`, hệ thống có hai cách biểu diễn cùng một ý: nhánh cũ dùng `classes.grade`, còn nhánh hiện tại dùng `classes.grade_level`. Migration 0006 giữ một nguồn sự thật là `grade_level`.
+
+- Nếu cột `classes.grade` đã từng tồn tại, migration backfill `classes.grade_level = coalesce(grade_level, grade)`.
+- Cột `classes.grade` bị drop để tránh hai nguồn sự thật.
+- CHECK `classes_grade_level_check` và `classes_grade_band_consistency` được reassert để đảm bảo lớp 1-5 = `primary`, 6-9 = `secondary`, 10-12 = `high_school`.
+
+Frontend (`TeacherClassesPage.jsx`) chọn lớp 1-12 trực tiếp; sau khi đổi lớp, danh sách môn được lọc bằng `subjects.grade_level` và trạng thái môn đã chọn được reset.

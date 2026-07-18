@@ -16,7 +16,7 @@ Mục tiêu là giữ mọi tính năng giáo viên có tác động rõ ràng t
 - giáo viên không cần khối lớp, ngày sinh hoặc đồng ý của người giám hộ;
 - Admin vẫn là vai trò được cấp riêng, không tự đăng ký.
 
-Giới hạn đang áp dụng để giảm phạm vi quyền: backend kiểm tra JWT và role, giáo viên chỉ thao tác lớp do mình sở hữu, học sinh phải cùng tổ chức và cùng khối lớp, mọi trạng thái thành viên được kiểm tra ở server. Trước pilot thật vẫn cần xác minh tổ chức/email trường, rate limit lời mời và audit đăng ký giáo viên.
+Giới hạn đang áp dụng để giảm phạm vi quyền: backend kiểm tra JWT và role, giáo viên chỉ thao tác lớp do mình sở hữu, học sinh phải cùng tổ chức và cùng lớp chính xác, mọi trạng thái thành viên được kiểm tra ở server. Trước pilot thật vẫn cần xác minh tổ chức/email trường, rate limit lời mời và audit đăng ký giáo viên.
 
 ## 2. Tính năng giáo viên từ hai tài liệu
 
@@ -71,13 +71,13 @@ Nếu học sinh đã `requested` rồi giáo viên gửi lời mời, hoặc đ
 
 Danh mục `subjects` bám bảng phân loại GDPT 2018 người dùng cung cấp:
 
-- `S`: Tự nhiên & Xã hội/Khoa học, Khoa học tự nhiên, Vật lý, Hóa học, Sinh học;
+- `S`: Tự nhiên và Xã hội, Khoa học, Khoa học tự nhiên, Vật lý, Hóa học, Sinh học;
 - `T`: Tin học;
 - `E`: Công nghệ;
-- `A`: Tiếng Việt, Ngữ văn, Mỹ thuật, Âm nhạc, Đạo đức, Lịch sử & Địa lý;
+- `A`: Tiếng Việt, Ngữ văn, Mỹ thuật, Âm nhạc, Đạo đức, Lịch sử và Địa lý, Lịch sử, Địa lý;
 - `M`: Toán.
 
-Mỗi môn gắn một `grade_band`: `primary`, `secondary`, hoặc `high_school`. Backend không cho mời/xin vào khi khối học sinh khác khối lớp.
+Mỗi lựa chọn là một bản ghi `môn + grade_level` cụ thể trong 101 dòng. UI chọn lớp 1-12 trước rồi chỉ hiển thị môn hợp lệ; backend và khóa ngoại database đều từ chối môn khác lớp. Học sinh cũng phải có `profile.grade_level` trùng chính xác với lớp để được mời hoặc xin vào. `grade_band` vẫn được dẫn xuất (`1-5`, `6-9`, `10-12`) cho lộ trình thích ứng.
 
 ## 6. Trạng thái triển khai
 

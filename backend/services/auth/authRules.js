@@ -1,4 +1,8 @@
-const GRADE_BANDS = new Set(["primary", "secondary", "high_school"]);
+import {
+  gradeBandForLevel,
+  normalizeGradeLevel,
+} from "../academic/academicCatalog.js";
+
 const ACCOUNT_STATUSES = new Set([
   "PENDING",
   "ACTIVE",
@@ -44,7 +48,9 @@ export function normalizeStudentOnboarding(user, payload = {}, currentDate = new
   const fullName = String(
     payload.fullName ?? metadata.full_name ?? metadata.name ?? "",
   ).trim();
-  const gradeBand = String(payload.gradeBand ?? metadata.grade_band ?? "").trim();
+  const gradeLevel = normalizeGradeLevel(
+    payload.gradeLevel ?? metadata.grade_level,
+  );
   const dateOfBirthInput = payload.dateOfBirth ?? metadata.date_of_birth;
   const guardianEmail = String(
     payload.guardianEmail ?? metadata.guardian_email ?? "",
@@ -53,8 +59,8 @@ export function normalizeStudentOnboarding(user, payload = {}, currentDate = new
   if (fullName.length < 2 || fullName.length > 80) {
     throw validationError("Họ tên cần có từ 2 đến 80 ký tự.");
   }
-  if (!GRADE_BANDS.has(gradeBand)) {
-    throw validationError("Khối lớp không hợp lệ.");
+  if (!gradeLevel) {
+    throw validationError("Lớp học không hợp lệ. Vui lòng chọn từ lớp 1 đến lớp 12.");
   }
 
   const { date, normalized: dateOfBirth } = parseDateOfBirth(dateOfBirthInput);
@@ -73,7 +79,8 @@ export function normalizeStudentOnboarding(user, payload = {}, currentDate = new
 
   return {
     fullName,
-    gradeBand,
+    gradeLevel,
+    gradeBand: gradeBandForLevel(gradeLevel),
     dateOfBirth,
     guardianEmail: requiresGuardianConsent ? guardianEmail : null,
     age,
