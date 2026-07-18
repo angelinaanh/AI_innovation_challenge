@@ -24,12 +24,14 @@ begin
     select 1 from information_schema.columns
     where table_schema = 'public' and table_name = 'classes' and column_name = 'subject_id'
   ) then
-    insert into public.class_subjects (class_id, subject_id, grade_level)
-    select id, subject_id, grade_level
-    from public.classes
-    where subject_id is not null
-    on conflict (class_id, subject_id) do update
-    set grade_level = excluded.grade_level;
+    execute $sql$
+      insert into public.class_subjects (class_id, subject_id, grade_level)
+      select id, subject_id, grade_level
+      from public.classes
+      where subject_id is not null
+      on conflict (class_id, subject_id) do update
+      set grade_level = excluded.grade_level
+    $sql$;
   end if;
 end $$;
 
