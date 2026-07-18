@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
-  BookOpenCheck,
   ChevronDown,
+  Library,
   LogOut,
   Menu,
   School,
@@ -16,8 +16,8 @@ import { Brand } from "../ui/Brand.jsx";
 
 const navItems = [
   { to: "/teacher", label: "Lớp học", icon: School, end: true },
-  { to: "/teacher/content", label: "Nội dung", icon: BookOpenCheck },
-  { to: "/teacher/ai-lessons", label: "Tạo bài giảng AI", icon: Sparkles },
+  { to: "/teacher/ai-lessons", label: "Tạo bài giảng AI", icon: Sparkles, end: true },
+  { to: "/teacher/ai-lessons/library", label: "Bài giảng AI đã lưu", icon: Library },
 ];
 
 function Navigation({ onNavigate }) {

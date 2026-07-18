@@ -81,6 +81,20 @@ export async function apiPatch(path, body, signal, accessToken) {
   return payload.data;
 }
 
+export async function apiDelete(path, signal, accessToken) {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "DELETE",
+    headers: await accessTokenHeaders(accessToken, { Accept: "application/json" }),
+    signal,
+  });
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw apiError(response, payload, "Không thể xóa dữ liệu trên EduOne.");
+  }
+  return payload.data;
+}
+
 export async function streamPost(path, body, { onEvent, signal } = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
@@ -172,35 +186,48 @@ export const api = {
     { decision },
     signal,
   ),
-  getTeacherContent: (signal) => apiGet("/teacher/content", signal),
-  createContentDraft: (payload, signal) => apiPost("/teacher/content/drafts", payload, signal),
-  getTeacherLesson: (lessonId, signal) => apiGet(
-    `/teacher/lessons/${encodeURIComponent(lessonId)}`,
+  saveAiCourse: (payload, signal) => apiPost("/teacher/content/ai-courses", payload, signal),
+  getAiCourses: (signal) => apiGet("/teacher/ai-courses", signal),
+  getTeacherAiLesson: (lessonId, signal) => apiGet(
+    `/teacher/ai-lessons/${encodeURIComponent(lessonId)}`,
     signal,
   ),
-  updateTeacherLesson: (lessonId, payload, signal) => apiPatch(
-    `/teacher/lessons/${encodeURIComponent(lessonId)}`,
-    payload,
+  updateAiLesson: (lessonId, content, signal) => apiPatch(
+    `/teacher/ai-lessons/${encodeURIComponent(lessonId)}`,
+    { content },
     signal,
   ),
-  submitLessonReview: (lessonId, signal) => apiPost(
-    `/teacher/lessons/${encodeURIComponent(lessonId)}/review`,
+  publishAiCourse: (courseId, signal) => apiPost(
+    `/teacher/ai-courses/${encodeURIComponent(courseId)}/publish`,
     {},
     signal,
   ),
-  publishTeacherLesson: (lessonId, humanMinutes, signal) => apiPost(
-    `/teacher/lessons/${encodeURIComponent(lessonId)}/publish`,
-    { humanMinutes },
-    signal,
-  ),
-  createLessonVersion: (lessonId, signal) => apiPost(
-    `/teacher/lessons/${encodeURIComponent(lessonId)}/versions`,
+  publishAiLesson: (lessonId, signal) => apiPost(
+    `/teacher/ai-lessons/${encodeURIComponent(lessonId)}/publish`,
     {},
     signal,
   ),
-  archiveTeacherLesson: (lessonId, signal) => apiPost(
-    `/teacher/lessons/${encodeURIComponent(lessonId)}/archive`,
+  unpublishAiLesson: (lessonId, signal) => apiPost(
+    `/teacher/ai-lessons/${encodeURIComponent(lessonId)}/unpublish`,
     {},
+    signal,
+  ),
+  getClassAiLessons: (classId, signal) => apiGet(
+    `/teacher/classes/${encodeURIComponent(classId)}/ai-lessons`,
+    signal,
+  ),
+  assignAiLessonsToClass: (classId, lessonIds, signal) => apiPost(
+    `/teacher/classes/${encodeURIComponent(classId)}/ai-lessons`,
+    { lessonIds },
+    signal,
+  ),
+  removeAiLessonFromClass: (classId, lessonId, signal) => apiDelete(
+    `/teacher/classes/${encodeURIComponent(classId)}/ai-lessons/${encodeURIComponent(lessonId)}`,
+    signal,
+  ),
+  getStudentAiLessons: (signal) => apiGet("/student/ai-lessons", signal),
+  getStudentAiLesson: (lessonId, signal) => apiGet(
+    `/student/ai-lessons/${encodeURIComponent(lessonId)}`,
     signal,
   ),
   getStudentClasses: (signal) => apiGet("/student/classes", signal),

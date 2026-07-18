@@ -94,11 +94,20 @@ async function loadOrgNode(teacher, skillNodeId) {
 async function loadLessonWithContext(teacherId, lessonId, { allowPublishedRevision = false } = {}) {
   const teacher = await loadTeacher(teacherId);
   const lessonResult = await supabase.from("lessons")
-    .select("id,skill_node_id,status,difficulty,content,source_document_id,generated_by,reviewed_by,published_at,created_at")
+    .select("id,skill_node_id,status,difficulty,content,content_format,source_document_id,generated_by,reviewed_by,published_at,created_at")
     .eq("id", lessonId).maybeSingle();
   throwDatabaseError(lessonResult.error, "load Content Studio lesson");
   if (!lessonResult.data) throw appError("CONTENT_NOT_FOUND", "Không tìm thấy bài học này.");
   const lesson = lessonResult.data;
+  // Bài giảng AI (steam_lesson) có shape content khác hẳn và không gắn Skill
+  // Node — editor này không đọc được. Chặn sớm với thông điệp rõ ràng thay vì
+  // để loadOrgNode ném "không tìm thấy Skill Node" khó hiểu.
+  if (lesson.content_format === "steam_lesson") {
+    throw appError(
+      "CONTENT_WRONG_SURFACE",
+      "Bài giảng này thuộc luồng Tạo bài giảng bằng AI. Hãy mở ở mục Bài giảng AI.",
+    );
+  }
   const node = await loadOrgNode(teacher, lesson.skill_node_id);
 
   const sourceResult = lesson.source_document_id

@@ -13,6 +13,10 @@ import {
   postJoin,
   postRespond,
 } from "../controllers/classroomController.js";
+import {
+  getStudentAiLessonDetail,
+  getStudentAiLessons,
+} from "../controllers/contentStudioController.js";
 
 export const studentRouter = Router();
 
@@ -28,3 +32,7 @@ studentRouter.get("/classes", getMyClasses);
 studentRouter.get("/invitations", getInvitations);
 studentRouter.post("/classes/join", postJoin);
 studentRouter.post("/memberships/:membershipId/respond", postRespond);
+
+// Bài giảng AI giáo viên đã xuất bản trong các lớp học sinh đang tham gia.
+studentRouter.get("/ai-lessons", getStudentAiLessons);
+studentRouter.get("/ai-lessons/:lessonId", getStudentAiLessonDetail);

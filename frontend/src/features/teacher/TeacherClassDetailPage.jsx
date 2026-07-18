@@ -14,6 +14,7 @@ import { Link, useParams } from "react-router-dom";
 import { gradeLabel } from "../../lib/academicCatalog.js";
 import { api } from "../../lib/apiClient.js";
 import { FormAlert, FormField } from "../auth/AuthFormControls.jsx";
+import { ClassAiLessonsPanel } from "./ClassAiLessonsPanel.jsx";
 
 function classSubjects(item) {
   return item?.subjects?.length ? item.subjects : item?.subject ? [item.subject] : [];
@@ -116,6 +117,8 @@ export function TeacherClassDetailPage() {
               </div>
             </div>
           </header>
+
+          <ClassAiLessonsPanel classId={classId} />
 
           <section className="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.6fr)]">
             <div className="surface overflow-hidden">

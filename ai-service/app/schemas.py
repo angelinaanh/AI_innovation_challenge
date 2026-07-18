@@ -1,9 +1,10 @@
 """Phần 1 — Data Schemas (Pydantic v2).
 
 Luồng Human-in-the-Loop:
-  1. OutlineRequest  -> OutlineResponse   (AI đề xuất dàn ý)
+  1. OutlineRequest -> OutlineResponse  (AI đề xuất dàn ý)
   2. Giáo viên sửa/chốt dàn ý trên UI
-  3. ContentGenerateRequest -> ContentGenerateResponse (AI viết bài + quiz)
+  3. LessonGenerateRequest -> LessonGenerateResponse  (AI viết bài giảng chi
+     tiết theo từng bài học, giáo viên sửa rồi lưu vào DB qua backend Node)
 """
 from enum import Enum
 from typing import List
@@ -78,14 +79,91 @@ class OutlineResponse(BaseModel):
     )
 
 
-# ---------------------------------------------------------------- Content ----
-class ContentGenerateRequest(BaseModel):
-    outline: List[OutlineItem] = Field(..., min_length=1, description="Dàn ý ĐÃ được giáo viên duyệt/sửa")
-    document_id: str = Field(..., description="Trả về từ bước outline — trỏ tới tài liệu đã ingest")
-    subject: str = Field("", description="Tên môn học, phục vụ ngữ cảnh prompt")
+# ------------------------------------------------------- Bài giảng chi tiết ---
+# Cấu trúc theo ai/prompts/create_leacturer.md — sinh theo TỪNG BÀI HỌC (không
+# phải từng mục): engage hook, block đa dạng, quiz có feedback cho từng phương
+# án, và nhiệm vụ thực hành cuối bài.
+class BlockType(str, Enum):
+    TEXT = "text"
+    FORMULA = "formula"
+    IMAGE_SUGGESTION = "image_suggestion"
+    QUICK_PRACTICE = "quick_practice"
+    TIP = "tip"
+
+
+class ContentBlock(BaseModel):
+    """Block đa hình. Mỗi type dùng một tập field khác nhau nên tất cả đều
+    optional; validator dưới đây loại block thiếu field bắt buộc của chính nó."""
+    type: BlockType
+    content: str = ""
+    alt_text: str = ""          # image_suggestion
+    question: str = ""          # quick_practice
+    answer: str = ""            # quick_practice
+
+    def is_valid(self) -> bool:
+        if self.type is BlockType.IMAGE_SUGGESTION:
+            return bool(self.alt_text.strip())
+        if self.type is BlockType.QUICK_PRACTICE:
+            return bool(self.question.strip() and self.answer.strip())
+        return bool(self.content.strip())
+
+
+class LessonSection(BaseModel):
+    section_id: str
+    section_title: str
+    content_blocks: List[ContentBlock] = Field(default_factory=list)
+
+
+class QuizOption(BaseModel):
+    text: str
+    is_correct: bool = False
+    feedback: str = ""
+
+
+class LessonQuiz(BaseModel):
+    question: str
+    options: List[QuizOption] = Field(..., min_length=2, max_length=6)
+
+    @field_validator("options")
+    @classmethod
+    def exactly_one_correct(cls, value: List[QuizOption]) -> List[QuizOption]:
+        if sum(1 for option in value if option.is_correct) != 1:
+            raise ValueError("mỗi câu hỏi phải có đúng 1 đáp án đúng")
+        return value
+
+
+class Evaluation(BaseModel):
+    quizzes: List[LessonQuiz] = Field(default_factory=list)
+
+
+class PracticalQuest(BaseModel):
+    quest_title: str
+    scenario: str = ""
+    task: str = ""
+    deliverable: str = ""
+
+
+class GeneratedLesson(BaseModel):
+    lesson_id: str
+    lesson_title: str
+    chapter_title: str = Field("", description="Bối cảnh chương, backend gán lại từ dàn ý")
+    estimated_time_minutes: int = Field(5, ge=5)
+    engage_hook: str = ""
+    sections: List[LessonSection] = Field(default_factory=list)
+    lesson_highlights: List[str] = Field(default_factory=list)
+    evaluation: Evaluation = Field(default_factory=Evaluation)
+    practical_quest: PracticalQuest | None = None
+
+
+class LessonGenerateRequest(BaseModel):
+    """Dàn ý ĐÃ được giáo viên duyệt ở bước 2 — gửi nguyên cây Chương/Bài/Mục."""
+    course_outline: CourseOutline
+    document_id: str
+    subject: str = ""
     grade: str
     level: Level
-    quiz_count: int = Field(3, ge=1, le=10, description="Số câu quiz cho MỖI mục dàn ý")
+    quiz_count: int = Field(3, ge=1, le=10, description="Số câu quiz cho MỖI bài học")
+    require_quest: bool = Field(True, description="Sinh nhiệm vụ thực hành cuối mỗi bài")
 
     @field_validator("grade")
     @classmethod
@@ -95,27 +173,9 @@ class ContentGenerateRequest(BaseModel):
         return value.strip()
 
 
-class Quiz(BaseModel):
-    question: str
-    options: List[str] = Field(..., min_length=2, max_length=6)
-    correct_answer: str = Field(..., description="Phải trùng khớp 1 phần tử trong options")
-    explanation: str
-
-    @field_validator("correct_answer")
-    @classmethod
-    def strip_answer(cls, value: str) -> str:
-        return value.strip()
-
-
-class SectionContent(BaseModel):
-    outline_id: str
-    title: str
-    content_markdown: str
-    quizzes: List[Quiz]
-
-
-class ContentGenerateResponse(BaseModel):
+class LessonGenerateResponse(BaseModel):
     document_id: str
-    lesson_markdown: str = Field(..., description="Bài giảng hoàn chỉnh (Markdown) ghép từ mọi section")
-    sections: List[SectionContent]
-    quizzes: List[Quiz] = Field(..., description="Gộp phẳng toàn bộ quiz của các section")
+    subject: str
+    grade: str
+    level: Level
+    lessons: List[GeneratedLesson]

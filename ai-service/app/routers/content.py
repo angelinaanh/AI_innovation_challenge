@@ -10,15 +10,14 @@ import asyncio
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 
 from ..config import get_settings
-from ..llm import flatten_course_outline, generate_outline, generate_section
+from ..llm import flatten_course_outline, generate_lesson, generate_outline
 from ..rag import RagPipeline, get_rag_pipeline
 from ..schemas import (
-    ContentGenerateRequest,
-    ContentGenerateResponse,
+    GeneratedLesson,
+    LessonGenerateRequest,
+    LessonGenerateResponse,
     Level,
     OutlineResponse,
-    Quiz,
-    SectionContent,
 )
 
 router = APIRouter(prefix="/api/teacher/content", tags=["teacher-content"])
@@ -67,49 +66,61 @@ async def create_outline(
     )
 
 
-@router.post("/generate", response_model=ContentGenerateResponse)
+@router.post("/generate", response_model=LessonGenerateResponse)
 async def generate_content(
-    payload: ContentGenerateRequest,
+    payload: LessonGenerateRequest,
     rag: RagPipeline = Depends(get_rag_pipeline),
-) -> ContentGenerateResponse:
-    """Bước 2: Nhận dàn ý ĐÃ DUYỆT -> viết từng mục (RAG per-section) -> gom bài.
+) -> LessonGenerateResponse:
+    """Bước 3: Nhận dàn ý ĐÃ DUYỆT -> viết chi tiết TỪNG BÀI HỌC -> trả cả khóa.
 
-    Các mục được sinh SONG SONG (tối đa 4 cùng lúc) — dàn ý STEAM thường có
-    20+ mục, chạy tuần tự với model lớn mất hàng chục phút.
+    Sinh theo bài (không theo mục) để một lần gọi LLM nhìn thấy trọn vẹn mạch
+    của bài — nhờ đó engage_hook, các mục và phần tổng kết ăn khớp với nhau.
+    Các bài chạy SONG SONG (tối đa 4) vì một khóa thường có 6+ bài.
     """
+    lessons_with_chapter = [
+        (chapter.chapter_title, lesson)
+        for chapter in payload.course_outline.chapters
+        for lesson in chapter.lessons
+        if lesson.sections  # bài bị giáo viên xóa hết mục thì bỏ qua
+    ]
+    if not lessons_with_chapter:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Dàn ý cần ít nhất một bài học còn mục.",
+        )
+
     semaphore = asyncio.Semaphore(4)
 
-    async def build_section(item) -> SectionContent:
+    async def build_lesson(chapter_title: str, lesson) -> GeneratedLesson:
         async with semaphore:
-            # Mỗi mục truy hồi top-k=4 chunks riêng theo đúng chủ đề của mục đó.
-            query = f"{item.title}. {item.description}".strip()
+            # Truy hồi theo toàn bộ phạm vi bài học: tên bài + mọi mục con.
+            query = " ".join(
+                [lesson.lesson_title]
+                + [section.section_title for section in lesson.sections]
+                + [section.intent for section in lesson.sections if section.intent]
+            ).strip()
             context_chunks = await asyncio.to_thread(rag.retrieve, payload.document_id, query)
-            content_markdown, quizzes = await asyncio.to_thread(
-                generate_section,
-                item=item,
+            return await asyncio.to_thread(
+                generate_lesson,
+                lesson=lesson,
+                chapter_title=chapter_title,
+                subject=payload.subject,
                 grade=payload.grade,
                 level=payload.level,
                 quiz_count=payload.quiz_count,
+                require_quest=payload.require_quest,
                 context_chunks=context_chunks,
             )
-        return SectionContent(
-            outline_id=item.id,
-            title=item.title,
-            content_markdown=content_markdown,
-            quizzes=quizzes,
-        )
 
-    # gather giữ nguyên thứ tự outline; 1 mục lỗi -> fail cả request (rõ ràng
-    # với giáo viên thay vì trả bài giảng thiếu mục ngầm định).
-    sections = list(await asyncio.gather(*(build_section(item) for item in payload.outline)))
-    all_quizzes: list[Quiz] = [quiz for section in sections for quiz in section.quizzes]
-
-    lesson_markdown = "\n\n".join(
-        f"## {section.title}\n\n{section.content_markdown}" for section in sections
-    )
-    return ContentGenerateResponse(
+    # gather giữ nguyên thứ tự dàn ý; 1 bài lỗi -> fail cả request (rõ ràng với
+    # giáo viên thay vì trả khóa học thiếu bài ngầm định).
+    lessons = list(await asyncio.gather(
+        *(build_lesson(chapter_title, lesson) for chapter_title, lesson in lessons_with_chapter)
+    ))
+    return LessonGenerateResponse(
         document_id=payload.document_id,
-        lesson_markdown=lesson_markdown,
-        sections=sections,
-        quizzes=all_quizzes,
+        subject=payload.subject,
+        grade=payload.grade,
+        level=payload.level,
+        lessons=lessons,
     )

@@ -6,16 +6,19 @@ import {
   Clock3,
   FileUp,
   GripVertical,
-  ListChecks,
   Loader2,
   Plus,
   RefreshCw,
+  Save,
   Sparkles,
   Trash2,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 
+import { api } from "../../lib/apiClient.js";
 import { FormAlert, FormField } from "../auth/AuthFormControls.jsx";
+import { GeneratedLessonEditor } from "./GeneratedLessonEditor.jsx";
 
 // Python AI Content Service (FastAPI) — tách khỏi backend Node.
 const AI_SERVICE_URL = import.meta.env.VITE_AI_SERVICE_URL || "http://127.0.0.1:8000";
@@ -27,6 +30,7 @@ const initialConfig = {
   grade: "",
   level: "Basic",
   quizCount: 3,
+  requireQuest: true,
 };
 
 async function postOutline(config, file) {
@@ -53,28 +57,9 @@ async function postGenerate(payload) {
   return data;
 }
 
-// Render markdown tối giản (heading/bold/danh sách) — đủ để giáo viên xem nháp.
-function MarkdownLite({ text }) {
-  const lines = String(text || "").split("\n");
-  return (
-    <div className="space-y-2 text-sm leading-6 text-slate-700">
-      {lines.map((line, index) => {
-        const bolded = line.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
-          part.startsWith("**") && part.endsWith("**")
-            ? <strong key={i} className="font-black text-slate-900">{part.slice(2, -2)}</strong>
-            : part);
-        if (/^###\s/.test(line)) return <h4 key={index} className="pt-2 text-base font-black text-slate-900">{line.replace(/^###\s*/, "")}</h4>;
-        if (/^##\s/.test(line)) return <h3 key={index} className="pt-3 text-lg font-black text-slate-950">{line.replace(/^##\s*/, "")}</h3>;
-        if (/^[-*]\s/.test(line)) return <p key={index} className="pl-4">• {bolded.map((p) => (typeof p === "string" ? p.replace(/^[-*]\s*/, "") : p))}</p>;
-        if (!line.trim()) return <div key={index} className="h-1" />;
-        return <p key={index}>{bolded}</p>;
-      })}
-    </div>
-  );
-}
-
 export function TeacherLessonGeneratorPage() {
-  // step: "config" (form + upload) -> "outline" (giáo viên duyệt) -> "result"
+  // step: "config" (form + upload) -> "outline" (giáo viên duyệt dàn ý)
+  //    -> "lessons" (giáo viên sửa bài giảng) -> "saved"
   const [step, setStep] = useState("config");
   const [config, setConfig] = useState(initialConfig);
   const [file, setFile] = useState(null);
@@ -82,8 +67,21 @@ export function TeacherLessonGeneratorPage() {
   const [error, setError] = useState(null);
   const [documentId, setDocumentId] = useState(null);
   const [course, setCourse] = useState(null); // course_outline: Chương -> Bài -> Mục
-  const [result, setResult] = useState(null);
+  const [lessons, setLessons] = useState(null); // bài giảng chi tiết đã sinh
+  const [classes, setClasses] = useState([]);
+  const [classId, setClassId] = useState("");
+  const [saved, setSaved] = useState(null);
   const fileInputRef = useRef(null);
+
+  // Danh sách lớp cần sẵn ở bước lưu; nạp nền ngay từ đầu để lúc bấm Hoàn
+  // thành không phải chờ. Lỗi ở đây không chặn luồng sinh bài giảng.
+  useEffect(() => {
+    let alive = true;
+    api.getTeacherClasses()
+      .then((rows) => { if (alive) setClasses(rows || []); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
 
   function update(field, value) {
     setConfig((current) => ({ ...current, [field]: value }));
@@ -145,44 +143,65 @@ export function TeacherLessonGeneratorPage() {
     });
   }
 
-  // Flatten Chương -> Bài -> Mục thành danh sách phẳng cho /generate:
-  // title giữ ngữ cảnh bài học để retrieval và prompt viết đúng trọng tâm.
-  function flattenCourse() {
-    const items = [];
-    for (const chapter of course?.chapters || []) {
+  // Bỏ mục trống trước khi gửi — mục không tiêu đề sẽ khiến AI viết lạc đề.
+  function prunedCourse() {
+    const next = structuredClone(course);
+    for (const chapter of next?.chapters || []) {
       for (const lesson of chapter.lessons || []) {
-        for (const section of lesson.sections || []) {
-          const title = String(section.section_title || "").trim();
-          if (!title) continue;
-          items.push({
-            id: String(section.section_id),
-            title: `${lesson.lesson_title} — ${title}`,
-            description: String(section.intent || "").trim(),
-          });
-        }
+        lesson.sections = (lesson.sections || [])
+          .filter((section) => String(section.section_title || "").trim());
       }
+      chapter.lessons = (chapter.lessons || []).filter((lesson) => lesson.sections.length > 0);
     }
-    return items;
+    next.chapters = (next?.chapters || []).filter((chapter) => chapter.lessons.length > 0);
+    return next;
   }
 
-  async function generateLesson() {
-    const cleaned = flattenCourse();
-    if (cleaned.length === 0) { setError("Dàn ý cần ít nhất một mục có tiêu đề."); return; }
+  async function generateLessons() {
+    const pruned = prunedCourse();
+    if (pruned.chapters.length === 0) { setError("Dàn ý cần ít nhất một bài học còn mục."); return; }
     setBusy(true);
     setError(null);
     try {
       const data = await postGenerate({
-        outline: cleaned,
+        course_outline: pruned,
         document_id: documentId,
         subject: config.subject.trim(),
         grade: String(config.grade),
         level: config.level,
         quiz_count: Number(config.quizCount),
+        require_quest: config.requireQuest,
       });
-      setResult(data);
-      setStep("result");
+      setLessons(data.lessons);
+      setStep("lessons");
     } catch (generateError) {
       setError(generateError.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Bước cuối: lưu khóa bài giảng đã chỉnh sửa vào lớp giáo viên chọn.
+  async function saveCourse() {
+    if (!classId) { setError("Hãy chọn lớp để lưu bài giảng."); return; }
+    setBusy(true);
+    setError(null);
+    try {
+      const data = await api.saveAiCourse({
+        classId,
+        subject: config.subject.trim(),
+        grade: String(config.grade),
+        level: config.level,
+        quizCount: Number(config.quizCount),
+        documentId,
+        sourceFilename: file?.name || null,
+        courseOutline: course,
+        lessons,
+      });
+      setSaved(data);
+      setStep("saved");
+    } catch (saveError) {
+      setError(saveError.message);
     } finally {
       setBusy(false);
     }
@@ -194,7 +213,9 @@ export function TeacherLessonGeneratorPage() {
     setFile(null);
     setDocumentId(null);
     setCourse(null);
-    setResult(null);
+    setLessons(null);
+    setClassId("");
+    setSaved(null);
     setError(null);
   }
 
@@ -210,7 +231,12 @@ export function TeacherLessonGeneratorPage() {
 
       {/* Step indicator */}
       <ol className="flex flex-wrap items-center gap-2 text-xs font-black" aria-label="Các bước">
-        {[["config", "1. Cấu hình & tài liệu"], ["outline", "2. Duyệt dàn ý"], ["result", "3. Bài giảng"]].map(([key, label], index) => (
+        {[
+          ["config", "1. Cấu hình & tài liệu"],
+          ["outline", "2. Duyệt dàn ý"],
+          ["lessons", "3. Sửa bài giảng"],
+          ["saved", "4. Hoàn thành"],
+        ].map(([key, label], index) => (
           <li key={key} className="flex items-center gap-2">
             {index > 0 && <ArrowRight size={14} className="text-slate-300" />}
             <span className={`rounded-md px-2.5 py-1.5 ${step === key ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-500"}`}>{label}</span>
@@ -258,6 +284,21 @@ export function TeacherLessonGeneratorPage() {
               />
             </label>
           </div>
+
+          <label className="flex items-start gap-3 rounded-lg border border-slate-200 p-3.5">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 shrink-0 accent-emerald-600"
+              checked={config.requireQuest}
+              onChange={(event) => update("requireQuest", event.target.checked)}
+            />
+            <span>
+              <span className="block text-xs font-black text-slate-700">Tạo nhiệm vụ thực hành cuối mỗi bài</span>
+              <span className="mt-0.5 block text-xs font-medium text-slate-500">
+                Nhiệm vụ mở theo bối cảnh thực tế (Webb DoK 3) — học sinh nộp sản phẩm thay vì chỉ làm trắc nghiệm.
+              </span>
+            </span>
+          </label>
 
           <div>
             <span className="mb-2 block text-xs font-black text-slate-700">Cung cấp tri thức — tài liệu gốc (PDF, Text)</span>
@@ -352,52 +393,81 @@ export function TeacherLessonGeneratorPage() {
 
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
             <button type="button" className="secondary-button" onClick={() => setStep("config")} disabled={busy}><ArrowLeft size={16} />Quay lại</button>
-            <button type="button" className="primary-button" onClick={generateLesson} disabled={busy}>
+            <button type="button" className="primary-button" onClick={generateLessons} disabled={busy}>
               {busy ? <Loader2 size={17} className="animate-spin" /> : <Sparkles size={17} />}
-              {busy ? "AI đang viết từng mục..." : "Chốt dàn ý & sinh bài giảng"}
+              {busy ? "AI đang viết từng bài..." : "Tạo bài giảng"}
             </button>
           </div>
         </section>
       )}
 
-      {/* ------------------------------------------- Bước 3: kết quả ---- */}
-      {step === "result" && result && (
+      {/* --------------------------------- Bước 3: sửa bài giảng ---- */}
+      {step === "lessons" && lessons && (
         <section className="max-w-3xl space-y-4">
           <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-bold text-emerald-800">
             <CheckCircle2 size={17} />
-            Đã sinh {result.sections.length} mục và {result.quizzes.length} câu quiz. Đây là bản nháp — hãy rà soát trước khi dùng cho học sinh.
+            Đã sinh {lessons.length} bài giảng. Bấm vào từng bài để sửa nội dung, xóa khối hoặc câu hỏi không phù hợp.
           </div>
 
-          {result.sections.map((section) => (
-            <article key={section.outline_id} className="surface p-5 sm:p-6">
-              <h2 className="text-xl font-black text-slate-950">{section.title}</h2>
-              <div className="mt-3"><MarkdownLite text={section.content_markdown} /></div>
+          <GeneratedLessonEditor lessons={lessons} onChange={setLessons} />
 
-              {section.quizzes.length > 0 && (
-                <div className="mt-5 space-y-3 border-t border-slate-100 pt-4">
-                  <p className="flex items-center gap-2 text-xs font-black uppercase text-slate-400"><ListChecks size={15} />Quiz ({section.quizzes.length} câu)</p>
-                  {section.quizzes.map((quiz, quizIndex) => (
-                    <div key={quizIndex} className="rounded-lg border border-slate-200 p-3.5">
-                      <p className="text-sm font-extrabold text-slate-900">Câu {quizIndex + 1}. {quiz.question}</p>
-                      <ul className="mt-2 space-y-1.5">
-                        {quiz.options.map((option, optionIndex) => (
-                          <li key={optionIndex} className={`rounded-md px-3 py-1.5 text-sm font-bold ${option === quiz.correct_answer ? "bg-emerald-50 text-emerald-800" : "bg-slate-50 text-slate-600"}`}>
-                            {String.fromCharCode(65 + optionIndex)}. {option}
-                            {option === quiz.correct_answer && <span className="ml-2 text-[11px] font-black uppercase text-emerald-600">Đáp án</span>}
-                          </li>
-                        ))}
-                      </ul>
-                      <p className="mt-2 text-xs font-medium leading-5 text-slate-500"><span className="font-black">Giải thích:</span> {quiz.explanation}</p>
-                    </div>
+          <div className="surface space-y-4 p-5 sm:p-6">
+            <div>
+              <h2 className="text-base font-black text-slate-950">Lưu vào lớp học</h2>
+              <p className="mt-1 text-sm font-medium text-slate-500">
+                Bài giảng sẽ được lưu ở trạng thái nháp trong lớp bạn chọn.
+              </p>
+            </div>
+            {classes.length === 0 ? (
+              <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-800">
+                Bạn chưa có lớp nào. Hãy <Link to="/teacher" className="underline">tạo lớp học</Link> trước khi lưu bài giảng.
+              </p>
+            ) : (
+              <label className="block">
+                <span className="mb-2 block text-xs font-black text-slate-700">Lớp</span>
+                <select className="auth-input px-3.5" value={classId} onChange={(event) => setClassId(event.target.value)} required>
+                  <option value="">Chọn lớp</option>
+                  {classes.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}{item.gradeLevel ? ` · Lớp ${item.gradeLevel}` : ""}
+                    </option>
                   ))}
-                </div>
-              )}
-            </article>
-          ))}
+                </select>
+              </label>
+            )}
+          </div>
 
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-            <button type="button" className="secondary-button" onClick={() => setStep("outline")}><ArrowLeft size={16} />Sửa dàn ý & sinh lại</button>
-            <button type="button" className="secondary-button" onClick={restart}><RefreshCw size={16} />Tạo bài giảng mới</button>
+            <button type="button" className="secondary-button" onClick={() => setStep("outline")} disabled={busy}>
+              <ArrowLeft size={16} />Sửa dàn ý & sinh lại
+            </button>
+            <button type="button" className="primary-button" onClick={saveCourse} disabled={busy || !classId}>
+              {busy ? <Loader2 size={17} className="animate-spin" /> : <Save size={17} />}
+              {busy ? "Đang lưu..." : "Hoàn thành & lưu bài giảng"}
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* ------------------------------------------ Bước 4: đã lưu ---- */}
+      {step === "saved" && saved && (
+        <section className="surface mx-auto max-w-xl space-y-5 p-6 text-center sm:p-8">
+          <CheckCircle2 size={40} className="mx-auto text-emerald-600" />
+          <div>
+            <h2 className="text-xl font-black text-slate-950">Đã lưu bài giảng</h2>
+            <p className="mt-2 text-sm font-medium leading-6 text-slate-500">
+              {saved.lessonCount} bài giảng và {saved.questionCount} câu hỏi đã được lưu vào lớp
+              {" "}<span className="font-black text-slate-800">{saved.className}</span> ở trạng thái nháp.
+              Học sinh chỉ nhìn thấy sau khi bạn xuất bản.
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+            <Link to="/teacher/ai-lessons/library" className="secondary-button">
+              <ArrowRight size={16} />Xem & xuất bản
+            </Link>
+            <button type="button" className="primary-button" onClick={restart}>
+              <RefreshCw size={16} />Tạo bài giảng mới
+            </button>
           </div>
         </section>
       )}

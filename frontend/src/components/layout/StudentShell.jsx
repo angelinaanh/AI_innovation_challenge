@@ -4,6 +4,7 @@ import {
   BookOpenCheck,
   ChevronDown,
   Flame,
+  GraduationCap,
   LayoutDashboard,
   LogOut,
   Map,
@@ -23,6 +24,7 @@ const navItems = [
   { to: "/student", label: "Tổng quan", icon: LayoutDashboard, end: true },
   { to: "/student/path", label: "Lộ trình học", icon: Map },
   { to: "/student/content", label: "Nội dung", icon: BookOpenCheck },
+  { to: "/student/ai-lessons", label: "Bài giảng của lớp", icon: GraduationCap },
   { to: "/student/classes", label: "Lớp học", icon: School },
 ];
 

@@ -27,8 +27,11 @@ import { LearningPathPage } from "../features/learning-path/LearningPathPage.jsx
 import { LessonPlayerPage } from "../features/lesson-player/LessonPlayerPage.jsx";
 import { StudentClassesPage } from "../features/student-classes/StudentClassesPage.jsx";
 import { StudentContentPage } from "../features/student-content/StudentContentPage.jsx";
-import { TeacherContentEditorPage } from "../features/teacher-content/TeacherContentEditorPage.jsx";
-import { TeacherContentPage } from "../features/teacher-content/TeacherContentPage.jsx";
+import {
+  StudentAiLessonDetailPage,
+  StudentAiLessonsPage,
+} from "../features/student-content/StudentAiLessonsPage.jsx";
+import { TeacherAiLessonsPage } from "../features/teacher-content/TeacherAiLessonsPage.jsx";
 import { TeacherLessonGeneratorPage } from "../features/teacher-content/TeacherLessonGeneratorPage.jsx";
 import { TeacherClassDetailPage } from "../features/teacher/TeacherClassDetailPage.jsx";
 import { TeacherClassesPage } from "../features/teacher/TeacherClassesPage.jsx";
@@ -64,6 +67,8 @@ export function App() {
               <Route path="/student" element={<DashboardPage />} />
               <Route path="/student/path" element={<LearningPathPage />} />
               <Route path="/student/content" element={<StudentContentPage />} />
+              <Route path="/student/ai-lessons" element={<StudentAiLessonsPage />} />
+              <Route path="/student/ai-lessons/:lessonId" element={<StudentAiLessonDetailPage />} />
               <Route path="/student/classes" element={<StudentClassesPage />} />
               <Route path="/student/lessons/:skillNodeId" element={<LessonPlayerPage />} />
             </Route>
@@ -73,9 +78,8 @@ export function App() {
             <Route element={<TeacherShell />}>
               <Route path="/teacher" element={<TeacherClassesPage />} />
               <Route path="/teacher/classes/:classId" element={<TeacherClassDetailPage />} />
-              <Route path="/teacher/content" element={<TeacherContentPage />} />
               <Route path="/teacher/ai-lessons" element={<TeacherLessonGeneratorPage />} />
-              <Route path="/teacher/content/:lessonId" element={<TeacherContentEditorPage />} />
+              <Route path="/teacher/ai-lessons/library" element={<TeacherAiLessonsPage />} />
             </Route>
           </Route>
 

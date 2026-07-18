@@ -36,8 +36,12 @@ async function loadOwnedClass(teacherId, classId) {
 async function loadSubjectsForClasses(classIds) {
   const ids = [...new Set(classIds.filter(Boolean))];
   if (ids.length === 0) return new Map();
+  // class_subjects có HAI khóa ngoại tới subjects: khóa đơn (subject_id) và
+  // khóa ghép (subject_id, grade_level) dùng để ép môn đúng khối của lớp.
+  // PostgREST không tự chọn được nên phải chỉ đích danh, nếu không trả
+  // PGRST201 "more than one relationship was found".
   const result = await supabase.from("class_subjects")
-    .select("class_id,subjects(id,name,steam_axis,grade_level,grade_band,org_id)")
+    .select("class_id,subjects!class_subjects_subject_id_fkey(id,name,steam_axis,grade_level,grade_band,org_id)")
     .in("class_id", ids);
   throwDatabaseError(result.error, "load class subjects");
 
@@ -55,6 +59,12 @@ async function validateClassSubjects(profile, subjectIds, gradeLevel) {
   const ids = [...new Set((subjectIds || []).map(String).filter(Boolean))];
   if (ids.length === 0) {
     throw appError("VALIDATION_ERROR", "Cần chọn ít nhất một môn học.");
+  }
+  // Thiếu gradeLevel là lỗi lập trình ở phía gọi, không phải lỗi người dùng:
+  // isSubjectInGrade() sẽ trả false cho MỌI môn và biến thành "môn không hợp
+  // lệ" — chẩn đoán sai hoàn toàn. Báo rõ thay vì im lặng từ chối.
+  if (!normalizeGradeLevel(gradeLevel)) {
+    throw new Error("validateClassSubjects requires a valid gradeLevel");
   }
 
   const result = await supabase.from("subjects")
@@ -144,7 +154,7 @@ export async function createClass(teacherId, {
   const cleanMaxMembers = parseMaxMembers(maxMembers);
   const teacher = await loadProfile(teacherId);
   if (teacher.role !== "teacher") throw appError("AUTH_FORBIDDEN", "Chỉ giáo viên được tạo lớp.");
-  const subjects = await validateClassSubjects(teacher, subjectIds);
+  const subjects = await validateClassSubjects(teacher, subjectIds, gradeLevel);
 
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const result = await supabase.from("classes").insert({
@@ -171,6 +181,15 @@ export async function createClass(teacherId, {
       })));
     if (subjectLinks.error) {
       await supabase.from("classes").delete().eq("id", result.data.id);
+      // PGRST204 = cột không tồn tại trong schema cache. Ở đây nó luôn nghĩa là
+      // migration 0008 (reconcile class_subjects.grade_level) chưa chạy — báo
+      // đúng nguyên nhân thay vì "lỗi cơ sở dữ liệu" chung chung.
+      if (subjectLinks.error.code === "PGRST204") {
+        throw appError(
+          "SCHEMA_OUT_OF_DATE",
+          "Cơ sở dữ liệu thiếu cột class_subjects.grade_level. Hãy chạy migration 0008.",
+        );
+      }
       throwDatabaseError(subjectLinks.error, "link class subjects");
     }
     return serializeClass(result.data, subjects);

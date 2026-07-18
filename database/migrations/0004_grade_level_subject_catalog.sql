@@ -124,15 +124,18 @@ begin
     from public.classes c
     where cs.class_id = c.id and cs.grade_level is null;
 
+    -- Postgres không cho tham chiếu bảng đích (cs) trong điều kiện JOIN của
+    -- mệnh đề FROM. Liệt kê bảng nguồn bằng dấu phẩy, điều kiện nối vào WHERE.
     update public.class_subjects cs
     set subject_id = replacement.id, grade_level = c.grade_level
-    from public.classes c
-    join public.subjects current_subject on current_subject.id = cs.subject_id
-    join public.subjects replacement
-      on replacement.org_id = current_subject.org_id
+    from public.classes c,
+         public.subjects current_subject,
+         public.subjects replacement
+    where cs.class_id = c.id
+      and current_subject.id = cs.subject_id
+      and replacement.org_id = current_subject.org_id
       and replacement.name = current_subject.name
       and replacement.grade_level = c.grade_level
-    where cs.class_id = c.id
       and c.grade_level is not null
       and current_subject.grade_level is distinct from c.grade_level;
   end if;

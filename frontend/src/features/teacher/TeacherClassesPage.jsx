@@ -56,8 +56,6 @@ export function TeacherClassesPage() {
   const [form, setForm] = useState(initialForm);
   const navigate = useNavigate();
 
-  // Giáo viên chọn môn học tự do, không giới hạn theo khối lớp/lớp đã chọn.
-  const visibleSubjects = subjects;
   const studentCount = classes.reduce((sum, item) => sum + item.memberCount, 0);
   const pendingCount = classes.reduce((sum, item) => sum + item.pendingCount, 0);
 
@@ -65,12 +63,7 @@ export function TeacherClassesPage() {
     setLoading(true);
     setError(null);
     try {
-      const [classRows, subjectRows] = await Promise.all([
-        api.getTeacherClasses(),
-        api.getTeacherSubjects(),
-      ]);
-      setClasses(classRows);
-      setSubjects(subjectRows);
+      setClasses(await api.getTeacherClasses());
     } catch (loadError) {
       setError(loadError.message);
     } finally {
@@ -83,6 +76,21 @@ export function TeacherClassesPage() {
     window.addEventListener("eduone:class-membership-updated", load);
     return () => window.removeEventListener("eduone:class-membership-updated", load);
   }, [load]);
+
+  // Danh mục môn học là danh mục THEO KHỐI LỚP: mỗi khối có bộ môn riêng và
+  // backend chỉ chấp nhận môn đúng khối. Nạp lại mỗi khi đổi lớp, nếu không
+  // danh sách sẽ gộp môn của cả 12 khối và mọi lựa chọn đều bị từ chối.
+  useEffect(() => {
+    const controller = new AbortController();
+    const gradeLevel = Number(form.gradeLevel);
+    if (!gradeLevel) { setSubjects([]); return undefined; }
+    api.getTeacherSubjects(gradeLevel, controller.signal)
+      .then(setSubjects)
+      .catch((subjectError) => {
+        if (subjectError.name !== "AbortError") setError(subjectError.message);
+      });
+    return () => controller.abort();
+  }, [form.gradeLevel]);
 
   function update(field, value) {
     setForm((current) => ({
@@ -221,11 +229,11 @@ export function TeacherClassesPage() {
               </div>
               <div className="block">
                 <span className="mb-2 block text-xs font-black text-slate-700">Môn học ({form.subjectIds.length} đã chọn)</span>
-                {visibleSubjects.length === 0 ? (
+                {subjects.length === 0 ? (
                   <p className="text-xs font-bold text-slate-400">Chưa có môn học cho lớp này.</p>
                 ) : (
                   <div className="flex flex-wrap gap-2">
-                    {visibleSubjects.map((subject) => {
+                    {subjects.map((subject) => {
                       const active = form.subjectIds.includes(subject.id);
                       return (
                         <button
