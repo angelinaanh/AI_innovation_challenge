@@ -173,10 +173,13 @@ export async function createClass(teacherId, {
       throwDatabaseError(result.error, "create class");
     }
 
+    // grade_level là NOT NULL kể từ migration 0008 và là vế của khóa ngoại ghép
+    // ép môn đúng khối — bỏ nó ra khỏi insert sẽ lỗi 23502 và không tạo được lớp.
     const subjectLinks = await supabase.from("class_subjects")
       .insert(subjects.map((subject) => ({
         class_id: result.data.id,
         subject_id: subject.id,
+        grade_level: gradeLevel,
       })));
     if (subjectLinks.error) {
       await supabase.from("classes").delete().eq("id", result.data.id);
