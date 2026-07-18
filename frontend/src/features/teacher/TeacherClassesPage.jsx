@@ -33,56 +33,6 @@ const gradeRangeByBand = {
   high_school: [10, 12],
 };
 
-// Khớp backend classroomRules.js SUBJECT_GRADE_RANGES — bảng GDPT 2018 cố
-// định, dùng làm nguồn sự thật cho lọc môn thay vì chỉ dựa vào
-// subjects.min_grade/max_grade (cột này có thể chưa có nếu migration 0004
-// chưa apply trên môi trường đang chạy).
-const subjectGradeRanges = {
-  primary: {
-    "Tự nhiên & Xã hội": [1, 3],
-    "Khoa học": [4, 5],
-    "Tin học": [3, 5],
-    "Công nghệ": [3, 5],
-    "Tiếng Việt": [1, 5],
-    "Mỹ thuật": [1, 5],
-    "Âm nhạc": [1, 5],
-    "Đạo đức": [1, 5],
-    "Toán": [1, 5],
-  },
-  secondary: {
-    "Khoa học tự nhiên": [6, 9],
-    "Tin học": [6, 9],
-    "Công nghệ": [6, 9],
-    "Ngữ văn": [6, 9],
-    "Mỹ thuật": [6, 9],
-    "Âm nhạc": [6, 9],
-    "Lịch sử & Địa lý": [6, 9],
-    "Toán": [6, 9],
-  },
-  high_school: {
-    "Vật lý": [10, 12],
-    "Hóa học": [10, 12],
-    "Sinh học": [10, 12],
-    "Tin học": [10, 12],
-    "Công nghệ": [10, 12],
-    "Ngữ văn": [10, 12],
-    "Mỹ thuật": [10, 12],
-    "Âm nhạc": [10, 12],
-    "Lịch sử": [10, 12],
-    "Địa lý": [10, 12],
-    "Toán": [10, 12],
-  },
-};
-
-function isSubjectInGrade(subject, gradeBand, grade) {
-  const fixedRange = subjectGradeRanges[gradeBand]?.[subject.name];
-  if (fixedRange) return grade >= fixedRange[0] && grade <= fixedRange[1];
-  if (subject.min_grade != null && subject.max_grade != null) {
-    return grade >= subject.min_grade && grade <= subject.max_grade;
-  }
-  return subject.grade_band === gradeBand;
-}
-
 const initialForm = {
   name: "",
   gradeBand: "secondary",
@@ -108,11 +58,8 @@ export function TeacherClassesPage() {
     return Array.from({ length: to - from + 1 }, (_, i) => from + i);
   }, [form.gradeBand]);
 
-  const visibleSubjects = useMemo(() => {
-    if (!form.grade) return [];
-    return subjects.filter((subject) => subject.grade_band === form.gradeBand
-      && isSubjectInGrade(subject, form.gradeBand, form.grade));
-  }, [form.gradeBand, form.grade, subjects]);
+  // Giáo viên chọn môn học tự do, không giới hạn theo khối lớp/lớp đã chọn.
+  const visibleSubjects = subjects;
   const studentCount = classes.reduce((sum, item) => sum + item.memberCount, 0);
   const pendingCount = classes.reduce((sum, item) => sum + item.pendingCount, 0);
 
@@ -265,9 +212,7 @@ export function TeacherClassesPage() {
               </div>
               <div className="block">
                 <span className="mb-2 block text-xs font-black text-slate-700">Môn học ({form.subjectIds.length} đã chọn)</span>
-                {!form.grade ? (
-                  <p className="text-xs font-bold text-slate-400">Chọn lớp trước khi chọn môn học.</p>
-                ) : visibleSubjects.length === 0 ? (
+                {visibleSubjects.length === 0 ? (
                   <p className="text-xs font-bold text-slate-400">Chưa có môn học cho lớp này.</p>
                 ) : (
                   <div className="flex flex-wrap gap-2">

@@ -129,7 +129,7 @@ npm run seed:subjects
 npm start
 ```
 
-`npm run seed:subjects` loads the STEAM subject catalog (GDPT 2018 classification) used by the classes feature. Apply migrations `0002` and `0003` to the Supabase project before running the source/subject seeds.
+`npm run seed:subjects` loads the STEAM subject catalog (GDPT 2018 classification) used by the classes feature. Apply migrations `0002` through `0006` (in order) to the Supabase project before running the source/subject seeds — `classroomService.listTeacherClasses`/`createClass` select `classes.max_members` (added in `0005`) and `classes.grade` (added in `0006`), so skipping those two migrations makes every classes-feature query fail with `Supabase query failed: ...`.
 
 `npm run seed:sources` backfills approved grounding chunks from each published lesson's own checkpoint content, so the grounded Tutor chat and interactive exercises work on **every** Skill Node, not only the seeded Loops lesson. It is idempotent and preserves the hand-authored Loops source. Without it, only the Loops node has approved material and the Tutor correctly refuses / cannot build exercises elsewhere.
 

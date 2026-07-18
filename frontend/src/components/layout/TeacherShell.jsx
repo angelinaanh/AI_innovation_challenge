@@ -5,6 +5,7 @@ import {
   LogOut,
   Menu,
   School,
+  Sparkles,
   X,
 } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
@@ -16,6 +17,7 @@ import { Brand } from "../ui/Brand.jsx";
 const navItems = [
   { to: "/teacher", label: "Lớp học", icon: School, end: true },
   { to: "/teacher/content", label: "Nội dung", icon: BookOpenCheck },
+  { to: "/teacher/ai-lessons", label: "Tạo bài giảng AI", icon: Sparkles },
 ];
 
 function Navigation({ onNavigate }) {

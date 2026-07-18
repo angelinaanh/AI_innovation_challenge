@@ -217,3 +217,13 @@ The teacher Content Studio follows the operational design direction rather than 
 The student library is lighter and action-oriented: approved count, available count, personal progress, then lesson cards. A locked published lesson remains visible but shows the exact recovery reason instead of an action link. This separates content availability from personal eligibility and makes the teacher-to-student impact legible.
 
 Desktop and 390x844 mobile QA found no horizontal overflow. Long Vietnamese headings wrap, source text remains readable, cards keep stable dimensions, and route-local scroll reset prevents detail pages from opening midway down the content.
+
+## Teacher AI Lesson Generator (`/teacher/ai-lessons`)
+
+Three-step human-in-the-loop wizard calling the Python `ai-service`:
+
+1. **Cấu hình & tài liệu** — form: Tên môn học (text), Lớp (1-12), Trình độ (Cơ bản/Nâng cao), Số câu quiz cuối mỗi bài (1-10), and a drag-and-drop upload zone for the source document (PDF/TXT, max 20MB). Submitting ingests the document and returns an AI-proposed outline.
+2. **Duyệt dàn ý** — the teacher edits every outline item inline (title + description), deletes or adds items, then confirms. Nothing is generated until the teacher approves.
+3. **Bài giảng** — per-section Markdown draft with highlighted keywords plus the quizzes (correct answer marked, explanation shown). Clearly labeled as a draft for teacher review; buttons to regenerate from the outline or start over.
+
+Nav entry "Tạo bài giảng AI" (Sparkles icon) in the teacher sidebar. Service URL comes from `VITE_AI_SERVICE_URL` (default `http://127.0.0.1:8000`).

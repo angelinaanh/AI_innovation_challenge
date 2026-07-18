@@ -5,7 +5,6 @@ import {
   generateJoinCode,
   isGradeBand,
   isGradeInBand,
-  isSubjectInGrade,
   nextMembershipStatus,
 } from "./classroomRules.js";
 
@@ -49,7 +48,9 @@ async function loadSubjectsForClasses(classIds) {
   return byClass;
 }
 
-async function validateClassSubjects(profile, subjectIds, gradeBand, grade) {
+// Giáo viên chọn môn học tự do cho lớp, không bắt buộc khớp khối lớp/lớp —
+// chỉ còn ràng buộc môn học phải thuộc đúng tổ chức (org) của giáo viên.
+async function validateClassSubjects(profile, subjectIds) {
   const ids = [...new Set((subjectIds || []).filter(Boolean))];
   if (ids.length === 0) throw appError("VALIDATION_ERROR", "Cần chọn ít nhất một môn học.");
   const result = await supabase.from("subjects")
@@ -57,11 +58,8 @@ async function validateClassSubjects(profile, subjectIds, gradeBand, grade) {
     .in("id", ids);
   throwDatabaseError(result.error, "validate class subjects");
   const found = result.data || [];
-  if (
-    found.length !== ids.length
-    || found.some((subject) => subject.org_id !== profile.org_id || !isSubjectInGrade(subject, gradeBand, grade))
-  ) {
-    throw appError("SUBJECT_INVALID", "Môn học không thuộc đúng lớp hoặc tổ chức này.");
+  if (found.length !== ids.length || found.some((subject) => subject.org_id !== profile.org_id)) {
+    throw appError("SUBJECT_INVALID", "Môn học không thuộc tổ chức này.");
   }
   return found;
 }
@@ -118,7 +116,7 @@ export async function createClass(teacherId, { name, gradeBand, grade, subjectId
   const cleanMaxMembers = parseMaxMembers(maxMembers);
   const teacher = await loadProfile(teacherId);
   if (teacher.role !== "teacher") throw appError("AUTH_FORBIDDEN", "Chỉ giáo viên được tạo lớp.");
-  const subjects = await validateClassSubjects(teacher, subjectIds, gradeBand, cleanGrade);
+  const subjects = await validateClassSubjects(teacher, subjectIds);
 
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const result = await supabase.from("classes").insert({

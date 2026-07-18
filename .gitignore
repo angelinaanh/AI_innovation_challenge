@@ -17,6 +17,13 @@ coverage/
 !.env.example
 !frontend/.env.example
 !backend/.env.example
+!ai-service/.env.example
+
+# Python AI service
+ai-service/.venv/
+ai-service/chroma_data/
+__pycache__/
+*.pyc
 
 # Runtime logs and temp files
 *.log
