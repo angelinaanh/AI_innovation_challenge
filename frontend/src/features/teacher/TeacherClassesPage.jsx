@@ -7,7 +7,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import {
@@ -55,12 +55,6 @@ export function TeacherClassesPage() {
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState(initialForm);
   const navigate = useNavigate();
-
-  const gradeOptions = useMemo(() => {
-    const [from, to] = gradeRangeByBand[form.gradeBand] || [];
-    if (!from) return [];
-    return Array.from({ length: to - from + 1 }, (_, i) => from + i);
-  }, [form.gradeBand]);
 
   // Giáo viên chọn môn học tự do, không giới hạn theo khối lớp/lớp đã chọn.
   const visibleSubjects = subjects;
