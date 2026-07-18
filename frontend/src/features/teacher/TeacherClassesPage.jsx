@@ -10,14 +10,13 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
+import {
+  GRADE_GROUPS,
+  STEAM_AXIS_LABELS,
+  gradeLabel,
+} from "../../lib/academicCatalog.js";
 import { api } from "../../lib/apiClient.js";
 import { FormAlert, FormField } from "../auth/AuthFormControls.jsx";
-
-const gradeLabels = {
-  primary: "Tiểu học",
-  secondary: "THCS",
-  high_school: "THPT",
-};
 
 const axisStyles = {
   S: "bg-emerald-100 text-emerald-800",
@@ -29,7 +28,7 @@ const axisStyles = {
 
 const initialForm = {
   name: "",
-  gradeBand: "secondary",
+  gradeLevel: "6",
   subjectId: "",
   description: "",
 };
@@ -45,8 +44,8 @@ export function TeacherClassesPage() {
   const navigate = useNavigate();
 
   const visibleSubjects = useMemo(
-    () => subjects.filter((subject) => subject.grade_band === form.gradeBand),
-    [form.gradeBand, subjects],
+    () => subjects.filter((subject) => subject.grade_level === Number(form.gradeLevel)),
+    [form.gradeLevel, subjects],
   );
   const studentCount = classes.reduce((sum, item) => sum + item.memberCount, 0);
   const pendingCount = classes.reduce((sum, item) => sum + item.pendingCount, 0);
@@ -78,7 +77,7 @@ export function TeacherClassesPage() {
     setForm((current) => ({
       ...current,
       [field]: value,
-      ...(field === "gradeBand" ? { subjectId: "" } : {}),
+      ...(field === "gradeLevel" ? { subjectId: "" } : {}),
     }));
   }
 
@@ -89,6 +88,7 @@ export function TeacherClassesPage() {
     try {
       const created = await api.createTeacherClass({
         ...form,
+        gradeLevel: Number(form.gradeLevel),
         subjectId: form.subjectId || null,
       });
       setCreateOpen(false);
@@ -148,10 +148,10 @@ export function TeacherClassesPage() {
               <Link key={item.id} to={`/teacher/classes/${item.id}`} className="surface group block min-h-52 p-5 transition hover:-translate-y-0.5 hover:border-emerald-300">
                 <div className="flex items-start justify-between gap-4">
                   <div className="grid h-11 w-11 place-items-center rounded-lg bg-emerald-700 text-white"><BookOpenCheck size={21} /></div>
-                  <span className={`rounded-md px-2 py-1 text-xs font-black ${axisStyles[item.subject?.steam_axis] || "bg-slate-100 text-slate-600"}`}>{item.subject?.steam_axis || "STEAM"}</span>
+                  <span title={STEAM_AXIS_LABELS[item.subject?.steam_axis]} className={`rounded-md px-2 py-1 text-xs font-black ${axisStyles[item.subject?.steam_axis] || "bg-slate-100 text-slate-600"}`}>{item.subject?.steam_axis || "STEAM"}</span>
                 </div>
                 <h3 className="mt-5 truncate text-lg font-black text-slate-950">{item.name}</h3>
-                <p className="mt-1 text-sm font-bold text-slate-500">{item.subject?.name || "Chưa chọn môn"} · {gradeLabels[item.grade_band]}</p>
+                <p className="mt-1 text-sm font-bold text-slate-500">{item.subject?.name || "Chưa chọn môn"} · {gradeLabel(item.grade_level)}</p>
                 <div className="mt-5 flex items-center gap-4 border-t border-slate-100 pt-4 text-xs font-bold text-slate-500">
                   <span>{item.memberCount} học sinh</span>
                   <span>{item.pendingCount} chờ duyệt</span>
@@ -173,8 +173,23 @@ export function TeacherClassesPage() {
             <form className="mt-6 space-y-5" onSubmit={createClass}>
               <FormField label="Tên lớp" value={form.name} onChange={(event) => update("name", event.target.value)} placeholder="Ví dụ: Scratch cơ bản 6A" required />
               <div className="grid gap-5 sm:grid-cols-2">
-                <label className="block"><span className="mb-2 block text-xs font-black text-slate-700">Khối lớp</span><select className="auth-input px-3.5" value={form.gradeBand} onChange={(event) => update("gradeBand", event.target.value)}><option value="primary">Tiểu học</option><option value="secondary">THCS</option><option value="high_school">THPT</option></select></label>
-                <label className="block"><span className="mb-2 block text-xs font-black text-slate-700">Môn học</span><select className="auth-input px-3.5" value={form.subjectId} onChange={(event) => update("subjectId", event.target.value)} required><option value="">Chọn môn</option>{visibleSubjects.map((subject) => <option key={subject.id} value={subject.id}>[{subject.steam_axis}] {subject.name}</option>)}</select></label>
+                <label className="block">
+                  <span className="mb-2 block text-xs font-black text-slate-700">Lớp</span>
+                  <select className="auth-input px-3.5" value={form.gradeLevel} onChange={(event) => update("gradeLevel", event.target.value)}>
+                    {GRADE_GROUPS.map((group) => (
+                      <optgroup key={group.label} label={group.label}>
+                        {group.grades.map((gradeLevel) => <option key={gradeLevel} value={gradeLevel}>Lớp {gradeLevel}</option>)}
+                      </optgroup>
+                    ))}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-xs font-black text-slate-700">Môn học theo lớp</span>
+                  <select className="auth-input px-3.5" value={form.subjectId} onChange={(event) => update("subjectId", event.target.value)} required>
+                    <option value="">Chọn môn của lớp {form.gradeLevel}</option>
+                    {visibleSubjects.map((subject) => <option key={subject.id} value={subject.id}>[{subject.steam_axis}] {subject.name}</option>)}
+                  </select>
+                </label>
               </div>
               <label className="block"><span className="mb-2 block text-xs font-black text-slate-700">Mô tả</span><textarea className="auth-input min-h-24 resize-y px-3.5 py-3" maxLength={500} value={form.description} onChange={(event) => update("description", event.target.value)} placeholder="Mục tiêu hoặc lịch học của lớp" /></label>
               <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">

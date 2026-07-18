@@ -15,7 +15,7 @@ const uid = (request) => request.auth?.profile?.id;
 
 export async function getSubjects(request, response, next) {
   try {
-    response.json({ data: await listSubjects(uid(request), request.query.gradeBand) });
+    response.json({ data: await listSubjects(uid(request), request.query.gradeLevel) });
   } catch (error) { next(error); }
 }
 
@@ -24,7 +24,7 @@ export async function postClass(request, response, next) {
   try {
     const data = await createClass(uid(request), {
       name: request.body?.name,
-      gradeBand: request.body?.gradeBand,
+      gradeLevel: request.body?.gradeLevel,
       subjectId: request.body?.subjectId,
       description: request.body?.description,
     });

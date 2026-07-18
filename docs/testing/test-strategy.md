@@ -137,13 +137,15 @@ Slice 6 classroom verification adds:
 
 - pure membership-state and join-code unit tests;
 - role-aware return-path tests so a teacher cannot be redirected into a remembered student URL;
-- live Supabase subject catalog with 28 GDPT 2018 rows;
+- catalog unit test for all 101 grade-specific GDPT 2018 rows and every grade 1-12;
+- boundary assertions such as no Tin học in grade 2, Tin học from grade 3, and Vật lý from grade 10;
+- live Supabase migration/seed check for exact `grade_level`, STEAM tag, and derived `grade_band`;
 - real teacher create-class and invite flow;
 - real student invitation display and acceptance;
 - real student join-code request and teacher approval flow;
 - teacher roster refresh showing the accepted student;
 - subject/teacher metadata and Socket.IO connected state on both role workspaces;
-- backend test suite (28 passing), frontend test suite (3 passing), and production build.
+- backend and frontend unit suites plus a clean production build.
 
 Slice 7 Content Studio verification adds:
 

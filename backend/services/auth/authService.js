@@ -8,7 +8,7 @@ import {
   onboardingRole,
 } from "./authRules.js";
 
-const PROFILE_FIELDS = "id,org_id,email,full_name,role,grade_band,guardian_consent_at,created_at";
+const PROFILE_FIELDS = "id,org_id,email,full_name,role,grade_level,grade_band,guardian_consent_at,created_at";
 
 function appError(code, message, cause) {
   const error = new Error(message);
@@ -42,6 +42,7 @@ export function accountFromIdentity(user, profile) {
     email: profile.email,
     fullName: profile.full_name,
     role: profile.role,
+    gradeLevel: profile.grade_level,
     gradeBand: profile.grade_band,
     guardianConsentAt: profile.guardian_consent_at,
     accountStatus,
@@ -96,7 +97,14 @@ async function bootstrapTeacherAccount(auth, payload) {
   }
   const insertResult = await supabase
     .from("profiles")
-    .insert({ id: auth.user.id, email: auth.user.email, full_name: onboarding.fullName, role: "teacher", grade_band: null })
+    .insert({
+      id: auth.user.id,
+      email: auth.user.email,
+      full_name: onboarding.fullName,
+      role: "teacher",
+      grade_level: null,
+      grade_band: null,
+    })
     .select(PROFILE_FIELDS)
     .single();
   let profile = insertResult.data;
@@ -121,6 +129,7 @@ async function bootstrapStudentAccount(auth, payload) {
   const userMetadata = {
     ...(auth.user.user_metadata || {}),
     full_name: onboarding.fullName,
+    grade_level: onboarding.gradeLevel,
     grade_band: onboarding.gradeBand,
     guardian_email: null,
   };
@@ -143,6 +152,7 @@ async function bootstrapStudentAccount(auth, payload) {
       email: auth.user.email,
       full_name: onboarding.fullName,
       role: "student",
+      grade_level: onboarding.gradeLevel,
       grade_band: onboarding.gradeBand,
     })
     .select(PROFILE_FIELDS)

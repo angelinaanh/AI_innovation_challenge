@@ -42,6 +42,7 @@ create table public.profiles (
   email text not null,
   full_name text,
   role text not null check (role in ('student','teacher','parent','admin')),
+  grade_level smallint check (grade_level between 1 and 12),
   grade_band text check (grade_band in ('primary','secondary','high_school')),
   guardian_consent_at timestamptz,          -- FR0.6
   created_at timestamptz not null default now()
@@ -385,17 +386,17 @@ Nguyên tắc giữ nguyên bất biến hệ thống: đây là **luyện tập
 
 ---
 
-## Phần 5 — Bổ sung: Môn học & Lớp học (migration 0003)
+## Phần 5 — Bổ sung: Môn học & Lớp học (migrations 0003-0004)
 
 SQL đầy đủ ở `database/migrations/0003_classes_and_subjects.sql`. Ba bảng:
 
-- `subjects` — danh mục môn theo **tag STEAM × khối lớp** bám Chương trình GDPT 2018 (mỗi dòng: `name`, `steam_axis` S/T/E/A/M, `grade_band`). Seed bằng `npm run seed:subjects`.
-- `classes` — lớp do giáo viên tạo (`teacher_id`, `grade_band`, `subject_id`, `join_code` duy nhất).
+- `subjects` — danh mục môn theo **tag STEAM × lớp cụ thể** bám Chương trình GDPT 2018 (mỗi dòng: `name`, `steam_axis` S/T/E/A/M, `grade_level` 1-12, `grade_band` dẫn xuất). Catalog có 101 dòng cho mỗi tổ chức.
+- `classes` — lớp do giáo viên tạo (`teacher_id`, `grade_level`, `grade_band`, `subject_id`, `join_code` duy nhất).
 - `class_memberships` — thành viên lớp, vòng đời `invited | requested → active | rejected`. `unique(class_id, student_id)`. Giáo viên **mời** (invited) hoặc học sinh **xin vào** bằng mã (requested); một lời mời và một yêu cầu cho cùng cặp lớp–học sinh sẽ hội tụ về `active`.
 
 RLS: subjects đọc trong org; classes do giáo viên sở hữu, học sinh đọc lớp mình là thành viên active; memberships học sinh thấy dòng của mình, giáo viên thấy dòng của lớp mình.
 
-Trạng thái live ngày 2026-07-18: migration `0003` đã được áp dụng và seed đủ 28 môn. Service layer còn kiểm tra `org_id`, `grade_band`, quyền sở hữu lớp và subject hợp lệ trước mọi write. E2E thật đã qua cả `invited -> active` và `requested -> active`; roster giáo viên và danh sách lớp học sinh đều đọc lại đúng thành viên.
+Migration `0004_grade_level_subject_catalog.sql` nâng dữ liệu band cũ lên `grade_level`, chuẩn hóa hai tên có dấu `&`, seed danh mục chính xác và thêm CHECK cho quan hệ grade/band. Khóa ngoại ghép `(subject_id, grade_level)` ngăn một lớp gắn môn của lớp khác ngay cả khi service có lỗi. Service layer kiểm tra `org_id`, lớp chính xác, quyền sở hữu và subject hợp lệ trước mọi write; `grade_band` vẫn được giữ để Skill Node/AI content tương thích.
 
 Để nối Content Studio với lớp, migration kế tiếp cần bảng `class_content_assignments(class_id, skill_node_id/lesson_id, assigned_by, available_from, due_at)`. Lesson vẫn bắt buộc `PUBLISHED`; assignment chỉ quyết định phạm vi lớp được phân phối.
 

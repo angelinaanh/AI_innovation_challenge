@@ -55,6 +55,8 @@ The same screen now includes a responsive AI Tutor drawer with persisted history
 
 Teacher and student class screens use real Express/Supabase data. Membership Socket.IO events refresh invitations, pending counts, and rosters without trusting the browser to decide membership. Post-login `returnTo` is accepted only when it stays inside the authenticated role workspace, preventing a previous student path from sending a teacher to `/unauthorized`.
 
+Student registration and teacher class creation use an exact grade selector from 1 to 12. In the class modal, changing grade clears the current subject and filters the next select to only the valid 101-row GDPT 2018 catalog subset; each option includes its S/T/E/A/M tag. Class cards and student profiles display the exact grade rather than only a broad school level.
+
 Content Studio keeps source and editable output in separate columns on desktop and stacked bands on mobile. Published lessons are read-only; teachers create a new version before editing. The student content library lists only nodes with at least one published lesson, keeps locked nodes visible with the explainable recovery reason, and routes only accessible nodes into the Lesson Player. `content.published` refreshes dashboard/path/content data in realtime.
 
 ## Commands

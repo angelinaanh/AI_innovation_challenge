@@ -1,8 +1,15 @@
 // Pure, testable logic for the classroom (classes + memberships) feature.
 import crypto from "node:crypto";
+import {
+  GRADE_LEVELS,
+  STEAM_AXES,
+  gradeBandForLevel,
+  isGradeLevel,
+  normalizeGradeLevel,
+} from "../academic/academicCatalog.js";
 
 export const GRADE_BANDS = ["primary", "secondary", "high_school"];
-export const STEAM_AXES = ["S", "T", "E", "A", "M"];
+export { GRADE_LEVELS, STEAM_AXES, gradeBandForLevel, isGradeLevel, normalizeGradeLevel };
 
 export function isGradeBand(value) {
   return GRADE_BANDS.includes(value);

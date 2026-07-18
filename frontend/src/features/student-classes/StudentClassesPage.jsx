@@ -8,14 +8,9 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
+import { gradeLabel } from "../../lib/academicCatalog.js";
 import { api } from "../../lib/apiClient.js";
 import { FormAlert, FormField } from "../auth/AuthFormControls.jsx";
-
-const gradeLabels = {
-  primary: "Tiểu học",
-  secondary: "THCS",
-  high_school: "THPT",
-};
 
 export function StudentClassesPage() {
   const [classes, setClasses] = useState([]);
@@ -137,7 +132,7 @@ export function StudentClassesPage() {
                 <article key={item.id} className="surface min-h-44 p-5">
                   <div className="flex items-start justify-between gap-4"><div className="grid h-11 w-11 place-items-center rounded-lg bg-sky-100 text-sky-800"><School size={21} /></div><span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-black text-slate-600">{item.subject?.steam_axis || "STEAM"}</span></div>
                   <h3 className="mt-4 truncate text-lg font-black">{item.name}</h3>
-                  <p className="mt-1 text-sm font-bold text-slate-500">{item.subject?.name || "Chưa chọn môn"} · {gradeLabels[item.gradeBand]}</p>
+                  <p className="mt-1 text-sm font-bold text-slate-500">{item.subject?.name || "Chưa chọn môn"} · {gradeLabel(item.gradeLevel)}</p>
                   <p className="mt-4 border-t border-slate-100 pt-3 text-xs font-bold text-slate-500">{item.teacher?.full_name || "Giáo viên phụ trách"}</p>
                 </article>
               ))}

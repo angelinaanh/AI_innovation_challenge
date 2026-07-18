@@ -44,7 +44,7 @@ Node.js + Express backend for application rules, realtime events, AI orchestrati
 | `GET /api/teacher/escalations` | Tutor escalation queue | teacher-scoped view without exposing unrelated chat history |
 | `GET/POST /api/teacher/classes` | classes + subjects | list/create teacher-owned classes |
 | `GET /api/teacher/classes/:id/members` | memberships + profiles | roster and pending requests for an owned class |
-| `POST /api/teacher/classes/:id/invite` | memberships | invite a same-org, same-grade student |
+| `POST /api/teacher/classes/:id/invite` | memberships | invite a same-org, same-exact-grade student |
 | `POST /api/student/classes/join` | memberships | request membership using a join code |
 | `POST /api/student/memberships/:id/respond` | memberships | accept or decline a teacher invitation |
 | `GET /api/teacher/content` | Skill Nodes + lessons | Content Studio counts and node/version workspace |
@@ -70,7 +70,7 @@ npm start
 
 `npm run seed:demo` is idempotent. It creates two demo Auth users, one Scratch course with seven Skill Nodes, approved lessons, attempts, XP activity, streak, and badges.
 
-`npm run seed:subjects` idempotently loads the 28-row GDPT 2018 STEAM subject catalog required by class creation after migration `0003`.
+`npm run seed:subjects` idempotently loads 101 grade-specific GDPT 2018 STEAM rows for every organization after migration `0004`.
 
 `npm run reset:demo` removes only the demo student's attempts and rewards for the seeded Loops quiz, then restores the scripted STEAM/XP/streak baseline. It does not affect other users or questions.
 
@@ -99,7 +99,7 @@ Every protected REST request must carry `Authorization: Bearer <supabase_access_
 
 Public registration can choose `student` or `teacher`. This intentionally overrides Functional Spec `F-103`: selected teachers become `ACTIVE` immediately; Admin remains provisioned separately. Students under 16 are stored as `PENDING` in trusted Auth app metadata and cannot call learning APIs or connect realtime until `guardian_consent_at` activates them.
 
-Classroom boundaries are server-owned: a teacher can read/mutate only classes where `teacher_id` matches the JWT profile; invitations and join requests require the same organization and grade band; subject IDs must belong to that organization and class grade. `class.membership.updated` is emitted to `teacher:{teacherId}` and `user:{studentId}` after every state change.
+Classroom boundaries are server-owned: a teacher can read/mutate only classes where `teacher_id` matches the JWT profile; invitations and join requests require the same organization and exact `grade_level`; subject IDs must belong to that organization and exact class grade. The backend derives `grade_band` from `grade_level` for adaptive-content compatibility. `class.membership.updated` is emitted to `teacher:{teacherId}` and `user:{studentId}` after every state change.
 
 Content Studio uses the same server-owned boundary. Skill Nodes must belong to the teacher organization; working drafts are editable only when their source was uploaded by that teacher. AI generation is backend-only, uses `ai/prompts/content_studio_draft.md`, records `ai_usage`, validates structured JSON, and moderates generated output. The transfer gate off, provider failure, or exhausted AI budget produces an explicitly labelled local fallback rather than blocking teacher work.
 

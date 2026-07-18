@@ -11,14 +11,9 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
+import { gradeLabel } from "../../lib/academicCatalog.js";
 import { api } from "../../lib/apiClient.js";
 import { FormAlert, FormField } from "../auth/AuthFormControls.jsx";
-
-const gradeLabels = {
-  primary: "Tiểu học",
-  secondary: "THCS",
-  high_school: "THPT",
-};
 
 export function TeacherClassDetailPage() {
   const { classId } = useParams();
@@ -99,7 +94,7 @@ export function TeacherClassDetailPage() {
           <header className="surface p-5 md:p-6">
             <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
               <div className="min-w-0">
-                <p className="eyebrow">{data.class.subject?.steam_axis || "STEAM"} · {gradeLabels[data.class.gradeBand]}</p>
+                <p className="eyebrow">{data.class.subject?.steam_axis || "STEAM"} · {gradeLabel(data.class.gradeLevel)}</p>
                 <h1 className="mt-2 truncate text-2xl font-black md:text-3xl">{data.class.name}</h1>
                 <p className="mt-2 text-sm font-bold text-slate-500">{data.class.subject?.name || "Chưa chọn môn học"}</p>
                 {data.class.description && <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">{data.class.description}</p>}

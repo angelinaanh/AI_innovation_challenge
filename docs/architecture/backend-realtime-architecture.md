@@ -136,7 +136,7 @@ Implemented:
 - Supabase access-token verification for REST and Socket.IO.
 - Server-side profile, role, and active-account middleware on every protected route.
 - Role-aware profile bootstrap: public student or teacher; student-only learning projections.
-- Subject validation and same-organization/same-grade classroom membership enforcement.
+- Subject validation and same-organization/same-exact-grade classroom membership enforcement; grade band is derived from grade 1-12.
 - Teacher-owned class CRUD slice, join codes, invitations, requests, decisions, and roster reads.
 - `class.membership.updated` fan-out to the affected teacher and student rooms.
 - Content Studio AI/local draft generation, schema validation, source/job/lesson/question/chunk persistence, and edit-rate/human-minute metrics.
