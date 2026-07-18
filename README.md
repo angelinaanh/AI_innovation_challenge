@@ -119,6 +119,15 @@ Slice 7 completes the first real teacher-to-student content loop:
 
 Slice 7 reuses the existing `source_documents`, `document_chunks`, `lessons`, `questions`, `content_jobs`, and `audit_log` tables; no new migration is required. A live Supabase E2E verified AI draft, edit, review, publish, revision, old-version archive, three Tutor chunks, published question, audit trail, and the new student lesson.
 
+Slice 8 closes the M3 / FR2 gap with an AI onboarding chat and a real placement test:
+
+- right after a student account is created, an `OnboardingGate` overlay opens a chat where an AI assistant collects the student's name, age, grade, still-enrolled status, school, and self-reported level, and answers questions about the system;
+- the collected profile is saved, then the system generates the "Nhiệm vụ Phân tích Kỹ năng" — a 20-30 question placement test covering one year of the student's grade across all five STEAM axes;
+- placement answers are graded server-side into a per-axis STEAM profile via one `score_events(source_type='placement_test')` (the base trigger projects it into `steam_profiles`), and the total score assigns the **Cơ bản (<50%)** or **Nâng cao (>=50%)** track;
+- the result screen shows the student's radar chart with an encouraging, non-ranking message;
+- it is fail-closed: with `OPENAI_API_KEY` unset or `AI_ALLOW_APPROVED_CONTENT_EXPORT=false`, the chat uses a deterministic slot-filling flow and the test uses a deterministic question bank (`backend/services/onboarding/placementBank.js`), so no student data leaves the server;
+- new tables in migration `0011_onboarding_and_placement.sql` (`placement_tests`, `placement_questions`, `placement_answers`) plus onboarding columns on `profiles`. Backend logic is unit-tested in `backend/tests/onboardingRules.test.js`.
+
 ## Local Start
 
 ```bash
@@ -130,7 +139,7 @@ npm run seed:subjects
 npm start
 ```
 
-`npm run seed:subjects` loads the STEAM subject catalog (GDPT 2018 classification) used by the classes feature. Apply migrations `0002` through `0006` (in order) to the Supabase project before running the source/subject seeds — `classroomService.listTeacherClasses`/`createClass` select `classes.max_members` (added in `0005`) and `classes.grade` (added in `0006`), so skipping those two migrations makes every classes-feature query fail with `Supabase query failed: ...`.
+`npm run seed:subjects` loads the STEAM subject catalog (GDPT 2018 classification) used by the classes feature. Apply migrations `0002` through `0011` (in order) to the Supabase project before running the source/subject seeds — migration `0011` adds the onboarding columns on `profiles` and the placement-test tables, so without it the student dashboard query (`onboarding_completed_at`, `placement_completed_at`, `learning_track`) fails — `classroomService.listTeacherClasses`/`createClass` select `classes.max_members` (added in `0005`) and `classes.grade` (added in `0006`), so skipping those two migrations makes every classes-feature query fail with `Supabase query failed: ...`.
 
 `npm run seed:sources` backfills approved grounding chunks from each published lesson's own checkpoint content, so the grounded Tutor chat and interactive exercises work on **every** Skill Node, not only the seeded Loops lesson. It is idempotent and preserves the hand-authored Loops source. Without it, only the Loops node has approved material and the Tutor correctly refuses / cannot build exercises elsewhere.
 

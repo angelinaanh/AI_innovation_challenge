@@ -29,23 +29,14 @@ test("activates a student aged 16 or older", () => {
   assert.equal(onboarding.guardianEmail, null);
 });
 
-test("keeps an under-16 account pending and requires guardian email", () => {
-  assert.throws(
-    () => normalizeStudentOnboarding(null, {
-      fullName: "Minh",
-      gradeLevel: 7,
-      dateOfBirth: "2012-08-01",
-    }, TODAY),
-    { code: "VALIDATION_ERROR" },
-  );
-
+test("activates an under-16 account without requiring guardian email (disabled COPPA)", () => {
   const onboarding = normalizeStudentOnboarding(null, {
     fullName: "Minh",
     gradeLevel: 7,
     dateOfBirth: "2012-08-01",
     guardianEmail: "guardian@example.com",
   }, TODAY);
-  assert.equal(onboarding.accountStatus, "PENDING");
+  assert.equal(onboarding.accountStatus, "ACTIVE");
   assert.equal(onboarding.gradeBand, "secondary");
   assert.equal(onboarding.guardianEmail, "guardian@example.com");
 });

@@ -166,6 +166,12 @@ export const api = {
     {},
     signal,
   ),
+  // Onboarding AI chat + Placement Test
+  onboardingChat: (body, signal) => apiPost("/student/onboarding/chat", body, signal),
+  completeOnboarding: (body, signal) => apiPost("/student/onboarding/complete", body, signal),
+  getPlacement: (signal) => apiGet("/student/placement", signal),
+  generatePlacement: (signal) => apiPost("/student/placement/generate", {}, signal),
+  submitPlacement: (body, signal) => apiPost("/student/placement/submit", body, signal),
   getTeacherSubjects: (gradeLevel, signal) => apiGet(
     `/teacher/subjects${gradeLevel ? `?gradeLevel=${encodeURIComponent(gradeLevel)}` : ""}`,
     signal,

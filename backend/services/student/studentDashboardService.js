@@ -69,7 +69,7 @@ export async function getStudentDashboard(requestedStudentId) {
     await Promise.all([
       supabase
         .from("profiles")
-        .select("id,full_name,role,grade_level,grade_band")
+        .select("id,full_name,role,grade_level,grade_band,onboarding_completed_at,placement_completed_at,learning_track")
         .eq("id", studentId)
         .single(),
       supabase.from("exp_totals").select("total_exp,level").eq("user_id", studentId).maybeSingle(),
@@ -104,6 +104,12 @@ export async function getStudentDashboard(requestedStudentId) {
       fullName: profileResult.data.full_name || "Học sinh EduOne",
       gradeLevel: profileResult.data.grade_level,
       gradeBand: profileResult.data.grade_band,
+    },
+    onboarding: {
+      // Bước AI chat + placement test sau khi tạo tài khoản (M3 / FR2).
+      chatCompleted: Boolean(profileResult.data.onboarding_completed_at),
+      placementCompleted: Boolean(profileResult.data.placement_completed_at),
+      learningTrack: profileResult.data.learning_track || null,
     },
     steamProfile: path.scores,
     gamification: {

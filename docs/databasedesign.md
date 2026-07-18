@@ -474,3 +474,14 @@ SQL đầy đủ ở `database/migrations/0006_class_exact_grade.sql`. Sau khi m
 - CHECK `classes_grade_level_check` và `classes_grade_band_consistency` được reassert để đảm bảo lớp 1-5 = `primary`, 6-9 = `secondary`, 10-12 = `high_school`.
 
 Frontend (`TeacherClassesPage.jsx`) chọn lớp 1-12 trực tiếp; sau khi đổi lớp, danh sách môn được lọc bằng `subjects.grade_level` và trạng thái môn đã chọn được reset.
+
+## Phần 10 — Bổ sung: Onboarding AI chat & Placement Test (migration 0011)
+
+Đóng lại khoảng trống M3/FR2 (placement test chưa được hiện thực). SQL đầy đủ ở `database/migrations/0011_onboarding_and_placement.sql`.
+
+- `profiles` thêm: `school_name`, `is_enrolled`, `self_reported_grade` (1-12), `learning_track` (basic/advanced), `onboarding_completed_at`, `placement_completed_at`.
+- `placement_tests` — một lượt test của học sinh: `grade_level`, `status` (in_progress/submitted), `generated_by` (model AI hoặc `deterministic-fallback`), `total_correct`, `score_percent`, `track`, `steam_result` (jsonb 5 trục).
+- `placement_questions` — câu hỏi của lượt test; `answer_index` giữ ở server, không gửi cho client khi đang làm bài.
+- `placement_answers` — câu trả lời của học sinh (unique theo test+question).
+
+Điểm bài test KHÔNG ghi thẳng vào `steam_profiles`; nó ghi một `score_events(source_type='placement_test')` với `delta_vector` 5 trục (đều >= 0), để trigger `apply_score_event` (schema gốc) cộng dồn — giữ đúng nguyên tắc event-sourcing và truy vết (FR1.6). RLS bật owner-only; backend dùng service_role nên bỏ qua RLS như phần còn lại.

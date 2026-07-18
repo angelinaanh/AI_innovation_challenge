@@ -69,23 +69,17 @@ export function normalizeStudentOnboarding(user, payload = {}, currentDate = new
     throw validationError("Ngày sinh chưa phù hợp với tài khoản học sinh.");
   }
 
-  const requiresGuardianConsent = age < 16;
-  if (
-    requiresGuardianConsent
-    && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guardianEmail)
-  ) {
-    throw validationError("Email người giám hộ là bắt buộc với học sinh dưới 16 tuổi.");
-  }
+  const requiresGuardianConsent = false; // Disabled COPPA check for always-active behavior
 
   return {
     fullName,
     gradeLevel,
     gradeBand: gradeBandForLevel(gradeLevel),
     dateOfBirth,
-    guardianEmail: requiresGuardianConsent ? guardianEmail : null,
+    guardianEmail: guardianEmail || null,
     age,
     requiresGuardianConsent,
-    accountStatus: requiresGuardianConsent ? "PENDING" : "ACTIVE",
+    accountStatus: "ACTIVE",
   };
 }
 

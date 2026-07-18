@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { ArrowRight, BookOpenCheck, RefreshCw, ShieldCheck, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
+import { OnboardingGate } from "../../features/onboarding/OnboardingGate.jsx";
 
 import { useStudentData } from "../../app/StudentDataProvider.jsx";
 import { BadgeShelf } from "./BadgeShelf.jsx";
@@ -39,12 +41,47 @@ function DashboardError({ message, retry }) {
 
 export function DashboardPage() {
   const { dashboard, loading, error, retry } = useStudentData();
+  const [showGate, setShowGate] = useState(false);
 
   if (loading) return <DashboardLoading />;
   if (error || !dashboard) return <DashboardError message={error} retry={retry} />;
 
   const firstName = dashboard.student.fullName.split(" ")[0];
   const recommendation = dashboard.recommendation;
+  const onboarding = dashboard?.onboarding;
+  const needsOnboarding = Boolean(dashboard) && onboarding && !onboarding.placementCompleted;
+
+  if (needsOnboarding) {
+    return (
+      <div className="space-y-4 md:space-y-5">
+        <section className="quest-hero" aria-labelledby="welcome-title">
+          <div className="relative z-10 max-w-3xl">
+            <div className="flex items-center gap-2 text-sm font-extrabold text-white/90">
+              <Sparkles size={17} aria-hidden="true" /> Bước khởi đầu quan trọng
+            </div>
+            <h1 id="welcome-title" className="mt-3 max-w-2xl text-3xl font-black leading-tight text-white md:text-[40px]">
+              Chào {firstName}, hãy làm Bài kiểm tra năng lực đầu vào!
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-white/90 md:text-base">
+              Hệ thống cần hiểu rõ thế mạnh của bạn để cá nhân hóa lộ trình học tập tối ưu nhất.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <button className="hero-button" onClick={() => setShowGate(true)}>
+                Bắt đầu làm bài <ArrowRight size={18} />
+              </button>
+            </div>
+          </div>
+          <div className="quest-symbol" aria-hidden="true">
+            <ShieldCheck size={68} strokeWidth={1.8} />
+          </div>
+        </section>
+
+        {showGate && (
+          <OnboardingGate onboarding={onboarding} onFinished={() => { setShowGate(false); retry(); }} />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 md:space-y-5">

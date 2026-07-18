@@ -17,6 +17,13 @@ import {
   getStudentAiLessonDetail,
   getStudentAiLessons,
 } from "../controllers/contentStudioController.js";
+import {
+  chat as onboardingChatHandler,
+  complete as onboardingCompleteHandler,
+  placementGenerate,
+  placementState,
+  placementSubmit,
+} from "../controllers/onboardingController.js";
 
 export const studentRouter = Router();
 
@@ -24,6 +31,13 @@ studentRouter.get("/dashboard", dashboard);
 studentRouter.get("/path", path);
 studentRouter.get("/lessons/:skillNodeId", lesson);
 studentRouter.post("/attempts", attempt);
+
+// Onboarding AI chat + Placement Test (M3 / FR2 / P-01, P-02)
+studentRouter.post("/onboarding/chat", onboardingChatHandler);
+studentRouter.post("/onboarding/complete", onboardingCompleteHandler);
+studentRouter.get("/placement", placementState);
+studentRouter.post("/placement/generate", placementGenerate);
+studentRouter.post("/placement/submit", placementSubmit);
 
 // Classes & subjects (student side): browse subjects, see my classes and
 // invitations, request to join by code, accept/decline an invitation.

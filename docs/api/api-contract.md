@@ -243,3 +243,19 @@ Student:
 Membership states: `invited` (teacher invited) / `requested` (student asked) → `active` (accepted/approved) / `rejected`. An invite and a request for the same class/student converge to `active`.
 
 Server invariants: the class owner must match the teacher JWT; class/subject/actor must share `org_id`; every class subject and every joining student must match the exact `grade_level`. A class may hold multiple subjects via `class_subjects` (migration 0005). `grade_band` is derived server-side and checked again in Postgres. Relevant errors are `SUBJECT_INVALID` (400), `GRADE_LEVEL_MISMATCH` (409), and `CLASS_FULL` (409, when a membership would go `active` past `max_members`).
+
+## Onboarding AI chat + Placement Test (migration 0011)
+
+Sau khi tạo tài khoản học sinh, một trợ lý AI thu thập thông tin (tên, tuổi, lớp, còn đi học, trường, trình độ tự đánh giá) và giải đáp về hệ thống; rồi hệ thống sinh "Nhiệm vụ Phân tích Kỹ năng" (placement test) 20-30 câu theo khối lớp. Điểm bài test ghi vào `score_events(source_type='placement_test')` (trigger cộng vào `steam_profiles`), tổng điểm quyết định lộ trình Cơ bản (<50%) / Nâng cao (>=50%).
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/student/onboarding/chat` | Một lượt hội thoại `{ messages: [{role,content}], collected }` → `{ reply, collected, complete }` |
+| POST | `/student/onboarding/complete` | Lưu `{ collected }` vào hồ sơ, đánh dấu `onboarding_completed_at` |
+| GET | `/student/placement` | Trạng thái placement: `not_started` / `in_progress` (kèm câu hỏi, ẩn đáp án) / `submitted` (kèm kết quả) |
+| POST | `/student/placement/generate` | Sinh (hoặc lấy lại) bài test đang làm → `{ testId, gradeLevel, questions }` |
+| POST | `/student/placement/submit` | Nộp `{ testId, answers: [{questionId, selectedIndex}] }` → `{ steam, scorePercent, track, radar, totalCorrect, totalQuestions }` |
+
+`GET /student/dashboard` bổ sung khối `onboarding: { chatCompleted, placementCompleted, learningTrack }` để frontend biết khi nào hiện overlay `OnboardingGate`.
+
+Fail-closed: khi `OPENAI_API_KEY` chưa đặt hoặc `AI_ALLOW_APPROVED_CONTENT_EXPORT=false`, chat dùng bộ hội thoại tất định (slot-filling) và bài test dùng ngân hàng câu hỏi tất định (`placementBank.js`, 5 câu/trục), không gửi dữ liệu học sinh ra ngoài.

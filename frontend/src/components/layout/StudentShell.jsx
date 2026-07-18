@@ -54,7 +54,7 @@ function Navigation({ onNavigate }) {
 export function StudentShell() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [activePanel, setActivePanel] = useState(null);
-  const { dashboard, realtimeStatus } = useStudentData();
+  const { dashboard, realtimeStatus, retry } = useStudentData();
   const { account, signOut } = useAuth();
   const gamification = dashboard?.gamification;
   const student = dashboard?.student;
@@ -203,6 +203,7 @@ export function StudentShell() {
           <Outlet />
         </main>
       </div>
+
     </div>
   );
 }

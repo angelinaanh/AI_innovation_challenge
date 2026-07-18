@@ -230,6 +230,40 @@ export async function generateStructuredExercise({ instructions, input, orgId, u
   }
 }
 
+// Helper chung: gọi LLM trả về JSON object. Không bắt lỗi ở đây — service gọi
+// chịu trách nhiệm bắt và lui về bộ sinh tất định (fail-closed) khi AI hỏng.
+export async function generateStructuredJson({
+  feature,
+  tier = 2,
+  model,
+  instructions,
+  input,
+  maxTokens = 1500,
+  orgId,
+  userId,
+}) {
+  const useModel = model || env.openAiModels.contentFast;
+  const response = await getOpenAiClient().responses.create({
+    model: useModel,
+    instructions,
+    input,
+    reasoning: { effort: "low" },
+    max_output_tokens: maxTokens,
+    text: { format: { type: "json_object" } },
+    store: false,
+  });
+  const tokensIn = Number(response.usage?.input_tokens || 0);
+  const tokensOut = Number(response.usage?.output_tokens || 0);
+  await recordAiUsage({ orgId, userId, feature, model: useModel, tier, tokensIn, tokensOut });
+  let data = null;
+  try {
+    data = JSON.parse(response.output_text || "{}");
+  } catch {
+    data = null;
+  }
+  return { data, model: useModel, tokensIn, tokensOut };
+}
+
 export async function generateStructuredLesson({ instructions, input, orgId, userId }) {
   try {
     const model = env.openAiModels.contentFast;
