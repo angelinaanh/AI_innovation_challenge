@@ -46,4 +46,6 @@ Migration `0005_class_capacity_and_multi_subject.sql` adds `classes.max_members`
 
 Migrations `0004` and `0005` are intentionally rerunnable after a failed/partial manual SQL attempt. They check whether legacy `classes.subject_id` still exists before reading it, and they realign existing `class_subjects` rows to the canonical grade-specific subject rows before adding composite constraints.
 
+Some live databases may still have legacy `subjects.min_grade` / `subjects.max_grade` columns from the older grade-range migration. Migration `0004` keeps those columns compatible by filling both values with the exact `grade_level` for every grade-specific catalog row, avoiding NOT NULL failures during manual reruns.
+
 Migration `0006_class_exact_grade.sql` is now a reconciliation migration. It preserves canonical `classes.grade_level`, backfills it from an older `classes.grade` column if that column exists, drops the obsolete column, and reasserts grade/band checks. This keeps the merged schema on one source of truth: `grade_level`.

@@ -4,6 +4,8 @@ begin;
 
 alter table public.profiles add column if not exists grade_level smallint;
 alter table public.subjects add column if not exists grade_level smallint;
+alter table public.subjects add column if not exists min_grade smallint;
+alter table public.subjects add column if not exists max_grade smallint;
 alter table public.classes add column if not exists grade_level smallint;
 
 alter table public.classes drop constraint if exists classes_subject_grade_level_fkey;
@@ -43,6 +45,11 @@ update public.subjects set grade_level = case name
   else null end
 where grade_level is null;
 
+update public.subjects
+set min_grade = coalesce(min_grade, grade_level),
+    max_grade = coalesce(max_grade, grade_level)
+where grade_level is not null and (min_grade is null or max_grade is null);
+
 update public.profiles set grade_level = case grade_band
   when 'primary' then 1 when 'secondary' then 6 when 'high_school' then 10 end
 where grade_level is null and grade_band is not null;
@@ -70,6 +77,11 @@ update public.subjects set grade_level = case grade_band
   when 'primary' then 1 when 'secondary' then 6 when 'high_school' then 10 end
 where grade_level is null;
 
+update public.subjects
+set min_grade = coalesce(min_grade, grade_level),
+    max_grade = coalesce(max_grade, grade_level)
+where grade_level is not null and (min_grade is null or max_grade is null);
+
 create unique index if not exists subjects_org_name_grade_level_uidx
   on public.subjects(org_id, name, grade_level);
 
@@ -93,11 +105,14 @@ with definitions(name, steam_axis, grades) as (values
          when grade_level <= 9 then 'secondary' else 'high_school' end grade_band
   from definitions cross join lateral unnest(grades) grade_level
 )
-insert into public.subjects(org_id,name,steam_axis,grade_level,grade_band)
-select o.id,c.name,c.steam_axis,c.grade_level,c.grade_band
+insert into public.subjects(org_id,name,steam_axis,grade_level,grade_band,min_grade,max_grade)
+select o.id,c.name,c.steam_axis,c.grade_level,c.grade_band,c.grade_level,c.grade_level
 from public.organizations o cross join catalog c
 on conflict (org_id,name,grade_level) do update
-set steam_axis=excluded.steam_axis, grade_band=excluded.grade_band;
+set steam_axis=excluded.steam_axis,
+    grade_band=excluded.grade_band,
+    min_grade=excluded.min_grade,
+    max_grade=excluded.max_grade;
 
 do $$
 begin
