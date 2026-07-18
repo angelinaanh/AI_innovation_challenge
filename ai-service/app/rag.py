@@ -68,13 +68,13 @@ class RagPipeline:
         else:
             raise HTTPException(
                 status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-                detail="Chỉ hỗ trợ PDF hoặc TXT.",
+                detail="Sai định dạng tài liệu. Vui lòng tải lên đúng định dạng PDF hoặc Text (.txt, .md).",
             )
         text = text.strip()
         if not text:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Tài liệu không có nội dung văn bản trích xuất được.",
+                detail="PDF không trích xuất được chữ (có thể là bản scan/ảnh). Vui lòng tải lên đúng định dạng tài liệu có văn bản.",
             )
         return text
 

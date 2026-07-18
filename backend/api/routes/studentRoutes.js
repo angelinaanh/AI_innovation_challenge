@@ -18,6 +18,12 @@ import {
   getStudentAiLessons,
 } from "../controllers/contentStudioController.js";
 import {
+  learningPath,
+  learningProgress,
+  learningSubjects,
+  saveLearningProgress,
+} from "../controllers/learningPathController.js";
+import {
   chat as onboardingChatHandler,
   complete as onboardingCompleteHandler,
   placementGenerate,
@@ -29,6 +35,12 @@ export const studentRouter = Router();
 
 studentRouter.get("/dashboard", dashboard);
 studentRouter.get("/path", path);
+
+// Lộ trình học theo môn (Mục lớn → Chương → Bài học → Bonus) + tiến độ.
+studentRouter.get("/learning-path", learningSubjects);
+studentRouter.get("/learning-path/:subjectKey", learningPath);
+studentRouter.get("/learning-path/:subjectKey/progress", learningProgress);
+studentRouter.post("/learning-path/:subjectKey/progress", saveLearningProgress);
 studentRouter.get("/lessons/:skillNodeId", lesson);
 studentRouter.post("/attempts", attempt);
 

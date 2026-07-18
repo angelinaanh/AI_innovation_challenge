@@ -3,6 +3,7 @@ import {
   ArrowRight,
   Bot,
   CheckCircle2,
+  ClipboardList,
   Clock3,
   FileUp,
   GripVertical,
@@ -20,10 +21,11 @@ import { api } from "../../lib/apiClient.js";
 import { FormAlert, FormField } from "../auth/AuthFormControls.jsx";
 import { GeneratedLessonEditor } from "./GeneratedLessonEditor.jsx";
 
-// Python AI Content Service (FastAPI) — tách khỏi backend Node.
-const AI_SERVICE_URL = import.meta.env.VITE_AI_SERVICE_URL || "http://127.0.0.1:8000";
-
 const GRADES = Array.from({ length: 12 }, (_, index) => index + 1);
+
+// Giữ đồng bộ với backend (aiContentGenerator: MAX_UPLOAD_BYTES / parseDocument).
+const MAX_UPLOAD_BYTES = 20 * 1024 * 1024; // 20 MB
+const ACCEPTED_EXTENSIONS = [".pdf", ".txt", ".md"];
 
 const initialConfig = {
   subject: "",
@@ -31,6 +33,7 @@ const initialConfig = {
   level: "Basic",
   quizCount: 3,
   requireQuest: true,
+  note: "", // Ghi chú dành cho giáo viên — đưa thêm vào prompt tạo dàn ý.
 };
 
 async function postOutline(config, file) {
@@ -40,21 +43,83 @@ async function postOutline(config, file) {
   body.append("grade", String(config.grade));
   body.append("level", config.level);
   body.append("quiz_count", String(config.quizCount));
-  const response = await fetch(`${AI_SERVICE_URL}/api/teacher/content/outline`, { method: "POST", body });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data?.detail || "Không tạo được dàn ý. Kiểm tra AI service đã chạy chưa.");
-  return data;
+  body.append("teacher_note", config.note.trim());
+  return api.generateOutline(body);
 }
 
 async function postGenerate(payload) {
-  const response = await fetch(`${AI_SERVICE_URL}/api/teacher/content/generate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data?.detail || "Không sinh được bài giảng.");
-  return data;
+  return api.generateLessons(payload);
+}
+
+// ID cục bộ cho chương/bài/mục do giáo viên thêm tay — chỉ cần duy nhất để làm
+// React key và neo danh tính bài học khi sinh nội dung.
+let idCounter = 0;
+function uid(prefix) {
+  idCounter += 1;
+  return `${prefix}-${Date.now().toString(36)}-${idCounter}`;
+}
+
+function newSection() {
+  return { section_id: uid("sec"), section_title: "", intent: "" };
+}
+function newLesson() {
+  return { lesson_id: uid("ls"), lesson_title: "", estimated_time_minutes: 15, sections: [newSection()] };
+}
+function newChapter() {
+  return {
+    chapter_id: uid("ch"),
+    chapter_title: "",
+    chapter_objective: "",
+    exam: { enabled: true, question_count: 10 },
+    lessons: [newLesson()],
+  };
+}
+
+// Bổ sung cấu hình Exam mặc định vào dàn ý AI trả về (AI chỉ sinh chương/bài/mục).
+// Giáo viên bật/tắt và chỉnh số câu ở bước duyệt; cấu hình đi kèm course_outline.
+function withExamDefaults(course) {
+  const next = structuredClone(course);
+  next.exams = next.exams || {
+    midterm: { enabled: false, question_count: 20 },
+    final: { enabled: true, question_count: 30 },
+  };
+  for (const chapter of next.chapters || []) {
+    chapter.exam = chapter.exam || { enabled: true, question_count: 10 };
+  }
+  return next;
+}
+
+// Ô cấu hình một bài Exam: bật/tắt + số lượng câu hỏi (khóa ô số khi tắt).
+function ExamControl({ label, hint, value, onChange }) {
+  const enabled = Boolean(value?.enabled);
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-3.5">
+      <label className="flex items-start gap-3">
+        <input
+          type="checkbox"
+          className="mt-0.5 h-4 w-4 shrink-0 accent-emerald-600"
+          checked={enabled}
+          onChange={(event) => onChange({ ...value, enabled: event.target.checked })}
+        />
+        <span>
+          <span className="block text-xs font-black text-slate-700">{label}</span>
+          {hint && <span className="mt-0.5 block text-xs font-medium text-slate-500">{hint}</span>}
+        </span>
+      </label>
+      <label className={`flex items-center gap-2 text-xs font-black ${enabled ? "text-slate-700" : "text-slate-300"}`}>
+        Số câu hỏi
+        <input
+          type="number"
+          min={1}
+          max={100}
+          disabled={!enabled}
+          className="auth-input !w-20 px-2.5 text-sm disabled:opacity-50"
+          value={value?.question_count ?? 10}
+          onChange={(event) => onChange({ ...value, question_count: event.target.value })}
+        />
+      </label>
+    </div>
+  );
 }
 
 export function TeacherLessonGeneratorPage() {
@@ -90,8 +155,16 @@ export function TeacherLessonGeneratorPage() {
   function onPickFile(picked) {
     if (!picked) return;
     const name = picked.name.toLowerCase();
-    if (!name.endsWith(".pdf") && !name.endsWith(".txt") && !name.endsWith(".md")) {
-      setError("Chỉ hỗ trợ tài liệu PDF hoặc Text (.txt).");
+    // Reset input để lần sau chọn lại cùng file vẫn kích hoạt onChange.
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (!ACCEPTED_EXTENSIONS.some((ext) => name.endsWith(ext))) {
+      setFile(null);
+      setError("Sai định dạng tài liệu. Vui lòng tải lên đúng định dạng PDF hoặc Text (.txt, .md).");
+      return;
+    }
+    if (picked.size > MAX_UPLOAD_BYTES) {
+      setFile(null);
+      setError("Tài liệu vượt quá 20MB. Vui lòng tải lên tài liệu nhỏ hơn 20MB.");
       return;
     }
     setError(null);
@@ -106,7 +179,7 @@ export function TeacherLessonGeneratorPage() {
     try {
       const data = await postOutline(config, file);
       setDocumentId(data.document_id);
-      setCourse(data.course_outline);
+      setCourse(withExamDefaults(data.course_outline));
       setStep("outline");
     } catch (outlineError) {
       setError(outlineError.message);
@@ -124,22 +197,47 @@ export function TeacherLessonGeneratorPage() {
     });
   }
 
+  // ---- Chương ----
+  function updateChapter(ci, field, value) {
+    updateCourse((next) => { next.chapters[ci][field] = value; });
+  }
+  function removeChapter(ci) {
+    updateCourse((next) => { next.chapters.splice(ci, 1); });
+  }
+  function addChapter() {
+    updateCourse((next) => { next.chapters.push(newChapter()); });
+  }
+  function updateChapterExam(ci, exam) {
+    updateCourse((next) => { next.chapters[ci].exam = exam; });
+  }
+
+  // ---- Bài học ----
+  function updateLesson(ci, li, field, value) {
+    updateCourse((next) => { next.chapters[ci].lessons[li][field] = value; });
+  }
+  function removeLesson(ci, li) {
+    updateCourse((next) => { next.chapters[ci].lessons.splice(li, 1); });
+  }
+  function addLesson(ci) {
+    updateCourse((next) => { next.chapters[ci].lessons.push(newLesson()); });
+  }
+
+  // ---- Mục nhỏ ----
   function updateSection(ci, li, si, field, value) {
     updateCourse((next) => { next.chapters[ci].lessons[li].sections[si][field] = value; });
   }
-
   function removeSection(ci, li, si) {
     updateCourse((next) => { next.chapters[ci].lessons[li].sections.splice(si, 1); });
   }
-
   function addSection(ci, li) {
+    updateCourse((next) => { next.chapters[ci].lessons[li].sections.push(newSection()); });
+  }
+
+  // ---- Exam toàn môn (giữa kỳ / cuối kỳ) ----
+  function updateCourseExam(which, exam) {
     updateCourse((next) => {
-      const lesson = next.chapters[ci].lessons[li];
-      lesson.sections.push({
-        section_id: `${lesson.lesson_id}.${lesson.sections.length + 1}-${Date.now()}`,
-        section_title: "",
-        intent: "",
-      });
+      next.exams = next.exams || {};
+      next.exams[which] = exam;
     });
   }
 
@@ -171,6 +269,7 @@ export function TeacherLessonGeneratorPage() {
         level: config.level,
         quiz_count: Number(config.quizCount),
         require_quest: config.requireQuest,
+        teacher_note: config.note.trim(),
       });
       setLessons(data.lessons);
       setStep("lessons");
@@ -319,6 +418,20 @@ export function TeacherLessonGeneratorPage() {
             />
           </div>
 
+          <label className="block">
+            <span className="mb-2 block text-xs font-black text-slate-700">Ghi chú dành cho giáo viên <span className="font-medium text-slate-400">(tùy chọn)</span></span>
+            <textarea
+              className="auth-input min-h-24 resize-y px-3.5 py-2.5 text-sm"
+              value={config.note}
+              onChange={(event) => update("note", event.target.value)}
+              placeholder="Yêu cầu/định hướng riêng để AI bám theo khi lập dàn ý. VD: tập trung chương 2–3, bỏ phần phụ lục, nhấn mạnh ví dụ thực tế..."
+              maxLength={1000}
+            />
+            <span className="mt-1 block text-xs font-medium text-slate-400">
+              AI sẽ ưu tiên tuân theo ghi chú này khi tạo dàn ý, miễn là không mâu thuẫn với tài liệu gốc.
+            </span>
+          </label>
+
           <div className="flex items-center gap-2 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-xs font-bold text-sky-800">
             <Bot size={17} />
             AI chỉ đề xuất bản nháp — bạn sẽ duyệt dàn ý và nội dung trước khi sử dụng với học sinh.
@@ -336,31 +449,75 @@ export function TeacherLessonGeneratorPage() {
       {/* --------------------------------------- Bước 2: duyệt dàn ý ---- */}
       {step === "outline" && course && (
         <section className="max-w-3xl space-y-4">
-          <div className="surface p-5 sm:p-6">
+          <div className="surface space-y-3 p-5 sm:p-6">
             <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-black text-slate-950">Dàn ý khóa học — chỉnh sửa trước khi sinh bài</h2>
-                {course.overall_objective && <p className="mt-1 text-sm font-medium leading-6 text-slate-500">{course.overall_objective}</p>}
-              </div>
+              <h2 className="text-lg font-black text-slate-950">Duyệt dàn ý & cấu trúc bài kiểm tra</h2>
               <span className="shrink-0 rounded-md bg-slate-100 px-2 py-1 text-xs font-black text-slate-600">{config.subject} · Lớp {config.grade}</span>
             </div>
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs font-bold text-amber-800">
+              Bước này chỉ chốt cấu trúc tiêu đề (chương/bài/mục) và số lượng câu hỏi cho các bài Exam — chưa sinh nội dung chi tiết.
+            </p>
+            <label className="block">
+              <span className="mb-2 block text-xs font-black text-slate-700">Mục tiêu tổng thể khóa học</span>
+              <textarea
+                className="auth-input min-h-16 resize-y px-3.5 py-2.5 text-sm"
+                value={course.overall_objective || ""}
+                onChange={(event) => updateCourse((next) => { next.overall_objective = event.target.value; })}
+                placeholder="Tóm tắt mục tiêu toàn khóa học trong 1-2 câu"
+                maxLength={600}
+              />
+            </label>
           </div>
 
           {course.chapters.map((chapter, ci) => (
             <article key={chapter.chapter_id} className="surface space-y-4 p-5 sm:p-6">
-              <div>
-                <p className="eyebrow">Chương {chapter.chapter_id}</p>
-                <h3 className="mt-1 text-lg font-black text-slate-950">{chapter.chapter_title}</h3>
-                {chapter.chapter_objective && <p className="mt-1 text-sm font-medium leading-6 text-slate-500">{chapter.chapter_objective}</p>}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="eyebrow">Chương {ci + 1}</p>
+                  <button
+                    type="button" className="icon-button inline-grid text-rose-500"
+                    aria-label="Xóa chương" title="Xóa chương" onClick={() => removeChapter(ci)}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+                <input
+                  className="auth-input px-3.5 text-base font-black" value={chapter.chapter_title}
+                  onChange={(event) => updateChapter(ci, "chapter_title", event.target.value)}
+                  placeholder="Tên chương (VD: Chương 1: Động lực học)" maxLength={300}
+                />
+                <input
+                  className="auth-input px-3.5 text-xs" value={chapter.chapter_objective || ""}
+                  onChange={(event) => updateChapter(ci, "chapter_objective", event.target.value)}
+                  placeholder="Mục tiêu cốt lõi của chương (tùy chọn)" maxLength={600}
+                />
               </div>
 
               {chapter.lessons.map((lesson, li) => (
                 <div key={lesson.lesson_id} className="rounded-lg border border-slate-200 p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-black text-slate-900">Bài {lesson.lesson_id}. {lesson.lesson_title}</p>
-                    <span className="flex items-center gap-1.5 rounded-md bg-violet-50 px-2 py-1 text-[11px] font-black text-violet-700">
-                      <Clock3 size={13} />{lesson.estimated_time_minutes} phút
-                    </span>
+                  <div className="flex flex-wrap items-start gap-2">
+                    <span className="mt-2 shrink-0 rounded-md bg-slate-100 px-2 py-1 text-[11px] font-black text-slate-600">Bài {ci + 1}.{li + 1}</span>
+                    <input
+                      className="auth-input min-w-0 flex-1 px-3 text-sm font-extrabold" value={lesson.lesson_title}
+                      onChange={(event) => updateLesson(ci, li, "lesson_title", event.target.value)}
+                      placeholder="Tên bài học" maxLength={300}
+                    />
+                    <label className="flex items-center gap-1.5 rounded-md bg-violet-50 px-2 py-1 text-[11px] font-black text-violet-700" title="Thời lượng dự kiến (phút)">
+                      <Clock3 size={13} />
+                      <input
+                        type="number" min={5} max={180}
+                        className="w-12 bg-transparent text-right outline-none"
+                        value={lesson.estimated_time_minutes}
+                        onChange={(event) => updateLesson(ci, li, "estimated_time_minutes", event.target.value)}
+                      />
+                      phút
+                    </label>
+                    <button
+                      type="button" className="icon-button mt-0.5 inline-grid text-rose-500"
+                      aria-label="Xóa bài học" title="Xóa bài học" onClick={() => removeLesson(ci, li)}
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
 
                   <div className="mt-3 space-y-2">
@@ -388,14 +545,46 @@ export function TeacherLessonGeneratorPage() {
                   </div>
                 </div>
               ))}
+
+              <button type="button" className="secondary-button !min-h-9 !text-xs" onClick={() => addLesson(ci)}><Plus size={14} />Thêm bài học</button>
+
+              {/* Exam sau chương */}
+              <ExamControl
+                label={`Exam sau chương ${ci + 1}`}
+                hint="Bài kiểm tra ngay sau khi học xong chương này."
+                value={chapter.exam}
+                onChange={(exam) => updateChapterExam(ci, exam)}
+              />
             </article>
           ))}
+
+          <button type="button" className="secondary-button w-full" onClick={addChapter}><Plus size={16} />Thêm chương</button>
+
+          {/* Exam toàn môn học */}
+          <div className="surface space-y-3 p-5 sm:p-6">
+            <div className="flex items-center gap-2">
+              <ClipboardList size={18} className="text-slate-500" />
+              <h3 className="text-base font-black text-slate-950">Kỳ thi toàn môn học</h3>
+            </div>
+            <ExamControl
+              label="Exam giữa kỳ (nửa môn học)"
+              hint="Tổng hợp kiến thức nửa đầu môn học."
+              value={course.exams?.midterm}
+              onChange={(exam) => updateCourseExam("midterm", exam)}
+            />
+            <ExamControl
+              label="Exam cuối kỳ (cuối môn học)"
+              hint="Tổng hợp kiến thức toàn bộ môn học."
+              value={course.exams?.final}
+              onChange={(exam) => updateCourseExam("final", exam)}
+            />
+          </div>
 
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
             <button type="button" className="secondary-button" onClick={() => setStep("config")} disabled={busy}><ArrowLeft size={16} />Quay lại</button>
             <button type="button" className="primary-button" onClick={generateLessons} disabled={busy}>
               {busy ? <Loader2 size={17} className="animate-spin" /> : <Sparkles size={17} />}
-              {busy ? "AI đang viết từng bài..." : "Tạo bài giảng"}
+              {busy ? "AI đang viết từng bài..." : "Chốt cấu trúc & tạo bài giảng"}
             </button>
           </div>
         </section>

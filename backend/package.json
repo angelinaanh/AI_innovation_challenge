@@ -10,6 +10,7 @@
     "seed:tutor": "node scripts/embedTutorKnowledge.js",
     "seed:sources": "node scripts/seedTutorSources.js",
     "seed:subjects": "node scripts/seedSubjects.js",
+    "seed:learning": "node scripts/seedLearningPaths.js",
     "reset:demo": "node scripts/seedDemo.js --reset-progress",
     "test": "node --test tests/**/*.test.js"
   },
@@ -18,7 +19,9 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
+    "multer": "^2.2.0",
     "openai": "^6.48.0",
+    "pdf-parse": "^2.4.5",
     "socket.io": "^4.8.1"
   }
 }

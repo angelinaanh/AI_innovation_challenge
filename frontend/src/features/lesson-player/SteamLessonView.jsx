@@ -84,6 +84,22 @@ function Block({ block }) {
     );
   }
 
+  if (block.type === "image") {
+    if (!block.url) return null;
+    return (
+      <figure className="space-y-1.5">
+        <img
+          src={block.url}
+          alt={block.alt_text || "Ảnh minh họa"}
+          className="max-h-[28rem] w-full rounded-lg border border-slate-200 bg-slate-50 object-contain"
+        />
+        {block.alt_text && (
+          <figcaption className="text-center text-xs font-medium italic text-slate-500">{block.alt_text}</figcaption>
+        )}
+      </figure>
+    );
+  }
+
   if (block.type === "image_suggestion") {
     return (
       <div className="rounded-lg border border-dashed border-sky-300 bg-sky-50/50 p-4">

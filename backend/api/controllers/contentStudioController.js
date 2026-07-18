@@ -21,8 +21,40 @@ import {
   submitContentReview,
   updateContentDraft,
 } from "../../services/content-studio/contentStudioService.js";
+import {
+  generateCourseLessons,
+  generateOutline,
+} from "../../services/content-studio/aiContentGenerator.js";
 
 const uid = (request) => request.auth?.profile?.id;
+
+// Bước 1 Lesson Generator: giáo viên upload tài liệu -> AI đề xuất dàn ý.
+export async function postContentOutline(request, response, next) {
+  try {
+    if (!request.file) {
+      const error = new Error("Hãy tải lên tài liệu gốc (PDF hoặc Text).");
+      error.code = "VALIDATION_ERROR";
+      throw error;
+    }
+    const data = await generateOutline({
+      filename: request.file.originalname,
+      buffer: request.file.buffer,
+      subject: request.body?.subject,
+      grade: request.body?.grade,
+      level: request.body?.level,
+      quizCount: request.body?.quiz_count,
+      teacherNote: request.body?.teacher_note,
+    });
+    response.json({ data });
+  } catch (error) { next(error); }
+}
+
+// Bước 2 Lesson Generator: dàn ý đã duyệt -> AI viết chi tiết từng bài.
+export async function postContentGenerate(request, response, next) {
+  try {
+    response.json({ data: await generateCourseLessons(request.body) });
+  } catch (error) { next(error); }
+}
 
 // Bước cuối của Lesson Generator: lưu khóa bài giảng AI giáo viên đã duyệt.
 export async function postAiCourse(request, response, next) {

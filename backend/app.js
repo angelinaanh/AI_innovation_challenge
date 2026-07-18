@@ -31,7 +31,9 @@ export function createApp() {
     },
     credentials: true,
   }));
-  app.use(express.json({ limit: "1mb" }));
+  // 25mb để chứa bài giảng có ảnh giáo viên tải lên (nhúng dạng data URI trong
+  // content jsonb). Upload tài liệu gốc đi qua multer riêng, không dùng giới hạn này.
+  app.use(express.json({ limit: "25mb" }));
   app.use((request, response, next) => {
     request.requestId = crypto.randomUUID();
     response.setHeader("x-request-id", request.requestId);

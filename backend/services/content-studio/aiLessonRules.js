@@ -7,7 +7,9 @@
  * validateLessonDraft trong contentStudioRules.js.
  */
 const LEVELS = new Set(["Basic", "Advanced"]);
-const BLOCK_TYPES = new Set(["text", "formula", "image_suggestion", "quick_practice", "tip"]);
+// "image" = ảnh giáo viên tự tải lên (url là data URI hoặc link); khác với
+// "image_suggestion" do AI đề xuất (chỉ có mô tả chữ).
+const BLOCK_TYPES = new Set(["text", "formula", "image_suggestion", "quick_practice", "image", "tip"]);
 
 function cleanText(value) {
   return String(value || "").trim();
@@ -18,6 +20,9 @@ function validateBlock(block, where) {
   if (!BLOCK_TYPES.has(block.type)) return `${where}: loại block "${block.type}" không hợp lệ.`;
   if (block.type === "image_suggestion") {
     return cleanText(block.alt_text) ? null : `${where}: gợi ý hình ảnh cần mô tả.`;
+  }
+  if (block.type === "image") {
+    return cleanText(block.url) ? null : `${where}: khối ảnh cần tải lên hình ảnh.`;
   }
   if (block.type === "quick_practice") {
     if (!cleanText(block.question)) return `${where}: bài tập nhanh cần câu hỏi.`;

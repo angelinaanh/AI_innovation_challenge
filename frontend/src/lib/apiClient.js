@@ -63,6 +63,22 @@ export async function apiPost(path, body, signal, accessToken) {
   return payload.data;
 }
 
+export async function apiPostForm(path, formData, signal, accessToken) {
+  // Không tự đặt Content-Type — trình duyệt tự thêm boundary cho multipart.
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "POST",
+    headers: await accessTokenHeaders(accessToken, { Accept: "application/json" }),
+    body: formData,
+    signal,
+  });
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw apiError(response, payload, "Không thể gửi tài liệu tới EduOne.");
+  }
+  return payload.data;
+}
+
 export async function apiPatch(path, body, signal, accessToken) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "PATCH",
@@ -146,6 +162,21 @@ export const api = {
   ),
   getDashboard: (signal) => apiGet("/student/dashboard", signal),
   getPath: (signal) => apiGet("/student/path", signal),
+  // Lộ trình học theo môn (nội dung từ DB backend) + tiến độ học sinh.
+  getLearningSubjects: (grade, signal) => apiGet(`/student/learning-path?grade=${encodeURIComponent(grade)}`, signal),
+  getLearningPath: (subjectKey, grade, signal) => apiGet(
+    `/student/learning-path/${encodeURIComponent(subjectKey)}?grade=${encodeURIComponent(grade)}`,
+    signal,
+  ),
+  getLearningProgress: (subjectKey, grade, signal) => apiGet(
+    `/student/learning-path/${encodeURIComponent(subjectKey)}/progress?grade=${encodeURIComponent(grade)}`,
+    signal,
+  ),
+  saveLearningProgress: (subjectKey, grade, completed, replace = false, signal) => apiPost(
+    `/student/learning-path/${encodeURIComponent(subjectKey)}/progress`,
+    { grade, completed, replace },
+    signal,
+  ),
   getLesson: (skillNodeId, signal) => apiGet(
     `/student/lessons/${encodeURIComponent(skillNodeId)}`,
     signal,
@@ -192,6 +223,9 @@ export const api = {
     { decision },
     signal,
   ),
+  // Lesson Generator — bước 1 (dàn ý từ tài liệu) & bước 2 (viết bài giảng).
+  generateOutline: (formData, signal) => apiPostForm("/teacher/content/outline", formData, signal),
+  generateLessons: (payload, signal) => apiPost("/teacher/content/generate", payload, signal),
   saveAiCourse: (payload, signal) => apiPost("/teacher/content/ai-courses", payload, signal),
   getAiCourses: (signal) => apiGet("/teacher/ai-courses", signal),
   getTeacherAiLesson: (lessonId, signal) => apiGet(

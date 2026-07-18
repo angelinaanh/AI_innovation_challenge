@@ -3,6 +3,7 @@ import {
   ChevronDown,
   ChevronRight,
   Image,
+  ImagePlus,
   Lightbulb,
   ListChecks,
   PencilLine,
@@ -11,7 +12,19 @@ import {
   Target,
   Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
+
+// Ảnh nhúng dạng data URI vào content jsonb — giới hạn để không phình DB.
+const MAX_IMAGE_BYTES = 1.5 * 1024 * 1024;
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
 
 // Metadata cho từng loại block (theo ai/prompts/create_leacturer.md).
 // `fields` quyết định editor render ô nhập nào — mỗi type dùng field khác nhau.
@@ -27,6 +40,12 @@ const BLOCK_META = {
     icon: Calculator,
     tone: "border-violet-200 bg-violet-50/50",
     fields: [{ key: "content", label: "Công thức LaTeX", rows: 2, mono: true }],
+  },
+  image: {
+    label: "Ảnh tải lên",
+    icon: ImagePlus,
+    tone: "border-sky-200 bg-white",
+    custom: "image", // render bằng ImageBlockEditor, không phải ô văn bản.
   },
   image_suggestion: {
     label: "Gợi ý hình ảnh",
@@ -51,10 +70,10 @@ const BLOCK_META = {
   },
 };
 
-const BLOCK_ORDER = ["text", "formula", "image_suggestion", "quick_practice", "tip"];
+const BLOCK_ORDER = ["text", "formula", "image", "image_suggestion", "quick_practice", "tip"];
 
 function emptyBlock(type) {
-  return { type, content: "", alt_text: "", question: "", answer: "" };
+  return { type, content: "", alt_text: "", question: "", answer: "", url: "" };
 }
 
 function AutoTextarea({ label, value, onChange, rows = 3, mono = false }) {
@@ -68,6 +87,49 @@ function AutoTextarea({ label, value, onChange, rows = 3, mono = false }) {
         onChange={(event) => onChange(event.target.value)}
       />
     </label>
+  );
+}
+
+// Khối ảnh: giáo viên tải ảnh từ máy, nhúng dạng data URI + chú thích tùy chọn.
+function ImageBlockEditor({ block, onField }) {
+  const inputRef = useRef(null);
+  const [error, setError] = useState(null);
+
+  async function onPick(file) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { setError("Chỉ chấp nhận tệp ảnh."); return; }
+    if (file.size > MAX_IMAGE_BYTES) { setError("Ảnh vượt quá 1.5MB. Vui lòng chọn ảnh nhỏ hơn."); return; }
+    setError(null);
+    onField("url", await readFileAsDataUrl(file));
+  }
+
+  return (
+    <div className="space-y-2.5">
+      {block.url ? (
+        <div className="space-y-2">
+          <img
+            src={block.url}
+            alt={block.alt_text || "Ảnh minh họa"}
+            className="max-h-64 w-full rounded-lg border border-slate-200 bg-slate-50 object-contain"
+          />
+          <div className="flex gap-1.5">
+            <button type="button" className="secondary-button !min-h-8 !px-2.5 !text-[11px]" onClick={() => inputRef.current?.click()}>Đổi ảnh</button>
+            <button type="button" className="secondary-button !min-h-8 !px-2.5 !text-[11px]" onClick={() => onField("url", "")}>Gỡ ảnh</button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          className="flex min-h-24 w-full flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed border-slate-300 text-xs font-bold text-slate-500 hover:border-sky-300 hover:bg-sky-50/30"
+          onClick={() => inputRef.current?.click()}
+        >
+          <ImagePlus size={20} />Bấm để tải ảnh lên (≤ 1.5MB)
+        </button>
+      )}
+      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={(event) => onPick(event.target.files?.[0])} />
+      {error && <p className="text-xs font-bold text-rose-600">{error}</p>}
+      <AutoTextarea label="Chú thích ảnh (tùy chọn)" rows={1} value={block.alt_text} onChange={(value) => onField("alt_text", value)} />
+    </div>
   );
 }
 
@@ -85,16 +147,18 @@ function BlockCard({ block, onField, onRemove }) {
           <Trash2 size={15} />
         </button>
       </div>
-      {meta.fields.map((field) => (
-        <AutoTextarea
-          key={field.key}
-          label={field.label}
-          rows={field.rows}
-          mono={field.mono}
-          value={block[field.key]}
-          onChange={(value) => onField(field.key, value)}
-        />
-      ))}
+      {meta.custom === "image"
+        ? <ImageBlockEditor block={block} onField={onField} />
+        : meta.fields.map((field) => (
+          <AutoTextarea
+            key={field.key}
+            label={field.label}
+            rows={field.rows}
+            mono={field.mono}
+            value={block[field.key]}
+            onChange={(value) => onField(field.key, value)}
+          />
+        ))}
     </div>
   );
 }

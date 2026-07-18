@@ -44,6 +44,10 @@ const STATUS_BY_CODE = {
   CONTENT_INVALID_STATE: 409,
   CONTENT_GENERATION_FAILED: 502,
   CONTENT_UNSAFE: 422,
+  // Tải tài liệu cho Lesson Generator (Tạo bài giảng bằng AI).
+  UPLOAD_TOO_LARGE: 413,
+  UPLOAD_INVALID_FORMAT: 415,
+  UPLOAD_NO_TEXT: 422,
 };
 
 export function notFound(request, response) {
