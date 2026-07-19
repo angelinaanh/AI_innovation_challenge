@@ -1,6 +1,7 @@
 import { supabase } from "../supabase.js";
 import { evaluateLearningPath } from "../path-engine/pathEngine.js";
 import { resolveStudentId, throwDatabaseError } from "./studentContext.js";
+import { radarSummary } from "../onboarding/onboardingRules.js";
 
 async function loadPathInputs(studentId) {
   const [steamResult, nodesResult, prerequisiteResult, lessonResult, attemptResult] =
@@ -74,7 +75,7 @@ export async function getStudentDashboard(requestedStudentId) {
         .single(),
       supabase
         .from("placement_tests")
-        .select("steam_result")
+        .select("steam_result,score_percent,track,status,submitted_at")
         .eq("user_id", studentId)
         .order("created_at", { ascending: false })
         .limit(1)
@@ -103,6 +104,11 @@ export async function getStudentDashboard(requestedStudentId) {
   throwDatabaseError(eventsResult.error, "load weekly activity");
 
   const exp = expResult.data || { total_exp: 0, level: 1 };
+  // Lộ trình cá nhân hoá suy ra từ lượt placement gần nhất đã nộp; profile.learning_track
+  // là bản sao đã lưu nên vẫn dùng làm dự phòng khi bản ghi test bị xoá.
+  const placement = placementResult?.data?.status === "submitted" ? placementResult.data : null;
+  const track = placement?.track || profileResult.data.learning_track || null;
+  const placementSteam = placement?.steam_result || null;
   const currentLevelFloor = Math.max(0, (exp.level - 1) * 500);
   const nextLevelAt = exp.level * 500;
 
@@ -117,9 +123,20 @@ export async function getStudentDashboard(requestedStudentId) {
       // Bước AI chat + placement test sau khi tạo tài khoản (M3 / FR2).
       chatCompleted: Boolean(profileResult.data.onboarding_completed_at),
       placementCompleted: Boolean(profileResult.data.placement_completed_at),
-      learningTrack: profileResult.data.learning_track || null,
-      proficiency: placementResult?.data?.steam_result?.proficiency || null,
+      learningTrack: track,
+      proficiency: placementSteam?.proficiency || null,
     },
+    // Kết quả bài test đầu vào — dùng để hiện lộ trình cá nhân hoá ở trang Lộ trình học.
+    placement: placement
+      ? {
+          track,
+          trackLabel: track === "advanced" ? "Nâng cao" : "Cơ bản",
+          scorePercent: placement.score_percent === null ? null : Number(placement.score_percent),
+          proficiency: placementSteam?.proficiency || null,
+          submittedAt: placement.submitted_at,
+          ...radarSummary(placementSteam || {}, { track }),
+        }
+      : null,
     steamProfile: path.scores,
     gamification: {
       totalExp: exp.total_exp,

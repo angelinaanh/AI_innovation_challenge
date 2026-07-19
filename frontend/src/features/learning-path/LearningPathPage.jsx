@@ -902,6 +902,136 @@ function MyClassesPanel({ classes, gradeLevel }) {
   );
 }
 
+// Nhãn/màu của hai lộ trình do bài test đầu vào phân loại (onboardingRules.resolveTrack).
+const TRACK_META = {
+  basic: {
+    label: "Cơ bản",
+    emoji: "🌱",
+    accent: "#0ea5e9",
+    bg: "#e0f2fe",
+    text: "#0369a1",
+    tagline: "Đi chắc từng bước — nắm vững nền tảng trước khi tăng tốc.",
+  },
+  advanced: {
+    label: "Nâng cao",
+    emoji: "🚀",
+    accent: "#059669",
+    bg: "#d1fae5",
+    text: "#047857",
+    tagline: "Nền tảng đã vững — thử sức với bài mở rộng và dự án thực hành.",
+  },
+};
+
+/**
+ * Khối "Lộ trình của tôi": hiển thị lộ trình (Cơ bản / Nâng cao) mà bài test đầu
+ * vào đã phân cho học sinh, đặt cạnh khối Lớp học để hai thông tin định hướng
+ * nằm cùng một tầm mắt.
+ */
+function MyTrackPanel({ placement, onPickSubject, subjects }) {
+  if (!placement) {
+    return (
+      <section className="surface p-5 md:p-6">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <Compass size={17} className="text-sky-600" aria-hidden="true" />
+          <h2 className="text-sm font-black text-slate-900">Lộ trình của tôi</h2>
+        </div>
+        <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-center">
+          <p className="text-sm font-bold text-slate-600">Bạn chưa có lộ trình cá nhân hoá.</p>
+          <p className="mt-1 text-xs font-medium text-slate-500">
+            Làm bài test đầu vào để EduOne xếp lộ trình phù hợp với bạn.
+          </p>
+          <Link to="/student" className="secondary-button mt-3 inline-flex">
+            Làm bài test đầu vào <ArrowRight size={15} />
+          </Link>
+        </div>
+      </section>
+    );
+  }
+
+  const meta = TRACK_META[placement.track] || TRACK_META.basic;
+  const weakest = STEAM_META[placement.weakestAxis];
+  const strongest = STEAM_META[placement.strongestAxis];
+  // Môn gợi ý: môn có trục STEAM chính trùng với trục yếu nhất — nơi cần bù nhiều nhất.
+  const suggested = subjects.find((s) => s.steam[0] === placement.weakestAxis)
+    || subjects.find((s) => s.steam.includes(placement.weakestAxis));
+
+  return (
+    <section className="surface p-5 md:p-6">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <Compass size={17} style={{ color: meta.accent }} aria-hidden="true" />
+        <h2 className="text-sm font-black text-slate-900">Lộ trình của tôi</h2>
+        <span
+          className="rounded-full px-2.5 py-0.5 text-[11px] font-black"
+          style={{ background: meta.bg, color: meta.text }}
+        >
+          Từ bài test đầu vào
+        </span>
+      </div>
+
+      <div
+        className="rounded-2xl p-4 text-white"
+        style={{ background: `linear-gradient(135deg, ${meta.accent}, ${meta.accent}cc)` }}
+      >
+        <div className="flex items-center gap-3">
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/20 text-2xl" aria-hidden="true">
+            {meta.emoji}
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="font-display text-xl font-bold leading-tight">Lộ trình {meta.label}</div>
+            <p className="mt-0.5 text-xs font-bold text-white/85">{meta.tagline}</p>
+          </div>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] font-black">
+          {placement.scorePercent !== null && (
+            <span className="rounded-full bg-white/20 px-2.5 py-1">Điểm test: {placement.scorePercent}%</span>
+          )}
+          {placement.proficiency && (
+            <span className="rounded-full bg-white/20 px-2.5 py-1">Trình độ: {placement.proficiency}</span>
+          )}
+        </div>
+      </div>
+
+      {(strongest || weakest) && (
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          {strongest && (
+            <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+              <div className="text-[10px] font-black uppercase tracking-wide text-slate-400">Thế mạnh</div>
+              <div className="mt-1 flex items-center gap-1.5">
+                <SteamBadge axis={placement.strongestAxis} />
+                <span className="text-sm font-black text-slate-800">{strongest.label}</span>
+              </div>
+            </div>
+          )}
+          {weakest && (
+            <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+              <div className="text-[10px] font-black uppercase tracking-wide text-slate-400">Cần bổ sung</div>
+              <div className="mt-1 flex items-center gap-1.5">
+                <SteamBadge axis={placement.weakestAxis} />
+                <span className="text-sm font-black text-slate-800">{weakest.label}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {placement.message && (
+        <p className="mt-3 text-sm font-medium leading-6 text-slate-600">{placement.message}</p>
+      )}
+
+      {suggested && (
+        <button
+          type="button"
+          onClick={() => onPickSubject(suggested.key)}
+          className="mt-3 inline-flex items-center gap-1.5 text-sm font-black hover:underline"
+          style={{ color: meta.text }}
+        >
+          Bắt đầu với {suggested.name} <ArrowRight size={16} />
+        </button>
+      )}
+    </section>
+  );
+}
+
 export function LearningPathPage() {
   const { dashboard } = useStudentData();
   const [path, setPath] = useState(null);
@@ -1008,7 +1138,14 @@ export function LearningPathPage() {
       </div>
 
       {!selected && (
-        <MyClassesPanel classes={classes} gradeLevel={studentGrade} />
+        <div className="grid items-start gap-4 lg:grid-cols-2">
+          <MyClassesPanel classes={classes} gradeLevel={studentGrade} />
+          <MyTrackPanel
+            placement={dashboard?.placement}
+            subjects={subjects}
+            onPickSubject={(key) => { setSelectedKey(key); setStudying(false); }}
+          />
+        </div>
       )}
 
       {!path ? (
