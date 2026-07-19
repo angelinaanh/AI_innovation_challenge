@@ -90,6 +90,22 @@ function trueFalseCluster(axis, pillar, level, body, clauses, answers, explanati
   };
 }
 
+function multipleSelect(axis, pillar, level, body, options, answers, explanation) {
+  return { steam_axis: axis, pillar, type: "multiple_select", cognitive_level: level, difficulty: DIFF_BY_LEVEL[level], body, options, accepted_answers: answers, explanation };
+}
+
+function ordering(axis, pillar, level, body, items, answers, explanation) {
+  return { steam_axis: axis, pillar, type: "ordering", cognitive_level: level, difficulty: DIFF_BY_LEVEL[level], body, options: { items }, accepted_answers: answers, explanation };
+}
+
+function dragDrop(axis, pillar, level, body, items, dropzones, answers, explanation) {
+  return { steam_axis: axis, pillar, type: "drag_drop", cognitive_level: level, difficulty: DIFF_BY_LEVEL[level], body, options: { items, dropzones }, accepted_answers: answers, explanation };
+}
+
+function hotspot(axis, pillar, level, body, url, items, explanation) {
+  return { steam_axis: axis, pillar, type: "hotspot", cognitive_level: level, difficulty: DIFF_BY_LEVEL[level], body, image_url: url, options: { items }, accepted_answers: null, explanation };
+}
+
 // Đặt đáp án đúng vào một vị trí xác định trong 4 lựa chọn số.
 function numericOptions(correct, distractors, slot) {
   const unique = [];
@@ -291,6 +307,31 @@ const SECONDARY_ENGLISH = [
   fill("A", "english", "comprehension", "Sắp xếp thành câu hoàn chỉnh: she / a / teacher / is.", ["she is a teacher"], "Câu đúng: \"She is a teacher\"."),
 ];
 
+const ECO_SCHOOL_SECONDARY = [
+  // Giai đoạn 1: Khảo sát & Năng lượng (Science & Math)
+  mcq("S", "science", "recognition", "Nguồn năng lượng nào sau đây gây ô nhiễm môi trường nhiều nhất?", ["Năng lượng gió", "Năng lượng mặt trời", "Than đá", "Thủy điện"], 2, "Than đá tạo ra nhiều CO2."),
+  multipleSelect("S", "science", "comprehension", "Chọn các biện pháp giúp tiết kiệm năng lượng trong trường học:", ["Bật điều hòa 18 độ", "Tắt đèn khi ra khỏi phòng", "Sử dụng quạt thay vì điều hòa", "Để máy tính chế độ Sleep cả đêm"], ["1", "2"], "Tắt đèn và dùng quạt giúp tiết kiệm điện."),
+  hotspot("S", "science", "application", "Nhấn vào vị trí thích hợp để lắp đặt tấm pin năng lượng mặt trời trên tòa nhà trường học.", "/phet/solar-panel-school.png", [{x: 250, y: 50, radius: 40}], "Mái nhà là nơi nhận nhiều ánh sáng mặt trời nhất."),
+  dragDrop("M", "math", "comprehension", "Phân loại rác thải vào đúng thùng rác:", ["Vỏ chuối", "Chai nhựa", "Giấy vụn", "Pin cũ"], ["Hữu cơ", "Tái chế", "Nguy hại"], ["Hữu cơ", "Tái chế", "Tái chế", "Nguy hại"], "Vỏ chuối (Hữu cơ), Chai nhựa/Giấy (Tái chế), Pin (Nguy hại)."),
+  
+  // Giai đoạn 2: Thiết kế Hệ thống Thông minh (Tech & Engineering)
+  ordering("T", "technology", "comprehension", "Sắp xếp các bước lắp đặt hệ thống tưới cây tự động:", ["Lắp đặt ống nước", "Cài đặt thời gian trên bộ điều khiển", "Khảo sát khu vực tưới", "Kết nối máy bơm với nguồn nước"], ["2", "0", "3", "1"], "Khảo sát -> Lắp ống -> Máy bơm -> Cài đặt."),
+  mcq("E", "engineering", "application", "Vật liệu nào tốt nhất để làm ống dẫn nước ngoài trời chống tia UV?", ["Ống nhựa PVC", "Ống thép", "Ống nhựa HDPE", "Ống thủy tinh"], 2, "HDPE bền và chịu tia UV tốt hơn PVC."),
+  multipleSelect("T", "technology", "application", "Cảm biến nào cần thiết cho hệ thống tưới cây tự động?", ["Cảm biến độ ẩm đất", "Cảm biến chuyển động", "Cảm biến nhiệt độ", "Cảm biến khói"], ["0", "2"], "Độ ẩm và nhiệt độ giúp quyết định lượng nước."),
+  dragDrop("E", "engineering", "application", "Nối các thiết bị với chức năng tương ứng trong hệ thống điện gió:", ["Cánh quạt", "Máy phát điện", "Biến tần"], ["Thu năng lượng cơ học", "Chuyển cơ năng thành điện", "Chuyển đổi dòng điện"], ["Thu năng lượng cơ học", "Chuyển cơ năng thành điện", "Chuyển đổi dòng điện"], "Cánh quạt thu gió, máy phát tạo điện, biến tần chuyển DC sang AC."),
+  
+  // Giai đoạn 3: Cảnh quan & Trực quan hóa (Arts & Math)
+  ordering("A", "art", "comprehension", "Sắp xếp quy trình thiết kế bồn hoa sân trường:", ["Vẽ phác thảo ý tưởng", "Lựa chọn loại cây trồng", "Thi công trồng cây", "Lên bản vẽ kỹ thuật chi tiết"], ["0", "1", "3", "2"], "Phác thảo -> Chọn cây -> Bản vẽ chi tiết -> Thi công."),
+  mcq("M", "math", "application", "Bồn hoa hình tròn đường kính 4m. Diện tích cần trồng cỏ là bao nhiêu? (Lấy pi = 3.14)", ["12.56 m2", "6.28 m2", "25.12 m2", "50.24 m2"], 0, "Bán kính r = 2. Diện tích S = pi * r^2 = 3.14 * 4 = 12.56."),
+  hotspot("A", "art", "application", "Chỉ ra vị trí tốt nhất để đặt bảng thông tin dự án Eco-School trên bản đồ sân trường.", "/phet/school-map.png", [{x: 400, y: 300, radius: 50}], "Gần cổng chính hoặc khu trung tâm nơi nhiều người qua lại."),
+  multipleSelect("A", "art", "comprehension", "Màu sắc nào phù hợp nhất để thiết kế logo Eco-School?", ["Xanh lá cây", "Xanh dương", "Đen tuyền", "Đỏ chót"], ["0", "1"], "Xanh lá (môi trường), Xanh dương (nước)."),
+  
+  // Giai đoạn 4: Vận hành & Xử lý sự cố
+  dragDrop("T", "logic", "application", "Máy bơm không hoạt động. Ghép nguyên nhân với cách xử lý:", ["Chưa cắm điện", "Ống bị tắc", "Hết nước trong bồn"], ["Làm sạch đường ống", "Bơm thêm nước", "Kiểm tra nguồn điện"], ["Kiểm tra nguồn điện", "Làm sạch đường ống", "Bơm thêm nước"], "Logic xử lý sự cố."),
+  ordering("S", "science", "application", "Trình tự xử lý khi phát hiện rò rỉ nước ở khu vực tưới:", ["Thông báo cho ban quản lý", "Sửa chữa hoặc thay ống", "Khóa van nước tổng", "Lau dọn khu vực ướt"], ["2", "0", "1", "3"], "Khóa van -> Thông báo -> Sửa -> Dọn."),
+  mcq("E", "logic", "application", "Hệ thống đèn hành lang tự động sáng vào ban ngày. Lỗi do đâu?", ["Bóng đèn hỏng", "Cảm biến ánh sáng bị bụi che khuất", "Mất điện", "Công tắc hỏng"], 1, "Bụi che cảm biến khiến nó nhận diện là ban đêm.")
+];
+
 // ---------------------------------------------------------------------------
 // CẤP 3 — THPT (lớp 10-12): 30 câu, 90'. M10 / Ngữ văn7 / Khoa học7 / Anh6.
 // ---------------------------------------------------------------------------
@@ -336,10 +377,7 @@ const HIGH_ENGLISH = [
 const BANKS = {
   kindergarten: () => [...KINDERGARTEN],
   primary: () => [...PRIMARY],
-  secondary: (grade) => [
-    ...SECONDARY_CURATED_MATH, ...extraMath(grade, "secondary"),
-    ...SECONDARY_LANG, ...SECONDARY_SCIENCE, ...SECONDARY_ENGLISH,
-  ],
+  secondary: (grade) => [...ECO_SCHOOL_SECONDARY], // Dự án Eco-School cho THCS
   high_school: (grade) => [
     ...HIGH_CURATED_MATH, ...extraMath(grade, "high_school"),
     ...HIGH_LANG, ...HIGH_SCIENCE, ...HIGH_ENGLISH,
@@ -361,5 +399,25 @@ export function buildDeterministicQuestions(gradeLevel, gradeBand) {
     allQuestions.sort(() => Math.random() - 0.5);
     return allQuestions.slice(0, 15).map((q, index) => ({ ...q, order_index: index }));
   }
+
+  // Khối THPT cần 70 câu, nếu không đủ thì lặp lại
+  if (band === "high_school") {
+    const requiredQuestions = 70;
+    while (allQuestions.length < requiredQuestions) {
+      const remaining = requiredQuestions - allQuestions.length;
+      allQuestions.push(...allQuestions.slice(0, remaining));
+    }
+    return allQuestions.map((q, index) => ({ ...q, order_index: index }));
+  }
+
+  // Cấp 2 hiện tại 50 câu (Fallback chỉ có 15 câu Eco-School, lặp lại cho đủ 50)
+  if (band === "secondary") {
+    const requiredQuestions = 50;
+    while (allQuestions.length < requiredQuestions) {
+      const remaining = requiredQuestions - allQuestions.length;
+      allQuestions.push(...allQuestions.slice(0, remaining));
+    }
+  }
+
   return allQuestions.map((question, index) => ({ ...question, order_index: index }));
 }

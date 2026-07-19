@@ -3,6 +3,13 @@ import { Bot, Loader2, Send, Sparkles, X, CheckCircle2, XCircle, AlertCircle, Cl
 
 import { api } from "../../lib/apiClient.js";
 import { RadarProfile } from "../student-dashboard/RadarProfile.jsx";
+import {
+  MultipleSelectQuestion,
+  OrderingQuestion,
+  DragDropQuestion,
+  HotspotQuestion,
+  NumericInputQuestion,
+} from "./InteractiveQuestions.jsx";
 
 const AXIS_LABEL = { S: "Khoa học", T: "Công nghệ", E: "Kỹ thuật", A: "Nghệ thuật", M: "Toán học" };
 const BRAND_GRADIENT = { background: "var(--gradient-brand)" };
@@ -140,6 +147,13 @@ function TestPhase({ onComplete }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
+  // Auto-save logic
+  useEffect(() => {
+    if (state.testId && Object.keys(answers).length > 0) {
+      localStorage.setItem(`placement_${state.testId}`, JSON.stringify(answers));
+    }
+  }, [answers, state.testId]);
+
   useEffect(() => {
     let active = true;
     (async () => {
@@ -158,6 +172,12 @@ function TestPhase({ onComplete }) {
           limitMinutes: result.limitMinutes || 45 
         });
         setTimeLeft((result.limitMinutes || 45) * 60);
+
+        // Load saved answers
+        const saved = localStorage.getItem(`placement_${result.testId}`);
+        if (saved) {
+          try { setAnswers(JSON.parse(saved)); } catch(e) {}
+        }
       } catch (loadError) {
         if (active) setError(loadError.message || "Mình chưa tạo được bài, bạn thử lại nhé 😊");
       }
@@ -195,6 +215,7 @@ function TestPhase({ onComplete }) {
         })),
       };
       const result = await api.submitPlacement(payload);
+      localStorage.removeItem(`placement_${state.testId}`);
       onComplete(result);
     } catch (submitError) {
       setError(submitError.message || "Mình chưa nộp được bài, bạn thử lại nhé 😊");
@@ -279,19 +300,53 @@ function TestPhase({ onComplete }) {
     return `${m}:${s}`;
   };
 
+  // Determine Eco-School stages if 50 questions
+  const isEcoSchool = total === 50 && state.gradeLevel >= 6 && state.gradeLevel <= 9;
+  const ecoStageNames = [
+    "Nhiệm vụ 1: Khảo sát",
+    "Nhiệm vụ 2: Thiết kế Hệ thống",
+    "Nhiệm vụ 3: Cảnh quan & Trực quan",
+    "Nhiệm vụ 4: Vận hành & Xử lý"
+  ];
+
+  // Determine High School stages if 70 questions
+  const isHighSchool = total === 70 && state.gradeLevel >= 10;
+  const highStageNames = [
+    "Phần 1: Nền tảng Học thuật",
+    "Phần 2: Phân tích Đa chiều",
+    "Phần 3: Vận dụng Định lượng"
+  ];
+
+  let currentStageName = "";
+  if (isEcoSchool) {
+    if (index < 15) currentStageName = ecoStageNames[0];
+    else if (index < 30) currentStageName = ecoStageNames[1];
+    else if (index < 40) currentStageName = ecoStageNames[2];
+    else currentStageName = ecoStageNames[3];
+  } else if (isHighSchool) {
+    if (index < 35) currentStageName = highStageNames[0];
+    else if (index < 55) currentStageName = highStageNames[1];
+    else currentStageName = highStageNames[2];
+  }
+
   return (
     <div className="flex min-h-[360px] flex-col">
       <div className="mb-4">
         <div className="flex items-center justify-between text-xs font-extrabold text-slate-500 mb-2">
-          <div className="flex items-center gap-2">
-            <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-700">
-              Câu {index + 1} / {total} · {AXIS_LABEL[question.steamAxis] || question.steamAxis}
-            </span>
-            {state.limitMinutes > 0 && (
-              <span className={`flex items-center gap-1 rounded-full px-2.5 py-1 ${timeLeft < 300 ? 'bg-rose-50 text-rose-600' : 'bg-slate-100 text-slate-600'}`}>
-                <Clock size={14} /> {formatTime(timeLeft)}
-              </span>
+          <div className="flex flex-col gap-1">
+            {(isEcoSchool || isHighSchool) && (
+              <span className="text-emerald-600 font-black uppercase">{currentStageName}</span>
             )}
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-700">
+                Câu {index + 1} / {total} · {AXIS_LABEL[question.steamAxis] || question.steamAxis}
+              </span>
+              {state.limitMinutes > 0 && (
+                <span className={`flex items-center gap-1 rounded-full px-2.5 py-1 ${timeLeft < 300 ? 'bg-rose-50 text-rose-600' : 'bg-slate-100 text-slate-600'}`}>
+                  <Clock size={14} /> {formatTime(timeLeft)}
+                </span>
+              )}
+            </div>
           </div>
           <span>Đã trả lời {answeredCount}/{total}</span>
         </div>
@@ -331,6 +386,16 @@ function TestPhase({ onComplete }) {
             );
           })}
         </div>
+      ) : question.type === "multiple_select" ? (
+        <MultipleSelectQuestion question={question} selectedAnswer={selected?.textAnswer} onChange={typeText} />
+      ) : question.type === "ordering" ? (
+        <OrderingQuestion question={question} selectedAnswer={selected?.textAnswer} onChange={typeText} />
+      ) : question.type === "drag_drop" ? (
+        <DragDropQuestion question={question} selectedAnswer={selected?.textAnswer} onChange={typeText} />
+      ) : question.type === "hotspot" ? (
+        <HotspotQuestion question={question} selectedAnswer={selected?.textAnswer} onChange={typeText} />
+      ) : question.type === "fill_blank" && isHighSchool ? (
+        <NumericInputQuestion question={question} selectedAnswer={selected?.textAnswer} onChange={typeText} />
       ) : question.type === "mcq" || question.type === "interactive_visual" || !question.type ? (
         <div className="space-y-2.5">
           {question.options.map((option, optionIndex) => {
@@ -402,98 +467,142 @@ function TestPhase({ onComplete }) {
 }
 
 function ResultPhase({ result, onFinish }) {
+  const [showReview, setShowReview] = useState(false);
   const radar = result.radar || {};
+  const insights = radar.insights || [];
+  const adaptivePaths = radar.adaptivePaths || [];
+
   return (
     <div className="flex min-h-[360px] flex-col">
-      <div className="mb-3 flex items-center gap-2 text-sm font-black text-emerald-700">
-        <Sparkles size={18} /> Kết quả phân tích kỹ năng
-      </div>
-      <RadarProfile profile={result.steam} />
-      <div className="mt-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-amber-50 p-4">
-        <p className="text-sm font-bold leading-6 text-slate-800">{radar.message}</p>
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-black">
-          <span className="rounded-full bg-white px-3 py-1 text-slate-700 shadow-sm">
-            Điểm tổng: {result.scorePercent}% ({result.totalCorrect}/{result.totalQuestions})
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-[15px] font-black text-emerald-700">
+          <Sparkles size={18} /> Phân tích Năng lực STEAM
+        </div>
+        <div className="flex items-center gap-2 text-xs font-black">
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-700">
+            Tỷ lệ đúng: {result.scorePercent}% ({result.totalCorrect}/{result.totalQuestions})
           </span>
-          <span className={`rounded-full px-3 py-1 text-white ${
-            result.track === "advanced" ? "bg-emerald-600" : "bg-sky-500"
-          }`}
-          >
-            Lộ trình {radar.trackLabel || (result.track === "advanced" ? "Nâng cao" : "Cơ bản")}
-          </span>
+          {result.steam_result?.gpa_10_scale !== undefined && (
+            <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-800 border border-emerald-200">
+              GPA Năng lực: {result.steam_result.gpa_10_scale}
+            </span>
+          )}
         </div>
       </div>
 
-      <RadarProfile profile={result.steam} proficiency={result.proficiency} />
-
-      {result.feedbacks && result.feedbacks.length > 0 && (
-        <div className="mt-4 space-y-3">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Nhận xét tổng quan từ Giáo viên AI</p>
-          {result.feedbacks.map((fb, idx) => (
-            <div key={idx} className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-sm leading-6 text-slate-700 shadow-sm">
-              <Sparkles size={14} className="mb-1 inline-block text-amber-500" /> {fb}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start mt-2">
+        <div className="bg-white rounded-3xl border border-slate-200 p-4 shadow-sm flex items-center justify-center">
+          <RadarProfile profile={result.steam} proficiency={result.proficiency} />
+        </div>
+        
+        <div className="space-y-3">
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Nhận xét tự động (Insights Engine)</p>
+          {insights.map((insight, idx) => (
+            <div key={idx} className={`rounded-xl border p-3 text-sm leading-relaxed shadow-sm ${
+              insight.type === "Điểm mạnh" ? "bg-emerald-50 border-emerald-100 text-emerald-800" :
+              insight.type === "Đạt chuẩn" ? "bg-blue-50 border-blue-100 text-blue-800" :
+              "bg-rose-50 border-rose-100 text-rose-800"
+            }`}>
+              <div className="font-bold flex items-center gap-1.5 mb-1">
+                {insight.domain} ({insight.axis}) - {insight.score}% 
+                <span className="text-[11px] px-2 py-0.5 rounded bg-white/50">{insight.type}</span>
+              </div>
+              <p className="opacity-90">{insight.text}</p>
             </div>
           ))}
+        </div>
+      </div>
+
+      {adaptivePaths.length > 0 && (
+        <div className="mt-8">
+          <h3 className="mb-4 text-[15px] font-black text-slate-800">Lộ Trình Cải Thiện Đề Xuất</h3>
+          <div className="space-y-4">
+            {adaptivePaths.map((path, idx) => (
+              <div key={idx} className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-5 shadow-sm">
+                <div className="font-bold text-amber-800 mb-2 flex items-center gap-2">
+                  <span className="bg-amber-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">!</span>
+                  Mục tiêu ưu tiên: Cải thiện {path.domain} ({path.axis})
+                </div>
+                <p className="text-sm text-amber-700 mb-4 font-medium">{path.reason}</p>
+                <div className="space-y-2">
+                  {path.tasks.map((task, tIdx) => (
+                    <div key={tIdx} className="flex items-start gap-2 bg-white rounded-lg p-3 text-sm text-slate-700 font-medium shadow-sm border border-amber-100">
+                      <div className="w-5 h-5 rounded border-2 border-amber-300 mt-0.5 shrink-0" />
+                      {task}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
       {result.questionDetails && result.questionDetails.length > 0 && (
         <div className="mt-8">
-          <h3 className="mb-4 text-[15px] font-black text-slate-800">Chi tiết Bài kiểm tra</h3>
-          <div className="space-y-4">
-            {result.questionDetails.map((q, idx) => (
-              <div key={q.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5 shrink-0">
-                    {q.isCorrect ? (
-                      <CheckCircle2 className="text-emerald-500" size={22} />
-                    ) : (
-                      <XCircle className="text-rose-500" size={22} />
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-bold text-slate-800 text-sm leading-relaxed">
-                      <span className="text-slate-500 mr-1">Câu {idx + 1}:</span> {q.body}
-                    </p>
-                    
-                    <div className="mt-2.5 text-sm">
-                      <span className="font-semibold text-slate-600">Đã trả lời: </span>
-                      {q.type === "mcq" || !q.type ? (
-                        q.options?.[q.selectedIndex] ? (
-                          <span className={q.isCorrect ? "text-emerald-700 font-medium" : "text-rose-600 font-medium"}>
-                            {q.options[q.selectedIndex]}
-                          </span>
-                        ) : (
-                          <span className="italic text-slate-400">Không chọn</span>
-                        )
+          <button 
+            onClick={() => setShowReview(!showReview)}
+            className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-slate-50 border border-slate-200 text-slate-700 font-bold hover:bg-slate-100 transition"
+          >
+            {showReview ? "Đóng chi tiết bài chữa" : "Xem chi tiết bài chữa (Review Mode)"}
+          </button>
+          
+          {showReview && (
+            <div className="space-y-4 mt-4">
+              {result.questionDetails.map((q, idx) => (
+                <div key={q.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 shrink-0">
+                      {q.isCorrect ? (
+                        <CheckCircle2 className="text-emerald-500" size={22} />
                       ) : (
-                        q.textAnswer ? (
-                          <span className="text-slate-700 font-medium">"{q.textAnswer}"</span>
-                        ) : (
-                          <span className="italic text-slate-400">Bỏ trống</span>
-                        )
+                        <XCircle className="text-rose-500" size={22} />
                       )}
                     </div>
-
-                    {(q.explanation || q.formativeFeedback) && (
-                      <div className="mt-3.5 rounded-xl bg-[#f8fafc] border border-slate-100 p-3.5 text-sm leading-relaxed text-slate-700">
-                        <div className="flex items-center gap-1.5 font-bold text-indigo-600 mb-1.5">
-                          <AlertCircle size={16} />
-                          Giải thích
-                        </div>
-                        {q.formativeFeedback ? (
-                          <div className="mb-2"><span className="font-semibold text-slate-600">Giáo viên AI: </span>{q.formativeFeedback}</div>
-                        ) : null}
-                        {q.explanation && (
-                          <div>{q.explanation}</div>
+                    <div className="flex-1">
+                      <p className="font-bold text-slate-800 text-sm leading-relaxed">
+                        <span className="text-slate-500 mr-1">Câu {idx + 1}:</span> {q.body}
+                      </p>
+                      
+                      <div className="mt-2.5 text-sm">
+                        <span className="font-semibold text-slate-600">Đã trả lời: </span>
+                        {q.type === "mcq" || !q.type ? (
+                          q.options?.[q.selectedIndex] ? (
+                            <span className={q.isCorrect ? "text-emerald-700 font-medium" : "text-rose-600 font-medium"}>
+                              {q.options[q.selectedIndex]}
+                            </span>
+                          ) : (
+                            <span className="italic text-slate-400">Không chọn</span>
+                          )
+                        ) : (
+                          q.textAnswer ? (
+                            <span className="text-slate-700 font-medium">"{q.textAnswer}"</span>
+                          ) : (
+                            <span className="italic text-slate-400">Bỏ trống</span>
+                          )
                         )}
                       </div>
-                    )}
+
+                      {(q.explanation || q.formativeFeedback) && (
+                        <div className="mt-3.5 rounded-xl bg-[#f8fafc] border border-slate-100 p-3.5 text-sm leading-relaxed text-slate-700">
+                          <div className="flex items-center gap-1.5 font-bold text-indigo-600 mb-1.5">
+                            <AlertCircle size={16} />
+                            Giải thích
+                          </div>
+                          {q.formativeFeedback ? (
+                            <div className="mb-2"><span className="font-semibold text-slate-600">Giáo viên AI: </span>{q.formativeFeedback}</div>
+                          ) : null}
+                          {q.explanation && (
+                            <div>{q.explanation}</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
