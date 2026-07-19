@@ -116,7 +116,7 @@ export function DashboardPage() {
       <MetricCards dashboard={dashboard} />
 
       <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.75fr)]">
-        <RadarProfile profile={dashboard.steamProfile} />
+        <RadarProfile profile={dashboard.steamProfile} proficiency={dashboard.onboarding?.proficiency} />
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
           <WeekActivity days={dashboard.weekActivity} />
           <BadgeShelf badges={dashboard.badges} />

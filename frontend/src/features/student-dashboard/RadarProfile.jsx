@@ -14,7 +14,7 @@ const AXES = [
   { key: "M", label: "Toán học" },
 ];
 
-export function RadarProfile({ profile }) {
+export function RadarProfile({ profile, proficiency }) {
   const data = AXES.map((axis) => ({
     ...axis,
     score: Number(profile?.[axis.key] || 0),
@@ -26,7 +26,11 @@ export function RadarProfile({ profile }) {
         <div>
           <p className="eyebrow">Hồ sơ năng lực</p>
           <h2 id="steam-title" className="section-title">La bàn STEAM của bạn</h2>
-          <p className="mt-1 text-sm text-slate-500">Cập nhật từ bài kiểm tra và hoạt động học.</p>
+          {proficiency ? (
+            <p className="mt-1 text-sm text-primary font-bold">Trình độ: {proficiency}</p>
+          ) : (
+            <p className="mt-1 text-sm text-slate-500">Cập nhật từ bài kiểm tra và hoạt động học.</p>
+          )}
         </div>
         <div className="flex flex-wrap gap-2" aria-label="Điểm STEAM">
           {data.map((axis) => (

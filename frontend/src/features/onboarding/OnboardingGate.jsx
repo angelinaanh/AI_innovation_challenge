@@ -423,6 +423,9 @@ function ResultPhase({ result, onFinish }) {
           </span>
         </div>
       </div>
+
+      <RadarProfile profile={result.steam} proficiency={result.proficiency} />
+
       {result.feedbacks && result.feedbacks.length > 0 && (
         <div className="mt-4 space-y-3">
           <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Nhận xét tổng quan từ Giáo viên AI</p>

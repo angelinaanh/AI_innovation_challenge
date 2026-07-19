@@ -10,6 +10,7 @@ import {
   gradePlacement,
   normalizeGeneratedQuestions,
   radarSummary,
+  resolveProficiency,
 } from "./onboardingRules.js";
 
 const promptUrl = new URL("../../../ai/prompts/placement_generator.md", import.meta.url);
@@ -176,6 +177,7 @@ async function submittedResult(test) {
     totalCorrect: test.total_correct,
     totalQuestions: test.total_questions,
     track: test.track,
+    proficiency: steam.proficiency || resolveProficiency(Number(test.score_percent)),
     radar: radarSummary(steam, { track: test.track }),
     questionDetails
   };
@@ -378,18 +380,26 @@ export async function submitPlacement(profile, payload = {}) {
     delta_vector: graded.steam,
   });
   throwDatabaseError(scoreEvent.error, "write placement score event");
+  const scorePercent = Math.round((graded.totalCorrect / graded.totalQuestions) * 100);
+
+  // Store the exact proficiency string into the JSONB steam_result column
+  // to avoid violating the profiles.learning_track constraint which only allows basic/advanced.
+  const steamResultWithProficiency = {
+    ...graded.steam,
+    proficiency: resolveProficiency(scorePercent),
+  };
 
   const testUpdate = await supabase
     .from("placement_tests")
     .update({
       status: "submitted",
-      total_correct: graded.totalCorrect,
-      score_percent: graded.scorePercent,
-      track: graded.track,
-      steam_result: graded.steam,
       submitted_at: new Date().toISOString(),
+      track: graded.track,
+      steam_result: steamResultWithProficiency,
+      total_correct: graded.totalCorrect,
+      score_percent: scorePercent,
     })
-    .eq("id", testId);
+    .eq("id", payload.testId);
   throwDatabaseError(testUpdate.error, "finalize placement test");
 
   const profileUpdate = await supabase
@@ -425,6 +435,7 @@ export async function submitPlacement(profile, payload = {}) {
     totalCorrect: graded.totalCorrect,
     totalQuestions: graded.totalQuestions,
     track: graded.track,
+    proficiency: resolveProficiency(graded.scorePercent),
     radar: radarSummary(graded.steam, { track: graded.track }),
     feedbacks: answerRows.map(r => r.formative_feedback).filter(Boolean),
     questionDetails
