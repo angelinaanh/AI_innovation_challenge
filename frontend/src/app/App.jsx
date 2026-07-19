@@ -22,6 +22,7 @@ import { LoginPage } from "../features/auth/LoginPage.jsx";
 import { OnboardingPage } from "../features/auth/OnboardingPage.jsx";
 import { RegisterPage } from "../features/auth/RegisterPage.jsx";
 import { ResetPasswordPage } from "../features/auth/ResetPasswordPage.jsx";
+import { AssessmentsPage } from "../features/assessments/AssessmentsPage.jsx";
 import { DashboardPage } from "../features/student-dashboard/DashboardPage.jsx";
 import { LearningPathPage } from "../features/learning-path/LearningPathPage.jsx";
 import { LessonPlayerPage } from "../features/lesson-player/LessonPlayerPage.jsx";
@@ -69,6 +70,7 @@ export function App() {
             <Route element={<StudentDataProvider><StudentShell /></StudentDataProvider>}>
               <Route path="/student" element={<DashboardPage />} />
               <Route path="/student/path" element={<LearningPathPage />} />
+              <Route path="/student/assessments" element={<AssessmentsPage />} />
               <Route path="/student/content" element={<StudentContentPage />} />
               <Route path="/student/soft-skills/:id" element={<SoftSkillLessonPage />} />
               <Route path="/student/ai-lessons" element={<StudentAiLessonsPage />} />

@@ -3,6 +3,7 @@ import {
   Bell,
   BookOpenCheck,
   ChevronDown,
+  ClipboardCheck,
   Flame,
   GraduationCap,
   LayoutDashboard,
@@ -25,6 +26,7 @@ import { Brand } from "../ui/Brand.jsx";
 const navItems = [
   { to: "/student", label: "Tổng quan", icon: LayoutDashboard, end: true },
   { to: "/student/path", label: "Lộ trình học", icon: Map },
+  { to: "/student/assessments", label: "Kiểm tra & Đánh giá", icon: ClipboardCheck },
   { to: "/student/content", label: "Thư viện kỹ năng", icon: BookOpenCheck },
   { to: "/student/ai-lessons", label: "Bài giảng của lớp", icon: GraduationCap },
   { to: "/student/classes", label: "Lớp học", icon: School },
