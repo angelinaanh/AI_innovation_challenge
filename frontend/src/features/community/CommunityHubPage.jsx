@@ -5,6 +5,7 @@ import { MarkdownContent } from "../../components/ui/MarkdownContent.jsx";
 import { Link } from "react-router-dom";
 import { api } from "../../lib/apiClient.js";
 import { CreatePostModal } from "./CreatePostModal.jsx";
+import { KnowledgeArenaSection } from "./knowledgeArena/KnowledgeArenaSection.jsx";
 
 function timeAgo(dateString) {
   if (!dateString) return "";
@@ -115,6 +116,12 @@ export function CommunityHubPage() {
             Đăng bài
           </button>
         </div>
+
+        {/* KNOWLEDGE ARENA — Đấu trường EduOne */}
+        <KnowledgeArenaSection
+          onRegister={() => window.alert("Đăng ký Đấu trường EduOne Mùa 1 — tính năng sắp ra mắt!")}
+          onViewRules={() => window.alert("Thể lệ chi tiết sẽ được cập nhật sớm.")}
+        />
 
         {/* FEATURED TIPS */}
         <section className="mb-10">
