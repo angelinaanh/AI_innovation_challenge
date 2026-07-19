@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Bell,
   BookOpenCheck,
@@ -18,6 +18,7 @@ import { NavLink, Outlet } from "react-router-dom";
 
 import { useAuth } from "../../app/AuthProvider.jsx";
 import { useStudentData } from "../../app/StudentDataProvider.jsx";
+import { TutorDock } from "../../features/tutor/TutorDock.jsx";
 import { gradeLabel } from "../../lib/academicCatalog.js";
 import { Brand } from "../ui/Brand.jsx";
 
@@ -58,6 +59,20 @@ export function StudentShell() {
   const { account, signOut } = useAuth();
   const gamification = dashboard?.gamification;
   const student = dashboard?.student;
+
+  const [dockOpen, setDockOpen] = useState(
+    () => localStorage.getItem("eduone.tutorDock.open") === "1",
+  );
+  const [dockWidth, setDockWidth] = useState(
+    () => Number(localStorage.getItem("eduone.tutorDock.width")) || 420,
+  );
+  useEffect(() => {
+    localStorage.setItem("eduone.tutorDock.open", dockOpen ? "1" : "0");
+  }, [dockOpen]);
+  useEffect(() => {
+    localStorage.setItem("eduone.tutorDock.width", String(dockWidth));
+  }, [dockWidth]);
+  const tutorNodes = dashboard?.pathPreview ?? [];
 
   return (
     <div className="min-h-screen bg-[#f5f8f7] text-slate-950">
@@ -204,6 +219,13 @@ export function StudentShell() {
         </main>
       </div>
 
+      <TutorDock
+        open={dockOpen}
+        width={dockWidth}
+        onOpenChange={setDockOpen}
+        onWidthChange={setDockWidth}
+        nodes={tutorNodes}
+      />
     </div>
   );
 }

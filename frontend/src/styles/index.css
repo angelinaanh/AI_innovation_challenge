@@ -154,7 +154,8 @@ button:focus-visible, a:focus-visible { outline: 3px solid #38bdf8; outline-offs
 .tutor-launcher:hover { transform: translateY(-2px); background: #115e59; }
 .tutor-layer { position: fixed; inset: 0; z-index: 70; }
 .tutor-backdrop { position: absolute; inset: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.28); backdrop-filter: blur(2px); }
-.tutor-drawer { position: absolute; inset-block: 0; right: 0; display: grid; width: min(430px, 100vw); grid-template-rows: auto auto minmax(0,1fr) auto auto auto; border-left: 1px solid #dbe3eb; background: #f8fafc; box-shadow: -18px 0 45px rgba(15,23,42,0.18); }
+.tutor-drawer { position: absolute; inset-block: 0; right: 0; display: grid; width: min(430px, 100vw); grid-template-rows: auto minmax(0,1fr); border-left: 1px solid #dbe3eb; background: #f8fafc; box-shadow: -18px 0 45px rgba(15,23,42,0.18); }
+.tutor-body { min-height: 0; display: grid; grid-template-rows: auto minmax(0,1fr) auto auto auto auto; background: #f8fafc; }
 .tutor-header { display: flex; min-height: 76px; align-items: center; gap: 12px; border-bottom: 1px solid #e2e8f0; background: white; padding: 13px 16px; }
 .tutor-brand-icon { display: grid; width: 42px; height: 42px; flex: 0 0 auto; place-items: center; border-radius: 8px; background: #0f766e; color: white; box-shadow: 0 3px 0 #99f6e4; }
 .tutor-online-dot { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 3px #dcfce7; }
@@ -185,6 +186,20 @@ button:focus-visible, a:focus-visible { outline: 3px solid #38bdf8; outline-offs
 .tutor-send { display: grid; width: 42px; height: 42px; place-items: center; align-self: end; border-radius: 8px; background: #0f766e; color: white; }
 .tutor-send:disabled { cursor: not-allowed; background: #cbd5e1; color: #64748b; }
 .tutor-disclaimer { background: white; padding: 0 14px 10px; text-align: center; color: #94a3b8; font-size: 9px; font-weight: 700; line-height: 1.4; }
+
+/* Global right-side AI Tutor dock (resizable + collapsible "sliding door") */
+.tutor-dock { position: fixed; inset-block: 0; right: 0; z-index: 55; display: grid; grid-template-rows: auto minmax(0,1fr); background: #f8fafc; border-left: 1px solid #dbe3eb; box-shadow: -18px 0 45px rgba(15,23,42,0.12); }
+.tutor-dock-resize { position: absolute; left: 0; top: 0; bottom: 0; width: 12px; transform: translateX(-50%); cursor: col-resize; z-index: 3; touch-action: none; }
+.tutor-dock-resize::after { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; transform: translateX(-50%); background: transparent; transition: background 120ms ease; }
+.tutor-dock-resize:hover::after { background: #0f766e; }
+.tutor-dock-header { display: flex; align-items: center; gap: 10px; min-height: 64px; border-bottom: 1px solid #e2e8f0; background: white; padding: 10px 14px 10px 16px; }
+.tutor-dock-select { margin-top: 3px; max-width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; background: #f8fafc; padding: 3px 6px; color: #334155; font-size: 11px; font-weight: 800; outline: none; }
+.tutor-dock-select:focus { border-color: #0f766e; box-shadow: 0 0 0 3px #ccfbf1; }
+.tutor-dock-empty { display: grid; place-items: center; padding: 40px 24px; text-align: center; color: #64748b; font-size: 13px; font-weight: 700; line-height: 1.6; }
+.tutor-dock-tab { position: fixed; right: 0; top: 50%; z-index: 45; display: inline-flex; align-items: center; gap: 7px; transform: translateY(-50%); border: 0; border-radius: 10px 0 0 10px; background: #0f766e; padding: 14px 9px; color: white; font-size: 12px; font-weight: 900; writing-mode: vertical-rl; box-shadow: -6px 0 18px rgba(15,118,110,0.28); transition: 160ms ease; }
+.tutor-dock-tab:hover { background: #115e59; padding-left: 12px; }
+.tutor-dock-backdrop { position: fixed; inset: 0; z-index: 54; border: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.28); }
+@media (max-width: 1023px) { .tutor-dock { width: 100% !important; z-index: 60; } }
 
 .skeleton { overflow: hidden; border-radius: 8px; background: linear-gradient(90deg, #e2e8f0 25%, #f8fafc 45%, #e2e8f0 65%); background-size: 220% 100%; animation: skeleton 1.4s infinite linear; }
 @keyframes skeleton { to { background-position: -220% 0; } }

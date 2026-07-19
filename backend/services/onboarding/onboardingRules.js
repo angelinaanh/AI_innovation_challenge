@@ -204,7 +204,7 @@ export function normalizeGeneratedQuestions(rawQuestions) {
   const cleaned = [];
   for (const raw of rawQuestions) {
     const axis = String(raw?.steam_axis || raw?.axis || "").toUpperCase();
-    const type = ["mcq", "fill_blank", "open"].includes(raw?.type) ? raw.type : "mcq";
+    const type = ["mcq", "fill_blank", "open", "interactive_visual", "true_false_cluster"].includes(raw?.type) ? raw.type : "mcq";
     const body = String(raw?.body || raw?.question || "").trim();
     const difficulty = ["easy", "medium", "hard"].includes(raw?.difficulty)
       ? raw.difficulty
@@ -241,6 +241,13 @@ export function normalizeGeneratedQuestions(rawQuestions) {
       const rubric = String(raw?.rubric || "").trim();
       if (!rubric) continue;
       question.rubric = rubric;
+    } else if (type === "interactive_visual") {
+      question.image_url = raw?.interactive_url || raw?.image_url || null; // save interactive URL in image_url or add interactive_url
+      question.options = Array.isArray(raw?.options) ? raw.options : ["😃 Trả lời đúng", "😢 Trả lời sai"];
+      question.answer_index = Number(raw?.answer_index) || 0;
+    } else if (type === "true_false_cluster") {
+      question.options = Array.isArray(raw?.clauses) ? raw.clauses : [];
+      question.accepted_answers = Array.isArray(raw?.answers) ? raw.answers : []; // [true, false, true, false]
     }
 
     cleaned.push(question);
@@ -270,7 +277,7 @@ export function gradePlacement(questions = [], answers = []) {
     const ans = answerByQuestionId.get(question.id) || {};
     let scoreFraction = 0;
 
-    if (question.type === "mcq" || !question.type) {
+    if (question.type === "mcq" || question.type === "interactive_visual" || !question.type) {
       if (ans.selectedIndex !== undefined && ans.selectedIndex !== null) {
         scoreFraction = Number(ans.selectedIndex) === Number(question.answer_index) ? 1 : 0;
       }
@@ -281,6 +288,20 @@ export function gradePlacement(questions = [], answers = []) {
           (acc) => String(acc).trim().toLowerCase() === normalized
         );
         scoreFraction = isMatch ? 1 : 0;
+      }
+    } else if (question.type === "true_false_cluster") {
+      if (ans.textAnswer && Array.isArray(question.accepted_answers)) {
+        // ans.textAnswer expected to be like "true,false,true,true"
+        const userAnswers = String(ans.textAnswer).split(',').map(s => s.trim().toLowerCase());
+        const correctAnswers = question.accepted_answers.map(a => String(a).trim().toLowerCase());
+        let correctCount = 0;
+        for (let i = 0; i < Math.min(4, correctAnswers.length); i++) {
+          if (userAnswers[i] === correctAnswers[i]) correctCount++;
+        }
+        if (correctCount === 1) scoreFraction = 0.1;
+        else if (correctCount === 2) scoreFraction = 0.25;
+        else if (correctCount === 3) scoreFraction = 0.5;
+        else if (correctCount === 4) scoreFraction = 1.0;
       }
     } else if (question.type === "open") {
       scoreFraction = Number(ans.scoreFraction) || 0;
