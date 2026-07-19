@@ -11,6 +11,7 @@ import {
   normalizeGeneratedQuestions,
   radarSummary,
   resolveProficiency,
+  convertRubricTo10Scale,
 } from "./onboardingRules.js";
 
 const promptUrl = new URL("../../../ai/prompts/placement_generator.md", import.meta.url);
@@ -66,15 +67,15 @@ function getTestMatrix(gradeLevel) {
     };
   } else if (gradeLevel <= 9) {
     return {
-      limitMinutes: 60,
-      totalQuestions: 25,
-      instruction: `Khối lớp ${gradeLevel} (Lớp 6-9). Sinh đúng 25 câu hỏi (18 trắc nghiệm 'mcq', 7 tự luận 'open'). Đảm bảo thời gian hoàn thành 60 phút. Tỷ lệ nhận thức: 40% nhận biết, 30% thông hiểu, 20% vận dụng, 10% vận dụng cao.`
+      limitMinutes: 90,
+      totalQuestions: 50,
+      instruction: `Khối lớp ${gradeLevel} (Lớp 6-9). Sinh đúng 50 câu hỏi theo hình thức Đánh giá Dự án (Project-based Assessment) mang tên "Dự án Eco-School". Đề thi chia làm 4 giai đoạn: 1. Khảo sát & Năng lượng (Science & Math), 2. Thiết kế Hệ thống Thông minh (Tech & Engineering), 3. Cảnh quan & Trực quan hóa (Arts & Math), 4. Vận hành & Xử lý sự cố (Tổng hợp STEAM). BẮT BUỘC sử dụng đa dạng dạng câu hỏi: drag_drop, multiple_select, ordering, fill_blank, mcq.`
     };
   } else {
     return {
-      limitMinutes: 90,
-      totalQuestions: 30,
-      instruction: `Khối lớp ${gradeLevel} (Lớp 10-12). Sinh đúng 30 câu (18 trắc nghiệm 'mcq', 4 cụm đúng/sai 'true_false_cluster', 8 tự luận 'open'). Đảm bảo thời gian hoàn thành 90 phút (mô phỏng kỳ thi chuẩn hóa).`
+      limitMinutes: 120,
+      totalQuestions: 70,
+      instruction: `Khối lớp ${gradeLevel} (Lớp 10-12). Sinh đúng 70 lệnh hỏi theo cấu trúc module đánh giá năng lực đại học: Phần 1 (Nền tảng Học thuật): 35 câu mcq/multiple_select. Phần 2 (Phân tích Đa chiều): 20 cụm lệnh đúng/sai (true_false_cluster) hoặc drag_drop. Phần 3 (Vận dụng Kỹ thuật & Định lượng): 15 câu hotspot, ordering hoặc fill_blank (yêu cầu số thập phân). Đảm bảo thời gian 120 phút. Lồng ghép tag [Tags: ...] vào explanation.`
     };
   }
 }
@@ -131,10 +132,11 @@ async function loadTestQuestions(testId, { withAnswers = false } = {}) {
     .eq("placement_test_id", testId)
     .order("order_index", { ascending: true });
   throwDatabaseError(result.error, "load placement questions");
-  
   return (result.data || []).map(q => {
     let actualType = q.type;
-    if (q.image_url && q.image_url.includes('/phet/')) {
+    if (q.options && q.options._actual_type) {
+      actualType = q.options._actual_type;
+    } else if (q.image_url && q.image_url.includes('/phet/')) {
       actualType = "interactive_visual";
     } else if (Array.isArray(q.accepted_answers) && (q.accepted_answers[0] === true || q.accepted_answers[0] === false)) {
       actualType = "true_false_cluster";
@@ -250,7 +252,18 @@ export async function generatePlacement(profile) {
 
   const rows = questions.map((question) => {
     let dbType = question.type || "mcq";
-    if (dbType === "interactive_visual" || dbType === "true_false_cluster") {
+    let options = question.options ?? null;
+
+    if (["interactive_visual", "true_false_cluster", "drag_drop", "multiple_select", "hotspot", "ordering"].includes(dbType)) {
+      if (["drag_drop", "multiple_select", "hotspot", "ordering"].includes(dbType)) {
+        if (Array.isArray(options)) {
+          options = { items: options, _actual_type: dbType };
+        } else if (typeof options === "object" && options !== null) {
+          options = { ...options, _actual_type: dbType };
+        } else {
+          options = { _actual_type: dbType };
+        }
+      }
       dbType = "mcq"; // Bỏ qua CHECK constraint của database
     }
     return {
@@ -261,7 +274,7 @@ export async function generatePlacement(profile) {
       type: dbType,
       body: question.body,
       image_url: question.image_url ?? null,
-      options: question.options ?? null,
+      options: options,
       answer_index: question.answer_index ?? null,
       rubric: question.rubric ?? null,
       accepted_answers: question.accepted_answers ?? null,
@@ -277,7 +290,9 @@ export async function generatePlacement(profile) {
   const saved = (questionsInsert.data || [])
     .map(q => {
       let actualType = q.type;
-      if (q.image_url && q.image_url.includes('/phet/')) {
+      if (q.options && q.options._actual_type) {
+        actualType = q.options._actual_type;
+      } else if (q.image_url && q.image_url.includes('/phet/')) {
         actualType = "interactive_visual";
       } else if (Array.isArray(q.accepted_answers) && (q.accepted_answers[0] === true || q.accepted_answers[0] === false)) {
         actualType = "true_false_cluster";
@@ -384,9 +399,11 @@ export async function submitPlacement(profile, payload = {}) {
 
   // Store the exact proficiency string into the JSONB steam_result column
   // to avoid violating the profiles.learning_track constraint which only allows basic/advanced.
+  const rubricScore = (graded.totalCorrect / graded.totalQuestions) * 12;
   const steamResultWithProficiency = {
     ...graded.steam,
     proficiency: resolveProficiency(scorePercent),
+    gpa_10_scale: convertRubricTo10Scale(rubricScore)
   };
 
   const testUpdate = await supabase

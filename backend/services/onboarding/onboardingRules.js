@@ -27,6 +27,20 @@ export function resolveProficiency(scorePercent) {
   return "Yếu";
 }
 
+export function convertRubricTo10Scale(rubricScore) {
+  let score;
+  if (rubricScore < 4.0) {
+    score = rubricScore * (4.9 / 3.9);
+  } else if (rubricScore < 7.0) {
+    score = 5.0 + ((rubricScore - 4.0) / 2.9) * 1.4;
+  } else if (rubricScore < 10.0) {
+    score = 6.5 + ((rubricScore - 7.0) / 2.9) * 1.4;
+  } else {
+    score = 8.0 + ((rubricScore - 10.0) / 2.0) * 2.0;
+  }
+  return Math.round(score * 10) / 10;
+}
+
 // ---------------------------------------------------------------------------
 // 1. Hội thoại thu thập thông tin (fallback tất định khi AI không khả dụng)
 // ---------------------------------------------------------------------------
@@ -313,6 +327,44 @@ export function gradePlacement(questions = [], answers = []) {
       }
     } else if (question.type === "open") {
       scoreFraction = Number(ans.scoreFraction) || 0;
+    } else if (question.type === "multiple_select") {
+      if (ans.textAnswer && Array.isArray(question.accepted_answers)) {
+        try {
+          const userAns = JSON.parse(ans.textAnswer).map(String);
+          const accepted = question.accepted_answers.map(String);
+          const isCorrect = userAns.length === accepted.length && userAns.every(a => accepted.includes(a));
+          scoreFraction = isCorrect ? 1 : 0;
+        } catch(e) {}
+      }
+    } else if (question.type === "drag_drop" || question.type === "ordering") {
+      if (ans.textAnswer && Array.isArray(question.accepted_answers)) {
+        try {
+          const userAns = JSON.parse(ans.textAnswer).map(String);
+          const accepted = question.accepted_answers.map(String);
+          let correctCount = 0;
+          for (let i = 0; i < accepted.length; i++) {
+            if (userAns[i] === accepted[i]) correctCount++;
+          }
+          scoreFraction = accepted.length > 0 ? (correctCount / accepted.length) : 0;
+        } catch(e) {}
+      }
+    } else if (question.type === "hotspot") {
+      if (ans.textAnswer && question.options) {
+        try {
+          const userClicks = JSON.parse(ans.textAnswer);
+          const targets = Array.isArray(question.options.items) ? question.options.items : (Array.isArray(question.options) ? question.options : []);
+          let hitCount = 0;
+          for (const target of targets) {
+            const hit = userClicks.some(click => {
+              const dx = click.x - target.x;
+              const dy = click.y - target.y;
+              return Math.sqrt(dx*dx + dy*dy) <= (target.radius || 30);
+            });
+            if (hit) hitCount++;
+          }
+          scoreFraction = targets.length > 0 ? (hitCount / targets.length) : 0;
+        } catch(e) {}
+      }
     }
 
     perAxis[axis].total += 1;
@@ -369,6 +421,40 @@ export function radarSummary(steam = {}, { track } = {}) {
     ? "Hãy bắt đầu khám phá cả 5 lĩnh vực để tìm ra thế mạnh của mình nhé."
     : `Hãy bổ sung thêm ${low.domain} (${lowAxis}) để tạo ra những sản phẩm ấn tượng hơn nữa nhé!`;
 
+  const insights = entries.map(([axis, score]) => {
+    let type = "Thiếu hụt";
+    let text = "";
+    if (score >= 80) {
+      type = "Điểm mạnh";
+      text = `Tư duy ${AXIS_META[axis].domain} xuất sắc. Hãy duy trì phong độ và thử sức với các dự án nâng cao.`;
+    } else if (score >= 50) {
+      type = "Đạt chuẩn";
+      text = `Nắm vững nền tảng ${AXIS_META[axis].domain}. Cần rèn luyện thêm tốc độ và kỹ năng phân tích sâu.`;
+    } else {
+      type = "Thiếu hụt";
+      text = `Kỹ năng ${AXIS_META[axis].domain} chưa đạt chuẩn. Đây là nguyên nhân khiến bạn dễ mất điểm ở các câu hỏi vận dụng.`;
+    }
+    return { axis, domain: AXIS_META[axis].domain, score, type, text };
+  });
+
+  const mockTasks = {
+    S: ["Xem video mô phỏng thí nghiệm Hóa học ảo (PhET)", "Thực hành 5 câu Trắc nghiệm Khoa học mức Nhận biết"],
+    T: ["Hoàn thành nhiệm vụ Kéo thả Thuật toán Blockly", "Ôn tập tài liệu: Cấu trúc điều kiện IF-ELSE"],
+    E: ["Xem video Nguyên lý cơ bản mạch điện xoay chiều", "Làm bài tập: Tìm lỗi sai trên bản vẽ kỹ thuật"],
+    A: ["Làm bài tập thực hành: Phối màu Tương phản (UI/UX)", "Đọc tài liệu: Nguyên tắc Công thái học (Ergonomics)"],
+    M: ["Ôn tập chuyên đề: Giải tích & Tích phân ứng dụng", "Làm 5 bài tập Tối ưu hóa Toán học thực tiễn"]
+  };
+
+  const weakAxes = [...sorted].reverse().filter(([_, score]) => score < 50).slice(0, 2);
+  const adaptivePaths = weakAxes.map(([axis, score]) => {
+    return {
+      axis,
+      domain: AXIS_META[axis].domain,
+      reason: `Kỹ năng ${AXIS_META[axis].domain} của bạn đang ở mức ${score}%, ảnh hưởng đến khả năng giải quyết các câu hỏi thực tế.`,
+      tasks: mockTasks[axis]
+    };
+  });
+
   return {
     headline,
     advice,
@@ -376,5 +462,7 @@ export function radarSummary(steam = {}, { track } = {}) {
     trackLabel,
     strongestAxis: highAxis,
     weakestAxis: lowAxis,
+    insights,
+    adaptivePaths,
   };
 }
