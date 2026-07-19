@@ -13,10 +13,18 @@ export const AXIS_META = Object.freeze({
 });
 
 // <50% -> Cơ bản, >=50% -> Nâng cao (theo mục 1.2/1.3 của tài liệu discovery).
-export const ADVANCED_THRESHOLD_PERCENT = 50;
+export const ADVANCED_THRESHOLD_PERCENT = 75;
 
 export function resolveTrack(scorePercent) {
   return Number(scorePercent) >= ADVANCED_THRESHOLD_PERCENT ? "advanced" : "basic";
+}
+
+export function resolveProficiency(scorePercent) {
+  const p = Number(scorePercent);
+  if (p >= 80) return "Giỏi";
+  if (p >= 65) return "Khá";
+  if (p >= 50) return "Trung bình";
+  return "Yếu";
 }
 
 // ---------------------------------------------------------------------------

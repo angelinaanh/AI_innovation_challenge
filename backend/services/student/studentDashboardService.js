@@ -65,13 +65,20 @@ export async function getStudentPath(requestedStudentId) {
 
 export async function getStudentDashboard(requestedStudentId) {
   const studentId = await resolveStudentId(requestedStudentId);
-  const [profileResult, expResult, streakResult, badgesResult, eventsResult, path] =
+  const [profileResult, placementResult, expResult, streakResult, badgesResult, eventsResult, path] =
     await Promise.all([
       supabase
         .from("profiles")
         .select("id,full_name,role,grade_level,grade_band,onboarding_completed_at,placement_completed_at,learning_track")
         .eq("id", studentId)
         .single(),
+      supabase
+        .from("placement_tests")
+        .select("steam_result")
+        .eq("user_id", studentId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
       supabase.from("exp_totals").select("total_exp,level").eq("user_id", studentId).maybeSingle(),
       supabase.from("streaks").select("current_streak,longest_streak,last_active_date").eq("user_id", studentId).maybeSingle(),
       supabase
@@ -89,6 +96,7 @@ export async function getStudentDashboard(requestedStudentId) {
     ]);
 
   throwDatabaseError(profileResult.error, "load student profile");
+  throwDatabaseError(placementResult.error, "load placement test");
   throwDatabaseError(expResult.error, "load EXP total");
   throwDatabaseError(streakResult.error, "load streak");
   throwDatabaseError(badgesResult.error, "load badges");
@@ -110,6 +118,7 @@ export async function getStudentDashboard(requestedStudentId) {
       chatCompleted: Boolean(profileResult.data.onboarding_completed_at),
       placementCompleted: Boolean(profileResult.data.placement_completed_at),
       learningTrack: profileResult.data.learning_track || null,
+      proficiency: placementResult?.data?.steam_result?.proficiency || null,
     },
     steamProfile: path.scores,
     gamification: {
