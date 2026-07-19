@@ -62,7 +62,13 @@ export function notFound(request, response) {
 
 export function errorHandler(error, request, response, _next) {
   const requestId = request.requestId || crypto.randomUUID();
-  const status = STATUS_BY_CODE[error.code] || 500;
+  // Ưu tiên mã lỗi nghiệp vụ; nếu không có thì tôn trọng status của lỗi HTTP
+  // (vd body-parser trả 413 khi payload quá lớn) thay vì rơi về 500 chung.
+  const status = STATUS_BY_CODE[error.code] || error.status || error.statusCode || 500;
+  if (error.type === "entity.too.large" && !error.code) {
+    error.code = "PAYLOAD_TOO_LARGE";
+    error.message = "Dữ liệu gửi lên quá lớn. Với bài giảng có ảnh, hãy dùng ảnh nhỏ hơn hoặc bớt ảnh.";
+  }
 
   console.error(JSON.stringify({
     level: "error",

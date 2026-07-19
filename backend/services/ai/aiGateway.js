@@ -4,6 +4,9 @@ import { throwDatabaseError } from "../student/studentContext.js";
 import { getOpenAiClient } from "./openaiClient.js";
 
 const MODEL_PRICING_PER_MILLION = Object.freeze({
+  // "gpt-5.6" là model dùng chung trong .env (content + tutor). Nếu thiếu ở đây,
+  // estimateCost trả 0 -> ngân sách không tăng -> guard vô hiệu. Tính theo tầng cao.
+  "gpt-5.6": { input: 5, output: 30 },
   "gpt-5.6-luna": { input: 1, output: 6 },
   "gpt-5.6-terra": { input: 2.5, output: 15 },
   "gpt-5.6-sol": { input: 5, output: 30 },

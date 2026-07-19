@@ -27,6 +27,7 @@ import {
 } from "../../services/content-studio/aiContentGenerator.js";
 
 const uid = (request) => request.auth?.profile?.id;
+const orgOf = (request) => request.auth?.profile?.org_id;
 
 // Bước 1 Lesson Generator: giáo viên upload tài liệu -> AI đề xuất dàn ý.
 export async function postContentOutline(request, response, next) {
@@ -44,6 +45,8 @@ export async function postContentOutline(request, response, next) {
       level: request.body?.level,
       quizCount: request.body?.quiz_count,
       teacherNote: request.body?.teacher_note,
+      orgId: orgOf(request),
+      userId: uid(request),
     });
     response.json({ data });
   } catch (error) { next(error); }
@@ -52,7 +55,8 @@ export async function postContentOutline(request, response, next) {
 // Bước 2 Lesson Generator: dàn ý đã duyệt -> AI viết chi tiết từng bài.
 export async function postContentGenerate(request, response, next) {
   try {
-    response.json({ data: await generateCourseLessons(request.body) });
+    const payload = { ...request.body, orgId: orgOf(request), userId: uid(request) };
+    response.json({ data: await generateCourseLessons(payload) });
   } catch (error) { next(error); }
 }
 

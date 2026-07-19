@@ -13,6 +13,7 @@ import crypto from "node:crypto";
 import { PDFParse } from "pdf-parse";
 
 import { env } from "../../utils/env.js";
+import { assertAiBudgetAllowance, recordAiUsage } from "../ai/aiGateway.js";
 import { getOpenAiClient } from "../ai/openaiClient.js";
 
 const MODEL = env.openAiModels.contentHigh;
@@ -150,7 +151,38 @@ function parseJsonObject(response) {
   }
 }
 
-async function callJson(instructions, input, { maxTokens, step, effort = "low", timeoutMs = 120000 }) {
+// Chặn khi ngân sách AI trong ngày đã hết. Chỉ AI_BUDGET_EXCEEDED mới chặn; lỗi
+// hạ tầng ngân sách thì fail-open (log) để không làm gãy luồng đang chạy tốt.
+async function guardBudget(orgId) {
+  if (!orgId) return;
+  try {
+    await assertAiBudgetAllowance({ orgId });
+  } catch (error) {
+    if (error.code === "AI_BUDGET_EXCEEDED") throw error;
+    console.warn(JSON.stringify({ level: "warn", code: "BUDGET_CHECK_FAILED", message: error.message }));
+  }
+}
+
+// Ghi nhận token đã tiêu (cập nhật daily_cost_budgets). Best-effort — lỗi ghi
+// nhận không được làm hỏng kết quả sinh nội dung.
+async function trackUsage(usage, response) {
+  if (!usage?.orgId) return;
+  try {
+    await recordAiUsage({
+      orgId: usage.orgId,
+      userId: usage.userId,
+      feature: usage.feature,
+      model: MODEL,
+      tier: 1,
+      tokensIn: Number(response.usage?.input_tokens || 0),
+      tokensOut: Number(response.usage?.output_tokens || 0),
+    });
+  } catch (error) {
+    console.warn(JSON.stringify({ level: "warn", code: "USAGE_RECORD_FAILED", message: error.message }));
+  }
+}
+
+async function callJson(instructions, input, { maxTokens, step, effort = "low", timeoutMs = 120000, usage }) {
   // Nguyên nhân số 1 của "JSON không hợp lệ" là model bị CẮT NGANG khi chạm giới
   // hạn token. Nên thử tối đa 2 lần: lần sau tăng gấp đôi ngân sách token trước
   // khi báo lỗi, thay vì fail ngay.
@@ -185,6 +217,9 @@ async function callJson(instructions, input, { maxTokens, step, effort = "low", 
       }
       throw appError("CONTENT_GENERATION_FAILED", `Không gọi được AI ở bước ${step}.`, error);
     }
+
+    // Token đã tiêu dù response hợp lệ hay bị cắt -> ghi nhận vào ngân sách.
+    await trackUsage(usage, response);
 
     // Bị cắt vì chạm giới hạn token -> thử lại với ngân sách lớn hơn nếu còn lượt.
     if (response.status === "incomplete") {
@@ -352,7 +387,7 @@ function coerceOutline(rawCourse, subject, grade) {
   return course;
 }
 
-export async function generateOutline({ filename, buffer, subject, grade, level, quizCount, teacherNote }) {
+export async function generateOutline({ filename, buffer, subject, grade, level, quizCount, teacherNote, orgId, userId }) {
   if (buffer.length > MAX_UPLOAD_BYTES) {
     throw appError("UPLOAD_TOO_LARGE", "Tài liệu vượt quá giới hạn 20MB. Vui lòng tải lên tài liệu nhỏ hơn 20MB.");
   }
@@ -361,6 +396,7 @@ export async function generateOutline({ filename, buffer, subject, grade, level,
   if (!cleanSubject || !cleanGrade) {
     throw appError("VALIDATION_ERROR", "Thiếu tên môn học hoặc khối lớp.");
   }
+  await guardBudget(orgId);
   const useLevel = level === "Advanced" ? "Advanced" : "Basic";
   const useQuizCount = Math.min(10, Math.max(1, Number.parseInt(quizCount, 10) || 3));
 
@@ -371,6 +407,7 @@ export async function generateOutline({ filename, buffer, subject, grade, level,
   const input = `DỮ LIỆU ĐẦU VÀO:\n[Tài liệu Nguồn]:\n----------------\n${documentForOutline(text)}\n----------------\nHãy tạo Dàn ý khóa học theo đúng cấu trúc JSON bắt buộc.`;
   const data = await callJson(instructions, input, {
     maxTokens: 12000, step: "tạo dàn ý", effort: "low", timeoutMs: 180000,
+    usage: { orgId, userId, feature: "content_outline" },
   });
 
   const course = coerceOutline(data.course_outline, cleanSubject, cleanGrade);
@@ -571,6 +608,9 @@ export async function generateCourseLessons(payload) {
   const requireQuest = payload?.require_quest !== false;
   const subject = String(payload?.subject || "").trim();
   const teacherNote = payload?.teacher_note; // Ghi chú đặc biệt từ bước 1 (BẮT BUỘC FOLLOW).
+  const orgId = payload?.orgId;
+  const userId = payload?.userId;
+  await guardBudget(orgId);
 
   const text = getDocument(documentId);
   if (!text) {
@@ -618,6 +658,7 @@ export async function generateCourseLessons(payload) {
       maxTokens: 8000,
       step: `viết bài '${lesson.lesson_title}'`,
       effort: "low",
+      usage: { orgId, userId, feature: "content_lesson" },
     });
     return normalizeLesson(data, { lesson, chapterTitle, requireQuest });
   });

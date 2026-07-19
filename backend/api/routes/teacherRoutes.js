@@ -2,6 +2,7 @@ import { Router } from "express";
 
 import multer from "multer";
 
+import { aiContentRateLimiter } from "../../middleware/rateLimit.js";
 import { escalations } from "../controllers/teacherController.js";
 import {
   exerciseProposals,
@@ -91,8 +92,8 @@ teacherRouter.post("/content/drafts", postContentDraft);
 // PUBLISHED — DRAFT là không gian làm việc riêng của giáo viên.
 // Bước 1 & 2: sinh dàn ý từ tài liệu và viết bài giảng chi tiết — gọi thẳng
 // OpenAI từ backend (thay cho AI Content Service tách riêng trước đây).
-teacherRouter.post("/content/outline", uploadDocument, postContentOutline);
-teacherRouter.post("/content/generate", postContentGenerate);
+teacherRouter.post("/content/outline", aiContentRateLimiter, uploadDocument, postContentOutline);
+teacherRouter.post("/content/generate", aiContentRateLimiter, postContentGenerate);
 teacherRouter.post("/content/ai-courses", postAiCourse);
 teacherRouter.get("/ai-courses", getAiCourses);
 teacherRouter.post("/ai-courses/:courseId/publish", postAiCoursePublish);

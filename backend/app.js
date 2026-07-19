@@ -42,9 +42,22 @@ export function createApp() {
     },
     credentials: true,
   }));
-  // 25mb để chứa bài giảng có ảnh giáo viên tải lên (nhúng dạng data URI trong
-  // content jsonb). Upload tài liệu gốc đi qua multer riêng, không dùng giới hạn này.
-  app.use(express.json({ limit: "25mb" }));
+  // Chỉ các route lưu/sửa bài giảng (có thể chứa ảnh nhúng dạng data URI) mới
+  // được nới 25MB; toàn bộ API còn lại giữ 1MB để thu hẹp bề mặt DoS/ngốn RAM.
+  // parser lớn chạy trước và đặt req._body -> parser 1MB phía sau tự bỏ qua.
+  const largeJsonPaths = [
+    /^\/api\/teacher\/content\/ai-courses\/?$/,
+    /^\/api\/teacher\/ai-lessons\/[^/]+\/?$/,
+  ];
+  const largeJson = express.json({ limit: "25mb" });
+  app.use((request, response, next) => {
+    if (largeJsonPaths.some((pattern) => pattern.test(request.path))) {
+      largeJson(request, response, next);
+      return;
+    }
+    next();
+  });
+  app.use(express.json({ limit: "1mb" }));
   app.use((request, response, next) => {
     request.requestId = crypto.randomUUID();
     response.setHeader("x-request-id", request.requestId);

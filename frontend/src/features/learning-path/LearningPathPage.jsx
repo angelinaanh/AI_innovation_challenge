@@ -933,9 +933,9 @@ export function LearningPathPage() {
     };
   }, [loadAll]);
 
-  // DEMO: cố định Lớp 9 cho mọi tài khoản để trình diễn lộ trình lớp 9.
-  // Khi chạy thật, đổi lại thành: Number(dashboard?.student?.gradeLevel) || 9
-  const studentGrade = 9;
+  // Lớp của học sinh đăng nhập; mặc định Lớp 9 khi hồ sơ chưa có gradeLevel
+  // (giữ demo lớp 9 chạy được cho tài khoản chưa gán lớp).
+  const studentGrade = Number(dashboard?.student?.gradeLevel) || 9;
   const band = bandOfGrade(studentGrade);
   const allNodes = path?.nodes ?? [];
   // Chỉ hiện môn học đúng lớp của học sinh (VD lớp 9 -> các môn có grade 9).
