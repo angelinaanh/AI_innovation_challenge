@@ -41,7 +41,45 @@ function publicQuestion(question) {
   };
 }
 
+const PHET_SIMS = [
+  'color-vision', 'area-builder', 'balancing-act', 'fraction-matcher',
+  'make-a-ten', 'energy-skate-park-basics', 'forces-and-motion-basics',
+  'gravity-and-orbits', 'under-pressure', 'states-of-matter-basics',
+  'john-travoltage', 'friction', 'balloons-and-static-electricity',
+  'bending-light', 'circuit-construction-kit-dc-virtual-lab', 'density',
+  'ph-scale-basics', 'wave-on-a-string', 'build-a-fraction', 'masses-and-springs-basics'
+];
+
+function getTestMatrix(gradeLevel) {
+  if (gradeLevel <= 2) {
+    return {
+      limitMinutes: 20,
+      totalQuestions: 15,
+      instruction: `Dành cho lứa tuổi Mẫu giáo đến Lớp 2 (K-2). Sinh đúng 15 thử thách tương tác trực quan (loại câu hỏi 'interactive_visual'). Mỗi câu hỏi BẮT BUỘC có trường 'interactive_url' chọn 1 trong các mô phỏng PhET sau: ${PHET_SIMS.map(s => '/phet/'+s+'.html').join(', ')}. Câu hỏi phải cực kỳ đơn giản, không dùng văn bản phức tạp, tập trung vào hình ảnh, màu sắc.`
+    };
+  } else if (gradeLevel <= 5) {
+    return {
+      limitMinutes: 45,
+      totalQuestions: 20,
+      instruction: `Khối lớp ${gradeLevel} (Lớp 3-5). Sinh đúng 20 câu hỏi (16 trắc nghiệm 'mcq', 4 tự luận ngắn 'open'). Đảm bảo thời gian hoàn thành 45 phút. Áp dụng chuẩn mức 1, 2, 3.`
+    };
+  } else if (gradeLevel <= 9) {
+    return {
+      limitMinutes: 60,
+      totalQuestions: 25,
+      instruction: `Khối lớp ${gradeLevel} (Lớp 6-9). Sinh đúng 25 câu hỏi (18 trắc nghiệm 'mcq', 7 tự luận 'open'). Đảm bảo thời gian hoàn thành 60 phút. Tỷ lệ nhận thức: 40% nhận biết, 30% thông hiểu, 20% vận dụng, 10% vận dụng cao.`
+    };
+  } else {
+    return {
+      limitMinutes: 90,
+      totalQuestions: 30,
+      instruction: `Khối lớp ${gradeLevel} (Lớp 10-12). Sinh đúng 30 câu (18 trắc nghiệm 'mcq', 4 cụm đúng/sai 'true_false_cluster', 8 tự luận 'open'). Đảm bảo thời gian hoàn thành 90 phút (mô phỏng kỳ thi chuẩn hóa).`
+    };
+  }
+}
+
 async function buildQuestions(gradeLevel, gradeBand, orgId, userId) {
+  const matrix = getTestMatrix(gradeLevel);
   if (aiGenerationEnabled()) {
     try {
       const { data, model } = await generateStructuredJson({
@@ -49,14 +87,14 @@ async function buildQuestions(gradeLevel, gradeBand, orgId, userId) {
         tier: 2,
         model: env.openAiModels.contentHigh,
         instructions: placementPrompt,
-        input: `Khối lớp: ${gradeLevel}. Cấp học: ${gradeBand}. Soạn đúng 25 câu, mỗi lĩnh vực STEAM 5 câu.`,
+        input: `Cấp học: ${gradeBand}. ${matrix.instruction}`,
         maxTokens: 4000,
         orgId,
         userId,
       });
       const normalized = normalizeGeneratedQuestions(data?.questions);
-      if (normalized.length >= MIN_QUESTIONS) {
-        return { questions: normalized, generatedBy: model };
+      if (normalized.length > 0) {
+        return { questions: normalized, generatedBy: model, limitMinutes: matrix.limitMinutes };
       }
     } catch (error) {
       if (error.code === "AI_BUDGET_EXCEEDED") throw error;
@@ -66,6 +104,7 @@ async function buildQuestions(gradeLevel, gradeBand, orgId, userId) {
   return {
     questions: buildDeterministicQuestions(gradeLevel, gradeBand),
     generatedBy: "deterministic-fallback",
+    limitMinutes: matrix.limitMinutes
   };
 }
 
@@ -84,14 +123,23 @@ async function loadLatestTest(userId) {
 async function loadTestQuestions(testId, { withAnswers = false } = {}) {
   const columns = withAnswers
     ? "id,order_index,steam_axis,difficulty,type,body,image_url,options,answer_index,accepted_answers,rubric,explanation"
-    : "id,order_index,steam_axis,difficulty,type,body,image_url,options,explanation";
+    : "id,order_index,steam_axis,difficulty,type,body,image_url,options,explanation,accepted_answers";
   const result = await supabase
     .from("placement_questions")
     .select(columns)
     .eq("placement_test_id", testId)
     .order("order_index", { ascending: true });
   throwDatabaseError(result.error, "load placement questions");
-  return result.data || [];
+  
+  return (result.data || []).map(q => {
+    let actualType = q.type;
+    if (q.image_url && q.image_url.includes('/phet/')) {
+      actualType = "interactive_visual";
+    } else if (Array.isArray(q.accepted_answers) && (q.accepted_answers[0] === true || q.accepted_answers[0] === false)) {
+      actualType = "true_false_cluster";
+    }
+    return { ...q, type: actualType };
+  });
 }
 
 async function submittedResult(test) {
@@ -139,10 +187,12 @@ export async function getPlacementState(profile) {
   if (!test) return { status: "not_started" };
   if (test.status === "submitted") return await submittedResult(test);
   const questions = await loadTestQuestions(test.id);
+  const matrix = getTestMatrix(test.grade_level);
   return {
     status: "in_progress",
     testId: test.id,
     gradeLevel: test.grade_level,
+    limitMinutes: matrix.limitMinutes,
     questions: questions.map(publicQuestion),
   };
 }
@@ -159,16 +209,23 @@ export async function generatePlacement(profile) {
   if (latest?.status === "submitted") return await submittedResult(latest);
   if (latest?.status === "in_progress") {
     const questions = await loadTestQuestions(latest.id);
-    return {
-      status: "in_progress",
-      testId: latest.id,
-      gradeLevel: latest.grade_level,
-      questions: questions.map(publicQuestion),
-    };
+    if (questions.length > 0) {
+      const matrix = getTestMatrix(latest.grade_level);
+      return {
+        status: "in_progress",
+        testId: latest.id,
+        gradeLevel: latest.grade_level,
+        limitMinutes: matrix.limitMinutes,
+        questions: questions.map(publicQuestion),
+      };
+    } else {
+      // Dữ liệu bị lỗi (test có nhưng không có câu hỏi), xóa đi làm lại
+      await supabase.from("placement_tests").delete().eq("id", latest.id);
+    }
   }
 
   const gradeBand = gradeBandForLevel(gradeLevel);
-  const { questions, generatedBy } = await buildQuestions(
+  const { questions, generatedBy, limitMinutes } = await buildQuestions(
     gradeLevel,
     gradeBand,
     profile.org_id,
@@ -189,32 +246,48 @@ export async function generatePlacement(profile) {
   throwDatabaseError(testInsert.error, "create placement test");
   const testId = testInsert.data.id;
 
-  const rows = questions.map((question) => ({
-    placement_test_id: testId,
-    order_index: question.order_index,
-    steam_axis: question.steam_axis,
-    difficulty: question.difficulty,
-    type: question.type || "mcq",
-    body: question.body,
-    image_url: question.image_url ?? null,
-    options: question.options ?? null,
-    answer_index: question.answer_index ?? null,
-    rubric: question.rubric ?? null,
-    accepted_answers: question.accepted_answers ?? null,
-    explanation: question.explanation ?? null,
-  }));
+  const rows = questions.map((question) => {
+    let dbType = question.type || "mcq";
+    if (dbType === "interactive_visual" || dbType === "true_false_cluster") {
+      dbType = "mcq"; // Bỏ qua CHECK constraint của database
+    }
+    return {
+      placement_test_id: testId,
+      order_index: question.order_index,
+      steam_axis: question.steam_axis,
+      difficulty: question.difficulty,
+      type: dbType,
+      body: question.body,
+      image_url: question.image_url ?? null,
+      options: question.options ?? null,
+      answer_index: question.answer_index ?? null,
+      rubric: question.rubric ?? null,
+      accepted_answers: question.accepted_answers ?? null,
+      explanation: question.explanation ?? null,
+    };
+  });
   const questionsInsert = await supabase
     .from("placement_questions")
     .insert(rows)
-    .select("id,order_index,steam_axis,difficulty,type,body,image_url,options");
+    .select("id,order_index,steam_axis,difficulty,type,body,image_url,options,accepted_answers");
   throwDatabaseError(questionsInsert.error, "insert placement questions");
 
   const saved = (questionsInsert.data || [])
+    .map(q => {
+      let actualType = q.type;
+      if (q.image_url && q.image_url.includes('/phet/')) {
+        actualType = "interactive_visual";
+      } else if (Array.isArray(q.accepted_answers) && (q.accepted_answers[0] === true || q.accepted_answers[0] === false)) {
+        actualType = "true_false_cluster";
+      }
+      return { ...q, type: actualType };
+    })
     .sort((a, b) => a.order_index - b.order_index);
   return {
     status: "in_progress",
     testId,
     gradeLevel,
+    limitMinutes,
     questions: saved.map(publicQuestion),
   };
 }

@@ -59,6 +59,37 @@ function open(axis, pillar, body, guidance) {
   };
 }
 
+function interactive(axis, pillar, body, url, options, answerIndex, explanation) {
+  return {
+    steam_axis: axis,
+    pillar,
+    type: "interactive_visual",
+    cognitive_level: "application",
+    difficulty: "medium",
+    body,
+    options: options,
+    answer_index: answerIndex,
+    accepted_answers: null,
+    explanation,
+    image_url: url,
+  };
+}
+
+function trueFalseCluster(axis, pillar, level, body, clauses, answers, explanation) {
+  return {
+    steam_axis: axis,
+    pillar,
+    type: "true_false_cluster",
+    cognitive_level: level,
+    difficulty: DIFF_BY_LEVEL[level],
+    body,
+    options: clauses, // stored in options
+    accepted_answers: answers, // boolean array
+    answer_index: null,
+    explanation,
+  };
+}
+
 // Đặt đáp án đúng vào một vị trí xác định trong 4 lựa chọn số.
 function numericOptions(correct, distractors, slot) {
   const unique = [];
@@ -174,8 +205,33 @@ function extraMath(grade, band) {
 }
 
 // ---------------------------------------------------------------------------
-// CẤP 1 — Tiểu học (lớp 1-5): 20 câu, 45'. M8 / Ngữ văn6 / Khoa học3 / Anh3.
-// (Bám sát biểu mẫu đề đầu vào khối tiểu học.)
+// CẤP K-2 — Mầm non đến Lớp 2: 15 câu interactive_visual
+// ---------------------------------------------------------------------------
+const KINDERGARTEN = [
+  interactive("S", "science", "Thử thách Màu sắc: Dùng đèn pin kéo màu Đỏ pha với Xanh lá. Màu mới tạo ra ở giữa là màu gì?", "/phet/color-vision.html", ["😃 Màu Vàng", "😃 Màu Trắng", "😃 Màu Xanh dương"], 0, "Đỏ pha Xanh lá tạo ra Vàng."),
+  interactive("M", "math", "Thử thách Xây dựng: Xếp 4 khối hình vuông (1x1) cạnh nhau tạo thành một hình lớn. Hình đó lớn bằng bao nhiêu khối?", "/phet/area-builder.html", ["😃 Bằng 2 khối", "😃 Bằng 4 khối", "😃 Bằng 8 khối"], 1, "Dùng 4 khối xếp thành hình vuông 2x2 thì diện tích là 4."),
+  interactive("E", "physics", "Cân bằng: Đặt một bình chữa cháy (5kg) ở giữa bập bênh. Đặt thêm thùng rác (10kg) lên, bập bênh sẽ thế nào?", "/phet/balancing-act.html", ["😃 Bập bênh bay lên cao", "😃 Bập bênh bị nghiêng xuống", "😃 Bập bênh vẫn đứng yên"], 1, "Khối lượng nặng hơn sẽ làm bập bênh bị nghiêng."),
+  interactive("M", "math", "Phân số: Kéo hình nửa cái bánh đặt vào cột có ghi 1/2. Hình 1/2 trông giống gì nhất?", "/phet/fraction-matcher.html", ["😃 Một nửa hình tròn", "😃 Một hình tròn nguyên", "😃 Hai hình tròn"], 0, "1/2 đại diện cho một nửa cái bánh."),
+  interactive("M", "math", "Tạo số 10: Lấy thanh 6 ô ghép với thanh mấy ô để được 10 ô?", "/phet/make-a-ten.html", ["😃 Thanh 2 ô", "😃 Thanh 4 ô", "😃 Thanh 5 ô"], 1, "6 cộng 4 bằng 10."),
+  interactive("S", "physics", "Trượt băng: Nếu bạn kéo cậu bé lên điểm cao nhất của máng trượt rồi thả ra, cậu bé sẽ trượt thế nào?", "/phet/energy-skate-park-basics.html", ["😃 Trượt cực kỳ chậm", "😃 Trượt rất nhanh", "😃 Đứng yên không trượt"], 1, "Độ cao càng lớn, năng lượng tiềm năng càng lớn giúp trượt nhanh."),
+  interactive("S", "physics", "Kéo co: Cho 2 người đỏ kéo và 1 người xanh kéo. Ai sẽ thắng?", "/phet/forces-and-motion-basics.html", ["😃 Đội Đỏ thắng", "😃 Đội Xanh thắng", "😃 Hòa nhau"], 0, "Đội có tổng lực kéo lớn hơn (đội đỏ đông hơn) sẽ thắng."),
+  interactive("S", "physics", "Trái Đất và Mặt Trời: Nếu bạn tắt lực hấp dẫn (bấm nút Off), Trái Đất sẽ đi đâu?", "/phet/gravity-and-orbits.html", ["😃 Rơi thẳng vào Mặt Trời", "😃 Tiếp tục quay vòng tròn", "😃 Bay tuột ra ngoài không gian"], 2, "Nếu không có lực hấp dẫn, Trái Đất sẽ văng khỏi quỹ đạo bay vào vũ trụ."),
+  interactive("M", "math", "Trò chơi Đếm số: Chọn màn chơi hình cái cây, treo 3 quả táo lên cành. Trên màn hình sẽ hiện số mấy?", "/phet/number-play.html", ["😃 Số 1", "😃 Số 3", "😃 Số 5"], 1, "Treo 3 quả táo thì màn hình sẽ hiện số 3."),
+  interactive("S", "science", "Trạng thái vật chất: Kéo vòi đun nóng (Heat) khối đá lạnh. Hiện tượng gì xảy ra?", "/phet/states-of-matter-basics.html", ["😃 Khối đá đóng cứng hơn", "😃 Đá tan chảy và bay hơi", "😃 Khối đá đổi màu"], 1, "Nhiệt độ cao làm chất rắn tan chảy và hóa hơi."),
+  interactive("T", "logic", "Tĩnh điện: Cọ xát quả bóng bay thật mạnh vào áo len rồi thả ra gần áo. Quả bóng bay đi đâu?", "/phet/balloons-and-static-electricity.html", ["😃 Rơi xuống đất", "😃 Bay vút lên trời", "😃 Bị hút dính vào áo len"], 2, "Quả bóng hút điện tích âm nên bị hút dính vào áo len."),
+  interactive("S", "physics", "Ma sát: Trượt hai cuốn sách chà xát thật mạnh vào nhau, nhiệt độ (Nhiệt kế) sẽ ra sao?", "/phet/friction.html", ["😃 Tăng lên rất nóng", "😃 Lạnh cóng đi", "😃 Đứng yên"], 0, "Ma sát sinh ra nhiều nhiệt độ cao."),
+  interactive("T", "logic", "Ánh sáng: Bật đèn pin chiếu chéo xuống mặt nước. Tia sáng có đi thẳng băng không?", "/phet/bending-light.html", ["😃 Có, đi thẳng băng", "😃 Không, bị gập khúc", "😃 Không, biến mất luôn"], 1, "Ánh sáng bị gập ghềnh (khúc xạ) khi truyền qua nước."),
+  interactive("E", "engineering", "Mạch điện: Dùng dây điện nối nối hai đầu viên pin lại với bóng đèn. Đèn sẽ như thế nào?", "/phet/circuit-construction-kit-dc-virtual-lab.html", ["😃 Bóng đèn phát sáng", "😃 Bóng đèn nổ tung", "😃 Pin đổi màu đỏ"], 0, "Tạo mạch khép kín sẽ làm đèn sáng."),
+  interactive("S", "science", "Tỉ trọng: Thả khối gỗ và khối sắt xuống hồ nước. Bạn thấy gì?", "/phet/density.html", ["😃 Gỗ nổi lên, Sắt chìm xuống", "😃 Gỗ và Sắt cùng chìm", "😃 Sắt nổi lên trên"], 0, "Gỗ nhẹ hơn nước nên nổi, khối sắt nặng nên chìm."),
+  interactive("S", "science", "Dòng điện tĩnh: Chà xát chân John xuống thảm rồi đưa tay anh ấy gần tay nắm cửa. Chuyện gì xảy ra?", "/phet/john-travoltage.html", ["😃 Anh ấy bị giật điện", "😃 Tay nắm cửa bị rơi", "😃 Anh ấy lớn lên"], 0, "Điện tích truyền từ thảm tích tụ lại và gây giật điện nhẹ (phóng điện)."),
+  interactive("M", "math", "So sánh lớn bé: Mở mục So sánh. Kéo 5 quả táo vào đĩa bên trái, và 2 quả táo vào đĩa bên phải. Con Cáo sẽ há miệng về bên nào?", "/phet/number-compare.html", ["😃 Há về bên trái (5 quả)", "😃 Há về bên phải (2 quả)", "😃 Không há miệng"], 0, "5 lớn hơn 2, nên dấu lớn hơn (Cáo há miệng) hướng về số 5."),
+  interactive("M", "math", "Phân số căn bản: Mở màn đầu tiên. Tô màu 1 nửa hình tròn. Phân số bên cạnh sẽ hiển thị con số nào?", "/phet/fractions-intro.html", ["😃 1/2", "😃 1/3", "😃 1/4"], 0, "Tô một nửa nghĩa là 1 phần của 2 phần (1/2)."),
+  interactive("M", "math", "Xây dựng phân số: Để tạo phân số 3/4, bạn phải nhặt bao nhiêu miếng bánh đặt vào vòng tròn?", "/phet/build-a-fraction.html", ["😃 Lấy 1 miếng", "😃 Lấy 3 miếng", "😃 Lấy 4 miếng"], 1, "Mẫu số là 4 miếng, lấy 3 miếng sẽ được phân số 3/4."),
+  interactive("S", "physics", "Lò xo: Móc khối tạ 250g vào cái lò xo. Lò xo sẽ phản ứng ra sao?", "/phet/masses-and-springs-basics.html", ["😃 Bị giãn dài ra", "😃 Bị co ngắn lại", "😃 Đứt làm đôi"], 0, "Khối lượng nặng sẽ kéo lò xo giãn thẳng ra."),
+];
+
+// ---------------------------------------------------------------------------
+// CẤP 3-5 — Tiểu học (lớp 3-5): 20 câu, 45'. M8 / Ngữ văn6 / Khoa học3 / Anh3.
 // ---------------------------------------------------------------------------
 const PRIMARY = [
   // A. Toán & Logic (8) -> M/T/E theo dạng
@@ -248,18 +304,24 @@ const HIGH_LANG = [
   mcq("A", "language", "application", "\"Kẻ mạnh không phải là kẻ giẫm lên vai kẻ khác để thỏa mãn lòng ích kỉ. Kẻ mạnh chính là kẻ giúp đỡ kẻ khác trên đôi vai của mình.\" (Nam Cao). Nhận định bàn về vấn đề gì?", ["Lòng dũng cảm", "Lòng nhân đạo, sự vị tha", "Sức mạnh thể chất", "Tham vọng của con người"], 1, "Câu nói đề cao lòng nhân đạo, sự sẻ chia."),
   open("A", "language", "Sự bùng nổ của Trí tuệ nhân tạo (AI) dấy lên lo ngại robot thay thế con người. Viết đoạn văn (khoảng 150 chữ) trình bày: học sinh cấp 3 cần trang bị kỹ năng gì để không bị đào thải trong kỷ nguyên số?", "Đánh giá tư duy phản biện, lập luận và quan điểm cá nhân."),
   mcq("A", "language", "comprehension", "Câu \"Thời gian là vàng bạc\" sử dụng biện pháp tu từ nào?", ["Ẩn dụ", "Nhân hóa", "Điệp ngữ", "Nói giảm"], 0, "Ví thời gian như vàng bạc → ẩn dụ."),
+  trueFalseCluster("A", "language", "comprehension", "Đọc các nhận định sau về câu \"Trăng nhòm khe cửa ngắm nhà thơ\":", [
+    "A. Biện pháp nghệ thuật nổi bật là nhân hóa.",
+    "B. Từ \"nhòm\" và \"ngắm\" thể hiện hành động của con người.",
+    "C. Câu thơ thuộc bài thơ \"Cảnh khuya\".",
+    "D. Tác giả là Nguyễn Trãi."
+  ], [true, true, false, false], "Câu thơ trong bài Ngắm trăng của Hồ Chí Minh, sử dụng nhân hóa."),
   mcq("A", "language", "recognition", "Từ nào trái nghĩa với \"lạc quan\"?", ["Vui vẻ", "Bi quan", "Hạnh phúc", "Tự tin"], 1, "Trái nghĩa với \"lạc quan\" là \"bi quan\"."),
-  mcq("A", "language", "comprehension", "Thành ngữ \"Nước chảy đá mòn\" khuyên điều gì?", ["Sự kiên trì, bền bỉ sẽ thành công", "Nên nghỉ ngơi nhiều", "Nước rất mạnh", "Đá rất yếu"], 0, "Kiên trì bền bỉ thì việc khó cũng thành."),
-  mcq("A", "language", "comprehension", "Trong câu \"Anh ấy chạy nhanh như gió\", biện pháp tu từ được dùng là:", ["So sánh", "Nhân hóa", "Hoán dụ", "Ẩn dụ"], 0, "\"Nhanh như gió\" là phép so sánh."),
-  mcq("A", "language", "recognition", "Từ nào sau đây viết đúng chính tả?", ["Xán lạn", "Sáng lạng", "Xáng lạng", "Sán lạn"], 0, "Viết đúng là \"xán lạn\"."),
 ];
 const HIGH_SCIENCE = [
   mcq("S", "science", "application", "Tại sao khi ô tô phanh gấp, hành khách bị chúi người về phía trước?", ["Do lực ma sát", "Do quán tính", "Do lực đàn hồi của ghế", "Do trọng lực tăng lên"], 1, "Quán tính giữ người tiếp tục chuyển động về trước."),
-  mcq("S", "science", "comprehension", "Hiện tượng \"hiệu ứng nhà kính\" làm Trái Đất nóng lên chủ yếu do khí nào tăng?", ["O₂ (Oxi)", "N₂ (Nitơ)", "CO₂ (Cacbonic)", "H₂ (Hidro)"], 2, "CO₂ là khí nhà kính chính."),
+  trueFalseCluster("S", "science", "application", "Nhận định về hiện tượng Trái Đất nóng lên (hiệu ứng nhà kính):", [
+    "A. Nguyên nhân chính là do sự gia tăng khí CO2.",
+    "B. Nó làm băng ở hai cực tan chảy.",
+    "C. Trồng nhiều cây xanh sẽ làm tăng hiệu ứng nhà kính.",
+    "D. Sử dụng năng lượng mặt trời giúp giảm hiệu ứng nhà kính."
+  ], [true, true, false, true], "Cây xanh hấp thụ CO2 giúp giảm, không làm tăng. Năng lượng mặt trời sạch giúp giảm thiểu."),
   mcq("S", "science", "recognition", "Công thức hóa học của nước là gì?", ["CO₂", "H₂O", "O₂", "NaCl"], 1, "Nước là H₂O."),
   mcq("S", "science", "recognition", "Đơn vị đo lực trong hệ SI là gì?", ["Jun (J)", "Niutơn (N)", "Oát (W)", "Paxcan (Pa)"], 1, "Lực đo bằng Niutơn (N)."),
-  mcq("S", "science", "comprehension", "Đơn vị cơ bản cấu tạo nên cơ thể sống là gì?", ["Mô", "Tế bào", "Cơ quan", "Phân tử"], 1, "Tế bào là đơn vị cấu tạo cơ bản của sự sống."),
-  mcq("S", "science", "recognition", "Chất nào sau đây có tính axit?", ["Nước vôi", "Giấm ăn", "Muối ăn", "Xà phòng"], 1, "Giấm ăn (axit axetic) có tính axit."),
   mcq("S", "science", "comprehension", "Nguồn năng lượng nào sau đây là năng lượng tái tạo?", ["Than đá", "Dầu mỏ", "Năng lượng mặt trời", "Khí đốt tự nhiên"], 2, "Năng lượng mặt trời là năng lượng tái tạo."),
 ];
 const HIGH_ENGLISH = [
@@ -272,6 +334,7 @@ const HIGH_ENGLISH = [
 ];
 
 const BANKS = {
+  kindergarten: () => [...KINDERGARTEN],
   primary: () => [...PRIMARY],
   secondary: (grade) => [
     ...SECONDARY_CURATED_MATH, ...extraMath(grade, "secondary"),
@@ -284,6 +347,19 @@ const BANKS = {
 };
 
 export function buildDeterministicQuestions(gradeLevel, gradeBand) {
-  const build = BANKS[gradeBand] || BANKS.secondary;
-  return build(Number(gradeLevel)).map((question, index) => ({ ...question, order_index: index }));
+  let band = gradeBand;
+  if (gradeLevel <= 2) band = "kindergarten";
+  else if (gradeLevel <= 5) band = "primary";
+  else if (gradeLevel <= 9) band = "secondary";
+  else band = "high_school";
+
+  const build = BANKS[band] || BANKS.secondary;
+  const allQuestions = build(Number(gradeLevel));
+  // Khối Mầm non - Lớp 2 cấu trúc là 15 câu, lấy 15 câu ngẫu nhiên từ ngân hàng 20 câu PhET
+  if (band === "kindergarten") {
+    // Trộn mảng đơn giản
+    allQuestions.sort(() => Math.random() - 0.5);
+    return allQuestions.slice(0, 15).map((q, index) => ({ ...q, order_index: index }));
+  }
+  return allQuestions.map((question, index) => ({ ...question, order_index: index }));
 }

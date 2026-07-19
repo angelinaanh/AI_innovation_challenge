@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { env } from "../../utils/env.js";
 import {
   assertTutorAllowance,
+  generateStructuredJson,
   generateTutorAnswer,
   moderateText,
   recordAiUsage,
@@ -18,15 +19,17 @@ import {
 import {
   isAnswerSeeking,
   isPromptOverrideAttempt,
+  isSmallTalk,
   normalizeText,
+  smallTalkReply,
   splitAnswerForStreaming,
 } from "./tutorRules.js";
 
 const promptUrl = new URL("../../../ai/prompts/tutor_socratic.md", import.meta.url);
-const refusalUrl = new URL("../../../ai/prompts/refusal.md", import.meta.url);
-const [tutorPrompt, refusalCopy] = await Promise.all([
+const conversationUrl = new URL("../../../ai/prompts/tutor_conversation.md", import.meta.url);
+const [tutorPrompt, conversationPrompt] = await Promise.all([
   readFile(promptUrl, "utf8"),
-  readFile(refusalUrl, "utf8").then((content) => content.split("\n").slice(2).join("\n").trim()),
+  readFile(conversationUrl, "utf8"),
 ]);
 
 const SAFETY_COPY = "Mình chưa thể trả lời nội dung này trong Tutor. Mình đã đánh dấu để giáo viên có thể hỗ trợ bạn an toàn và phù hợp hơn.";
@@ -178,7 +181,17 @@ function findCachedAnswer(question, messages) {
   return null;
 }
 
-async function emitAnswer({ answer, messageId, studentMessageId, mode, confidence, citations, emit, cached }) {
+async function emitAnswer({
+  answer,
+  messageId,
+  studentMessageId,
+  mode,
+  confidence,
+  citations,
+  emit,
+  cached,
+  escalationRecommended = false,
+}) {
   for (const delta of splitAnswerForStreaming(answer)) {
     emit("token", { delta });
     await new Promise((resolve) => setTimeout(resolve, 18));
@@ -192,7 +205,7 @@ async function emitAnswer({ answer, messageId, studentMessageId, mode, confidenc
     mode,
     confidence,
     cached,
-    escalationRecommended: false,
+    escalationRecommended,
   });
 }
 
@@ -227,6 +240,118 @@ async function emitRefusal({ content, session, studentMessage, emit, mode, autoE
     cached: false,
     escalationRecommended: !autoEscalate,
     escalationId: escalation?.id || null,
+  });
+}
+
+// Natural, OpenAI-powered conversation for turns that are NOT grounded academic
+// questions (greetings, thanks, "who are you", help, and academic questions that
+// fall outside the approved lesson). Guardrails: no lesson content is sent to the
+// model and the prompt forbids teaching outside-lesson knowledge; academic
+// out-of-scope turns come back as kind="out_of_scope" and offer the teacher.
+async function handleConversationalTurn({
+  question,
+  session,
+  studentMessage,
+  previousMessages,
+  profile,
+  studentId,
+  emit,
+}) {
+  let inputSafety;
+  try {
+    inputSafety = await moderateText(question, {
+      orgId: profile.org_id,
+      userId: studentId,
+      feature: "tutor_safety_input",
+    });
+  } catch {
+    await emitRefusal({
+      content: "Mình chưa thể kiểm tra an toàn cho câu hỏi lúc này. Bạn có thể gửi câu hỏi cho giáo viên.",
+      session,
+      studentMessage,
+      emit,
+      mode: "safety_unavailable",
+    });
+    return;
+  }
+  if (inputSafety.flagged) {
+    await emitRefusal({
+      content: SAFETY_COPY,
+      session,
+      studentMessage,
+      emit,
+      mode: "safety",
+      autoEscalate: true,
+    });
+    return;
+  }
+
+  const recentHistory = previousMessages.slice(-6)
+    .map((message) => `${message.role === "student" ? "Học sinh" : "Tutor"}: ${message.content}`)
+    .join("\n");
+  const input = [
+    recentHistory ? `Hội thoại gần đây:\n${recentHistory}` : "",
+    `Tin nhắn hiện tại của học sinh:\n${question}`,
+    'Trả lời bằng JSON đúng định dạng {"reply": "...", "kind": "chat" | "out_of_scope"}.',
+  ].filter(Boolean).join("\n\n");
+
+  let reply = "";
+  let kind = "chat";
+  try {
+    const { data } = await generateStructuredJson({
+      feature: "tutor_conversation",
+      model: env.openAiModels.tutor,
+      tier: 2,
+      instructions: conversationPrompt,
+      input,
+      maxTokens: 300,
+      orgId: profile.org_id,
+      userId: studentId,
+    });
+    if (data && typeof data.reply === "string" && data.reply.trim()) {
+      reply = data.reply.trim();
+      kind = data.kind === "out_of_scope" ? "out_of_scope" : "chat";
+    }
+  } catch (error) {
+    if (!["AI_UNAVAILABLE", "AI_PROVIDER_ERROR", "DATABASE_ERROR"].includes(error.code)) {
+      throw error;
+    }
+    // Provider hiccup: degrade to a warm canned reply instead of an error.
+  }
+  if (!reply) {
+    reply = smallTalkReply(question);
+    kind = "chat";
+  }
+
+  try {
+    const outputSafety = await moderateText(reply, {
+      orgId: profile.org_id,
+      userId: studentId,
+      feature: "tutor_safety_output",
+    });
+    if (outputSafety.flagged) {
+      reply = "Mình xin phép chưa trả lời câu này. Bạn có thể hỏi lại theo cách khác hoặc nhờ giáo viên nhé.";
+      kind = "out_of_scope";
+    }
+  } catch {
+    reply = smallTalkReply(question);
+    kind = "chat";
+  }
+
+  const assistantMessage = await saveMessage({
+    sessionId: session.id,
+    role: "assistant",
+    content: reply,
+  });
+  await emitAnswer({
+    answer: reply,
+    messageId: assistantMessage.id,
+    studentMessageId: studentMessage.id,
+    mode: kind === "out_of_scope" ? "out_of_scope" : "chat",
+    confidence: kind === "out_of_scope" ? 0 : 1,
+    citations: [],
+    emit,
+    escalationRecommended: kind === "out_of_scope",
   });
 }
 
@@ -298,7 +423,10 @@ export async function createOrResumeTutorSession(requestedStudentId, skillNodeId
         ...message,
         citations,
         studentMessageId: priorStudentMessage?.id || null,
-        escalationRecommended: Boolean(priorStudentMessage && citations.length === 0 && !escalation),
+        // Escalation is offered live (in the SSE "done" event). On history reload
+        // we can't recover the message kind, so we only surface an already-created
+        // escalation — this avoids showing "gửi giáo viên" under a greeting reply.
+        escalationRecommended: false,
         escalated: Boolean(escalation),
       };
     }),
@@ -343,6 +471,16 @@ export async function streamTutorMessage({ requestedStudentId, sessionId, rawMes
       studentMessage,
       emit,
       mode: "prompt_override",
+    });
+    return;
+  }
+
+  // Obvious conversational turns (greetings, thanks, "who are you") skip
+  // retrieval and go straight to the OpenAI-powered conversational layer, so a
+  // simple "hi" is answered naturally instead of hitting a grounding refusal.
+  if (isSmallTalk(question)) {
+    await handleConversationalTurn({
+      question, session, studentMessage, previousMessages, profile, studentId, emit,
     });
     return;
   }
@@ -401,13 +539,13 @@ export async function streamTutorMessage({ requestedStudentId, sessionId, rawMes
     }
     throw error;
   }
+  // Not grounded in the approved lesson: instead of a blunt refusal, let the
+  // conversational layer reply naturally. It answers chit-chat/help warmly and,
+  // for genuine academic questions outside the lesson, points to the teacher
+  // (kind="out_of_scope") without inventing an answer.
   if (!retrieval.grounded) {
-    await emitRefusal({
-      content: refusalCopy,
-      session,
-      studentMessage,
-      emit,
-      mode: "out_of_scope",
+    await handleConversationalTurn({
+      question, session, studentMessage, previousMessages, profile, studentId, emit,
     });
     return;
   }

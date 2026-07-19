@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bot, Loader2, Send, Sparkles, X, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { Bot, Loader2, Send, Sparkles, X, CheckCircle2, XCircle, AlertCircle, Clock } from "lucide-react";
 
 import { api } from "../../lib/apiClient.js";
 import { RadarProfile } from "../student-dashboard/RadarProfile.jsx";
@@ -132,7 +132,9 @@ function ChatPhase({ onComplete }) {
 }
 
 function TestPhase({ onComplete }) {
-  const [state, setState] = useState({ loading: true, testId: null, questions: [] });
+  const [state, setState] = useState({ loading: true, testId: null, questions: [], gradeLevel: null, limitMinutes: 0 });
+  const [surveyCompleted, setSurveyCompleted] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(0);
   const [answers, setAnswers] = useState({});
   const [index, setIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -148,13 +150,37 @@ function TestPhase({ onComplete }) {
           onComplete(result);
           return;
         }
-        setState({ loading: false, testId: result.testId, questions: result.questions });
+        setState({ 
+          loading: false, 
+          testId: result.testId, 
+          questions: result.questions, 
+          gradeLevel: result.gradeLevel, 
+          limitMinutes: result.limitMinutes || 45 
+        });
+        setTimeLeft((result.limitMinutes || 45) * 60);
       } catch (loadError) {
         if (active) setError(loadError.message || "Mình chưa tạo được bài, bạn thử lại nhé 😊");
       }
     })();
     return () => { active = false; };
   }, [onComplete]);
+
+  useEffect(() => {
+    if (state.loading || timeLeft <= 0 || submitting) return;
+    if (state.gradeLevel <= 2 && !surveyCompleted) return; // Không đếm giờ khi đang làm khảo sát
+
+    const timerId = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timerId);
+          submit();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timerId);
+  }, [state.loading, timeLeft, submitting, state.gradeLevel, surveyCompleted]);
 
   async function submit() {
     setSubmitting(true);
@@ -187,8 +213,39 @@ function TestPhase({ onComplete }) {
     );
   }
 
+  if (state.gradeLevel <= 2 && !surveyCompleted) {
+    return (
+      <div className="flex min-h-[360px] flex-col justify-center">
+        <h3 className="mb-4 text-xl font-bold text-slate-800 text-center">Khảo sát dành cho Phụ huynh</h3>
+        <p className="text-sm text-slate-600 mb-6 text-center">Để bài đánh giá chính xác hơn, EduOne cần tìm hiểu thói quen của bé.</p>
+        <div className="space-y-4 mb-6">
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Bé nhà mình thích chơi trò chơi nào nhất?</label>
+            <input type="text" className="auth-input w-full p-3" placeholder="Ví dụ: Xếp hình, vẽ tranh..." />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Bé có thể tập trung tối đa bao lâu?</label>
+            <select className="auth-input w-full p-3">
+              <option>Dưới 10 phút</option>
+              <option>10 - 20 phút</option>
+              <option>Hơn 20 phút</option>
+            </select>
+          </div>
+        </div>
+        <button className="auth-primary-button" onClick={() => setSurveyCompleted(true)}>Hoàn thành & Bắt đầu Test</button>
+      </div>
+    );
+  }
+
   const total = state.questions.length;
   const question = state.questions[index];
+  if (!question) {
+    return (
+      <div className="grid min-h-[360px] place-items-center text-slate-500">
+        <p className="text-sm font-bold text-rose-500">Lỗi: Không tìm thấy dữ liệu câu hỏi. Vui lòng thử lại.</p>
+      </div>
+    );
+  }
   const answeredCount = Object.keys(answers).length;
   const selected = answers[question.id];
   const isLast = index === total - 1;
@@ -197,22 +254,48 @@ function TestPhase({ onComplete }) {
     setAnswers({ ...answers, [question.id]: { selectedIndex: optionIndex } });
   }
 
+  function toggleTrueFalse(clauseIndex, value) {
+    const currentValues = selected?.textAnswer ? selected.textAnswer.split(',') : ["","","",""];
+    currentValues[clauseIndex] = value.toString();
+    setAnswers({ ...answers, [question.id]: { textAnswer: currentValues.join(',') } });
+  }
+
   function typeText(text) {
     setAnswers({ ...answers, [question.id]: { textAnswer: text } });
   }
 
-  const isAnswered = selected && (selected.selectedIndex !== undefined || (selected.textAnswer && selected.textAnswer.trim().length > 0));
+  const isAnswered = (() => {
+    if (!selected) return false;
+    if (question.type === "true_false_cluster") {
+      const vals = selected.textAnswer ? selected.textAnswer.split(',') : [];
+      return vals.filter(v => v === "true" || v === "false").length === (question.options?.length || 4);
+    }
+    return selected.selectedIndex !== undefined || (selected.textAnswer && selected.textAnswer.trim().length > 0);
+  })();
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
 
   return (
     <div className="flex min-h-[360px] flex-col">
       <div className="mb-4">
-        <div className="flex items-center justify-between text-xs font-extrabold text-slate-500">
-          <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-700">
-            Câu {index + 1} / {total} · {AXIS_LABEL[question.steamAxis] || question.steamAxis}
-          </span>
+        <div className="flex items-center justify-between text-xs font-extrabold text-slate-500 mb-2">
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-700">
+              Câu {index + 1} / {total} · {AXIS_LABEL[question.steamAxis] || question.steamAxis}
+            </span>
+            {state.limitMinutes > 0 && (
+              <span className={`flex items-center gap-1 rounded-full px-2.5 py-1 ${timeLeft < 300 ? 'bg-rose-50 text-rose-600' : 'bg-slate-100 text-slate-600'}`}>
+                <Clock size={14} /> {formatTime(timeLeft)}
+              </span>
+            )}
+          </div>
           <span>Đã trả lời {answeredCount}/{total}</span>
         </div>
-        <div className="mt-2.5 h-2.5 overflow-hidden rounded-full bg-slate-100">
+        <div className="mt-1 h-2.5 overflow-hidden rounded-full bg-slate-100">
           <div
             className="h-full rounded-full bg-gradient-to-r from-amber-400 to-emerald-500 transition-[width] duration-500"
             style={{ width: `${(answeredCount / total) * 100}%` }}
@@ -220,14 +303,35 @@ function TestPhase({ onComplete }) {
         </div>
       </div>
 
-      {question.imageUrl && (
+      {question.type === "interactive_visual" && question.imageUrl ? (
+        <div className="mb-4 overflow-hidden rounded-xl border border-slate-200">
+          <iframe src={question.imageUrl} className="w-full h-[400px] border-none" title="Mô phỏng PhET" />
+        </div>
+      ) : question.imageUrl ? (
         <div className="mb-4 overflow-hidden rounded-2xl border border-slate-100 bg-slate-50">
           <img src={question.imageUrl} alt="Minh họa" className="max-h-48 w-full object-contain mix-blend-multiply" />
         </div>
-      )}
-      <p className="font-display mb-4 text-lg font-bold leading-snug text-slate-900">{question.body}</p>
+      ) : null}
       
-      {question.type === "mcq" || !question.type ? (
+      <p className="font-display mb-4 text-[17px] font-bold leading-snug text-slate-900 whitespace-pre-wrap">{question.body}</p>
+      
+      {question.type === "true_false_cluster" ? (
+        <div className="space-y-3">
+          {question.options.map((clause, clauseIndex) => {
+            const currentVals = selected?.textAnswer ? selected.textAnswer.split(',') : [];
+            const val = currentVals[clauseIndex];
+            return (
+              <div key={clauseIndex} className="p-3 border-2 border-slate-200 rounded-xl bg-white shadow-sm flex flex-col gap-2">
+                <p className="text-sm font-semibold text-slate-700">{clause}</p>
+                <div className="flex items-center gap-3">
+                  <button type="button" onClick={() => toggleTrueFalse(clauseIndex, true)} className={`flex-1 py-1.5 rounded-lg text-sm font-bold transition ${val === "true" ? "bg-emerald-100 text-emerald-700 border-2 border-emerald-500" : "bg-slate-50 text-slate-500 border-2 border-transparent hover:bg-slate-100"}`}>Đúng</button>
+                  <button type="button" onClick={() => toggleTrueFalse(clauseIndex, false)} className={`flex-1 py-1.5 rounded-lg text-sm font-bold transition ${val === "false" ? "bg-rose-100 text-rose-700 border-2 border-rose-500" : "bg-slate-50 text-slate-500 border-2 border-transparent hover:bg-slate-100"}`}>Sai</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : question.type === "mcq" || question.type === "interactive_visual" || !question.type ? (
         <div className="space-y-2.5">
           {question.options.map((option, optionIndex) => {
             const isSelected = selected?.selectedIndex === optionIndex;
