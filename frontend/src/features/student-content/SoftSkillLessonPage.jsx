@@ -18,6 +18,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
+import { STEAM_META } from "../../lib/steam.js";
 import { getSoftSkillLesson } from "./softSkillLessons.js";
 
 // Tailwind cần chuỗi class tĩnh -> khai báo đầy đủ cho từng tông màu.
@@ -87,6 +88,18 @@ export function SoftSkillLessonPage() {
             <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-3 py-1 text-xs font-black text-white backdrop-blur"><Clock3 size={14} /> {lesson.duration}</span>
             <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-3 py-1 text-xs font-black text-white backdrop-blur"><Trophy size={14} /> {lesson.xpReward} XP</span>
             <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-3 py-1 text-xs font-black text-white backdrop-blur">{lesson.category}</span>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] font-black uppercase tracking-wide text-white/70">Trục STEAM:</span>
+            {lesson.steam.map((code) => (
+              <span
+                key={code}
+                className="inline-flex items-center rounded-md bg-white/90 px-2 py-0.5 text-[11px] font-black"
+                style={{ color: STEAM_META[code].text }}
+              >
+                {STEAM_META[code].emoji} {code} · {STEAM_META[code].label}
+              </span>
+            ))}
           </div>
           <p className="mt-4 text-xs font-black uppercase tracking-wide text-white/70">{lesson.nodeCode}</p>
           <h1 className="mt-1 text-3xl font-black leading-tight text-white md:text-[40px]">{lesson.title}</h1>

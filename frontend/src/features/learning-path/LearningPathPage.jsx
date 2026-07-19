@@ -28,63 +28,9 @@ import { Link } from "react-router-dom";
 import { useStudentData } from "../../app/StudentDataProvider.jsx";
 import { gradeLabel } from "../../lib/academicCatalog.js";
 import { api } from "../../lib/apiClient.js";
+import { STEAM_META } from "../../lib/steam.js";
+import { SUBJECT_ICONS, subjectsForGrade } from "./curriculum.js";
 import { GRADE9_SYLLABUS } from "./grade9Syllabus.js";
-
-// Lớp -> cấp học (khối), để lọc đúng danh mục môn theo lớp của học sinh.
-function bandOfGrade(grade) {
-  if (grade <= 5) return "primary";
-  if (grade <= 9) return "secondary";
-  return "high_school";
-}
-
-// Canonical STEAM axis palette — see docs/design/design-style.md
-const STEAM_META = {
-  S: { label: "Khoa học", solid: "#22c55e", bg: "#dcfce7", text: "#15803d" },
-  T: { label: "Công nghệ", solid: "#3b82f6", bg: "#dbeafe", text: "#1d4ed8" },
-  E: { label: "Kỹ thuật", solid: "#f97316", bg: "#ffedd5", text: "#c2410c" },
-  A: { label: "Nghệ thuật", solid: "#a855f7", bg: "#f3e8ff", text: "#7e22ce" },
-  M: { label: "Toán học", solid: "#ef4444", bg: "#fee2e2", text: "#b91c1c" },
-};
-
-const SUBJECT_ICONS = {
-  math: "➕",
-  natural_society: "🌱",
-  science: "🔬",
-  technology: "🛠️",
-  scratch: "💻",
-  arts: "🎨",
-  natural_science: "🧪",
-  physics: "⚛️",
-  chemistry: "⚗️",
-  biology: "🧬",
-};
-
-const CURRICULUM = {
-  primary: [
-    { key: "math", name: "Toán học", steam: ["S", "A", "M"], grades: [1, 2, 3, 4, 5] },
-    { key: "natural_society", name: "Tự nhiên & Xã hội", steam: ["S", "M"], grades: [1, 2, 3] },
-    { key: "science", name: "Khoa học", steam: ["S", "M"], grades: [4, 5] },
-    { key: "technology", name: "Công Nghệ", steam: ["S", "E"], grades: [3, 4, 5] },
-    { key: "scratch", name: "Tin học", steam: ["T", "M"], grades: [3, 4, 5] },
-    { key: "arts", name: "Nghệ thuật (Mỹ thuật, Âm nhạc)", steam: ["A", "E", "M"], grades: [1, 2, 3, 4, 5] },
-  ],
-  secondary: [
-    { key: "math", name: "Toán học", steam: ["M", "T", "E"], grades: [6, 7, 8, 9] },
-    { key: "natural_science", name: "Khoa học Tự nhiên", steam: ["S", "M", "E"], grades: [6, 7, 8, 9] },
-    { key: "technology", name: "Công nghệ", steam: ["E", "S", "M"], grades: [6, 7, 8, 9] },
-    { key: "scratch", name: "Tin học", steam: ["T", "M", "E"], grades: [6, 7, 8, 9] },
-    { key: "arts", name: "Nghệ thuật (Mỹ thuật, Âm nhạc)", steam: ["A", "T", "E"], grades: [6, 7, 8, 9] },
-  ],
-  high_school: [
-    { key: "math", name: "Toán học", steam: ["M", "T", "E"], grades: [10, 11, 12] },
-    { key: "physics", name: "Vật lí", steam: ["S", "M", "E"], grades: [10, 11, 12] },
-    { key: "chemistry", name: "Hóa học", steam: ["S", "M", "E"], grades: [10, 11, 12] },
-    { key: "biology", name: "Sinh học", steam: ["S", "M", "E"], grades: [10, 11, 12] },
-    { key: "technology", name: "Công nghệ", steam: ["E", "T", "S", "M"], grades: [10, 11, 12] },
-    { key: "scratch", name: "Tin học", steam: ["T", "M", "E"], grades: [10, 11, 12] },
-    { key: "arts", name: "Nghệ thuật (Mỹ thuật, Âm nhạc)", steam: ["A", "T", "E"], grades: [10, 11, 12] },
-  ],
-};
 
 const NODE_STATUS = {
   completed: { label: "Hoàn thành", icon: Check },
@@ -1066,10 +1012,9 @@ export function LearningPathPage() {
   // Lớp của học sinh đăng nhập; mặc định Lớp 9 khi hồ sơ chưa có gradeLevel
   // (giữ demo lớp 9 chạy được cho tài khoản chưa gán lớp).
   const studentGrade = Number(dashboard?.student?.gradeLevel) || 9;
-  const band = bandOfGrade(studentGrade);
   const allNodes = path?.nodes ?? [];
   // Chỉ hiện môn học đúng lớp của học sinh (VD lớp 9 -> các môn có grade 9).
-  const subjects = (CURRICULUM[band] ?? []).filter((subject) => subject.grades.includes(studentGrade));
+  const subjects = subjectsForGrade(studentGrade);
 
   const subjectsWithProgress = subjects.map((subject) => {
     const matching = allNodes.filter((n) => n.subject === subject.key);

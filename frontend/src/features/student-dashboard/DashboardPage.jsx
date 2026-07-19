@@ -5,8 +5,9 @@ import { OnboardingGate } from "../../features/onboarding/OnboardingGate.jsx";
 
 import { useStudentData } from "../../app/StudentDataProvider.jsx";
 import { BadgeShelf } from "./BadgeShelf.jsx";
+import { DueAssessmentBanner } from "./DueAssessmentBanner.jsx";
+import { InProgressSubjects } from "./InProgressSubjects.jsx";
 import { MetricCards } from "./MetricCards.jsx";
-import { PathPreview } from "./PathPreview.jsx";
 import { RadarProfile } from "./RadarProfile.jsx";
 import { WeekActivity } from "./WeekActivity.jsx";
 
@@ -113,14 +114,16 @@ export function DashboardPage() {
         </div>
       </section>
 
+      <DueAssessmentBanner />
+
       <MetricCards dashboard={dashboard} />
 
       <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.75fr)]">
         <RadarProfile profile={dashboard.steamProfile} proficiency={dashboard.onboarding?.proficiency} />
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
+          <InProgressSubjects grade={Number(dashboard.student?.gradeLevel) || 9} />
           <WeekActivity days={dashboard.weekActivity} />
           <BadgeShelf badges={dashboard.badges} />
-          <PathPreview nodes={dashboard.pathPreview} progress={dashboard.pathProgress} />
         </div>
       </div>
     </div>
